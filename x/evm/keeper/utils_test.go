@@ -447,12 +447,8 @@ func (suite *KeeperTestSuite) TestDeductTxCostsFromUserBalance() {
 				balance := vmdb.GetBalance(suite.address)
 				suite.Require().Equal(balance, hundredInt.BigInt())
 			}
-<<<<<<< HEAD
-			vmdb.Commit()
-=======
 			_, err := vmdb.Commit()
 			suite.Require().NoError(err, "Unexpected error while committing to vmdb: %d", err)
->>>>>>> 76d65bfe9 (fix to BenchmarkMessageCall)
 
 			tx := evmtypes.NewTx(zeroInt.BigInt(), 1, &suite.address, amount, tc.gasLimit, gasPrice, gasFeeCap, gasTipCap, nil, tc.accessList)
 			tx.From = tc.from

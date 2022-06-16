@@ -196,6 +196,7 @@ replace (
 	// ics23 patch for dragonberry
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
 	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.6-0.20230110154545-70f48768ca49
+	github.com/ethereum/go-ethereum => github.com/mmsqe/go-ethereum v1.10.26-0.20230127080103-3a00e53a24bb
 	// Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
 	// TODO Remove it: https://github.com/cosmos/cosmos-sdk/issues/10409
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.7.0
