@@ -19,16 +19,16 @@ declare -a modules=(
                     "evm" 
                     "feemarket" 
                    )
-declare -a dbs=("1-0" "1-1")
+declare -a dbs=("0-0" "0-1")
 
 FOLDER=$PWD"/app/tmp"
 for module in "${modules[@]}"
 do
     for db in "${dbs[@]}"
     do
-        iaviewer-o data $FOLDER/"$db"/testing.db "s/k:${module}/" 1 > $FOLDER/"$module"-"$db".data
+        iaviewer-o data $FOLDER/"$db"/testing.db "s/k:${module}/" 0 > $FOLDER/"$module"-"$db".data
     done
-    delta=$(diff $FOLDER/"$module"-1-0.data $FOLDER/"$module"-1-1.data)
+    delta=$(diff $FOLDER/"$module"-0-0.data $FOLDER/"$module"-0-1.data)
     if [ "$delta" != "" ] 
     then
         echo "${module} is not deterministic ${delta}"

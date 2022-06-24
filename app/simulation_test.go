@@ -300,9 +300,10 @@ func TestAppStateDeterminism(t *testing.T) {
 	config.OnOperation = false
 	config.AllInvariants = false
 	config.ChainID = SimAppChainID
+	config.NumBlocks = 1
 
-	numSeeds := 3
-	numTimesToRunPerSeed := 3
+	numSeeds := 1
+	numTimesToRunPerSeed := 2
 	appHashList := make([]json.RawMessage, numTimesToRunPerSeed)
 
 	dir, err := os.Getwd()
@@ -352,9 +353,8 @@ func TestAppStateDeterminism(t *testing.T) {
 
 			appHash := app.LastCommitID().Hash
 			appHashList[j] = appHash
-
+			fmt.Printf("appHashList[0]: %x\n", appHashList[0])
 			if j != 0 {
-				fmt.Printf("appHashList[0]: %x\n", appHashList[0])
 				fmt.Printf("appHashList[j]: %x\n", appHashList[j])
 				require.Equal(
 					t, string(appHashList[0]), string(appHashList[j]),
