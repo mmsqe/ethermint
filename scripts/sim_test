@@ -1,0 +1,36 @@
+#!/usr/bin
+
+declare -a modules=(
+                    "acc" 
+                    "bank" 
+                    "staking" 
+                    "mint" 
+                    "distribution" 
+                    "slashing" 
+                    "gov" 
+                    "params" 
+                    "upgrade" 
+                    "evidence" 
+                    "capability" 
+                    "feegrant" 
+                    "authz" 
+                    "ibc" 
+                    "transfer" 
+                    "evm" 
+                    "feemarket" 
+                   )
+declare -a dbs=("1-0" "1-1")
+
+FOLDER=$PWD"/app/tmp"
+for module in "${modules[@]}"
+do
+    for db in "${dbs[@]}"
+    do
+        iaviewer-o data $FOLDER/"$db"/testing.db "s/k:${module}/" 1 > $FOLDER/"$module"-"$db".data
+    done
+    delta=$(diff $FOLDER/"$module"-1-0.data $FOLDER/"$module"-1-1.data)
+    if [ "$delta" != "" ] 
+    then
+        echo "${module} is not deterministic ${delta}"
+    fi
+done

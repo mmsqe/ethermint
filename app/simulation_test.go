@@ -302,9 +302,14 @@ func TestAppStateDeterminism(t *testing.T) {
 	config.ChainID = SimAppChainID
 
 	numSeeds := 3
-	numTimesToRunPerSeed := 5
+	numTimesToRunPerSeed := 3
 	appHashList := make([]json.RawMessage, numTimesToRunPerSeed)
 
+	dir, err := os.Getwd()
+	fmt.Printf("dir path: %s\n", dir)
+	require.NoError(t, err)
+	folder := fmt.Sprintf("%s/%s", dir, "tmp")
+	os.RemoveAll(folder)
 	for i := 0; i < numSeeds; i++ {
 		config.Seed = rand.Int63()
 
@@ -316,7 +321,10 @@ func TestAppStateDeterminism(t *testing.T) {
 				logger = log.NewNopLogger()
 			}
 
-			db := dbm.NewMemDB()
+			// db := dbm.NewMemDB()
+			path := fmt.Sprintf("%s/%d-%d", folder, i, j)
+			fmt.Printf("db path: %s\n", path)
+			db, err := dbm.NewGoLevelDB("testing", path)
 			app := NewEthermintApp(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, simapp.FlagPeriodValue, MakeEncodingConfig(), simapp.EmptyAppOptions{}, interBlockCacheOpt())
 
 			fmt.Printf(
@@ -324,7 +332,7 @@ func TestAppStateDeterminism(t *testing.T) {
 				config.Seed, i+1, numSeeds, j+1, numTimesToRunPerSeed,
 			)
 
-			_, _, err := simulation.SimulateFromSeed(
+			_, _, err = simulation.SimulateFromSeed(
 				t,
 				os.Stdout,
 				app.BaseApp,
@@ -338,13 +346,16 @@ func TestAppStateDeterminism(t *testing.T) {
 			require.NoError(t, err)
 
 			if config.Commit {
-				simapp.PrintStats(db)
+				// simapp.PrintStats(db)
 			}
+			db.Close()
 
 			appHash := app.LastCommitID().Hash
 			appHashList[j] = appHash
 
 			if j != 0 {
+				fmt.Printf("appHashList[0]: %x\n", appHashList[0])
+				fmt.Printf("appHashList[j]: %x\n", appHashList[j])
 				require.Equal(
 					t, string(appHashList[0]), string(appHashList[j]),
 					"non-determinism in seed %d: %d/%d, attempt: %d/%d\n", config.Seed, i+1, numSeeds, j+1, numTimesToRunPerSeed,
