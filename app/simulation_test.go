@@ -300,10 +300,9 @@ func TestAppStateDeterminism(t *testing.T) {
 	config.OnOperation = false
 	config.AllInvariants = false
 	config.ChainID = SimAppChainID
-	config.NumBlocks = 1
 
-	numSeeds := 1
-	numTimesToRunPerSeed := 2
+	numSeeds := 3
+	numTimesToRunPerSeed := 5
 	appHashList := make([]json.RawMessage, numTimesToRunPerSeed)
 
 	for i := 0; i < numSeeds; i++ {
