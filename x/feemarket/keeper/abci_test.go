@@ -7,6 +7,11 @@ import (
 )
 
 func (suite *KeeperTestSuite) TestEndBlock() {
+	gasWantedFunc := func() {
+		meter := sdk.NewGasMeter(uint64(1000000000))
+		suite.ctx = suite.ctx.WithBlockGasMeter(meter)
+		suite.app.FeeMarketKeeper.SetTransientBlockGasWanted(suite.ctx, 5000000)
+	}
 	testCases := []struct {
 		name         string
 		NoBaseFee    bool
@@ -20,13 +25,15 @@ func (suite *KeeperTestSuite) TestEndBlock() {
 			uint64(0),
 		},
 		{
+			"baseFee nil with gasWanted",
+			true,
+			gasWantedFunc,
+			uint64(0),
+		},
+		{
 			"pass",
 			false,
-			func() {
-				meter := sdk.NewGasMeter(uint64(1000000000))
-				suite.ctx = suite.ctx.WithBlockGasMeter(meter)
-				suite.app.FeeMarketKeeper.SetTransientBlockGasWanted(suite.ctx, 5000000)
-			},
+			gasWantedFunc,
 			uint64(2500000),
 		},
 	}
