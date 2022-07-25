@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -151,14 +152,15 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 func (ic *IbcContract) Commit(ctx sdk.Context) error {
 	for _, msg := range ic.msgs {
 		fmt.Printf("Commit: %+v\n", msg)
-		// res, err := ic.transferKeeper.Transfer(ic.ctx.Context(), msg)
-		if err := ic.transferKeeper.SendTransfer(
-			ctx, msg.SourcePort, msg.SourceChannel, msg.Token, sdk.AccAddress(msg.Sender), msg.Receiver, msg.TimeoutHeight, msg.TimeoutTimestamp,
-		); err != nil {
-			fmt.Println("Commit err: ", err)
+		src, err := sdk.AccAddressFromHex(strings.TrimPrefix(msg.Sender, "0x"))
+		if err != nil {
 			return err
 		}
-		fmt.Println("Commit after")
+		if err := ic.transferKeeper.SendTransfer(
+			ctx, msg.SourcePort, msg.SourceChannel, msg.Token, src, msg.Receiver, msg.TimeoutHeight, msg.TimeoutTimestamp,
+		); err != nil {
+			return err
+		}
 	}
 	return nil
 }
