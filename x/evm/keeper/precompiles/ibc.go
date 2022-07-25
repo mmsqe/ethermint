@@ -136,11 +136,9 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 		stateDB.AppendJournalEntry(ibcMessageChange{ic, caller, receiver, msg})
 		sequence, found := ic.channelKeeper.GetNextSequenceSend(ic.ctx, portId, channelId)
 		if !found {
-			sequence = 0
-		} else {
-			sequence++
+			sequence = 1
 		}
-		fmt.Printf("TransferMethod sequence: %d\n", sequence)
+		fmt.Printf("TransferMethod sequence: %d, found: %+v\n", sequence, found)
 		return TransferMethod.Outputs.Pack(new(big.Int).SetUint64(sequence))
 	} else if bytes.Equal(methodID, QueryAckMethod.ID) {
 		args, err := QueryAckMethod.Inputs.Unpack(input[4:])
@@ -152,8 +150,9 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 		sequence := args[2].(*big.Int)
 		seq := sequence.Uint64()
 		fmt.Printf("QueryAckMethod portId: %s, channelId: %s, sequence: %d\n", portId, channelId, seq)
-		// ic.channelKeeper.GetPacketAcknowledgement(ctx, portId, channelId, seq)
-		return nil, nil
+		ack, found := ic.channelKeeper.GetPacketAcknowledgement(ic.ctx, portId, channelId, seq)
+		fmt.Printf("QueryAckMethod ack: %+v, found: %+v\n", ack, found)
+		return QueryAckMethod.Outputs.Pack(found)
 	} else {
 		return nil, errors.New("unknown method")
 	}
