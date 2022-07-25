@@ -52,7 +52,10 @@ func init() {
 			Name: "srcDenom",
 			Type: stringType,
 		}},
-		nil,
+		abi.Arguments{abi.Argument{
+			Name: "sequence",
+			Type: uint256Type,
+		}},
 	)
 	QueryAckMethod = abi.NewMethod(
 		"queryAck", "queryAck", abi.Function, "", false, false, abi.Arguments{abi.Argument{
@@ -93,10 +96,10 @@ func (ic *IbcContract) RequiredGas(input []byte) uint64 {
 }
 
 func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, value *big.Int, readonly bool) ([]byte, error) {
-	// stateDB, ok := evm.StateDB.(ExtStateDB)
-	// if !ok {
-	// 	return nil, errors.New("not run in ethermint")
-	// }
+	stateDB, ok := evm.StateDB.(ExtStateDB)
+	if !ok {
+		return nil, errors.New("not run in ethermint")
+	}
 	methodID := input[:4]
 	fmt.Printf("IbcContract: %x\n", methodID)
 	if bytes.Equal(methodID, TransferMethod.ID) {
@@ -130,8 +133,15 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 			TimeoutTimestamp: timeoutTimestamp,
 		}
 		ic.msgs = append(ic.msgs, msg)
-		// stateDB.AppendJournalEntry(ibcMessageChange{ic, caller, receiver, msg})
-		return nil, err
+		stateDB.AppendJournalEntry(ibcMessageChange{ic, caller, receiver, msg})
+		sequence, found := ic.channelKeeper.GetNextSequenceSend(ic.ctx, portId, channelId)
+		if !found {
+			sequence = 0
+		} else {
+			sequence++
+		}
+		fmt.Printf("TransferMethod sequence: %d\n", sequence)
+		return TransferMethod.Outputs.Pack(new(big.Int).SetUint64(sequence))
 	} else if bytes.Equal(methodID, QueryAckMethod.ID) {
 		args, err := QueryAckMethod.Inputs.Unpack(input[4:])
 		if err != nil {
@@ -152,6 +162,7 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 func (ic *IbcContract) Commit(ctx sdk.Context) error {
 	for _, msg := range ic.msgs {
 		fmt.Printf("Commit: %+v\n", msg)
+		// res, err := ic.transferKeeper.Transfer(ic.ctx.Context(), msg)
 		src, err := sdk.AccAddressFromHex(strings.TrimPrefix(msg.Sender, "0x"))
 		if err != nil {
 			return err
