@@ -19,8 +19,9 @@ import (
 )
 
 var (
-	TransferMethod abi.Method
-	QueryAckMethod abi.Method
+	TransferMethod     abi.Method
+	QueryAckMethod     abi.Method
+	QueryNextSeqMethod abi.Method
 
 	_ statedb.StatefulPrecompiledContract = (*IbcContract)(nil)
 	_ statedb.JournalEntry                = ibcMessageChange{}
@@ -70,6 +71,19 @@ func init() {
 		abi.Arguments{abi.Argument{
 			Name: "status",
 			Type: boolType,
+		}},
+	)
+	QueryNextSeqMethod = abi.NewMethod(
+		"queryNextSeq", "queryNextSeq", abi.Function, "", false, false, abi.Arguments{abi.Argument{
+			Name: "portId",
+			Type: stringType,
+		}, abi.Argument{
+			Name: "channelId",
+			Type: stringType,
+		}},
+		abi.Arguments{abi.Argument{
+			Name: "sequence",
+			Type: uint256Type,
 		}},
 	)
 }
@@ -153,6 +167,17 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 		ack, found := ic.channelKeeper.GetPacketAcknowledgement(ic.ctx, portId, channelId, seq)
 		fmt.Printf("QueryAckMethod ack: %+v, found: %+v\n", ack, found)
 		return QueryAckMethod.Outputs.Pack(found)
+	} else if bytes.Equal(methodID, QueryNextSeqMethod.ID) {
+		args, err := QueryNextSeqMethod.Inputs.Unpack(input[4:])
+		if err != nil {
+			return nil, errors.New("fail to unpack input arguments")
+		}
+		portId := args[0].(string)
+		channelId := args[1].(string)
+		fmt.Printf("QueryNextSeqMethod portId: %s, channelId: %s\n", portId, channelId)
+		sequence, _ := ic.channelKeeper.GetNextSequenceSend(ic.ctx, portId, channelId)
+		fmt.Printf("QueryNextSeqMethod sequence: %d\n", sequence)
+		return QueryNextSeqMethod.Outputs.Pack(new(big.Int).SetUint64(sequence))
 	} else {
 		return nil, errors.New("unknown method")
 	}
