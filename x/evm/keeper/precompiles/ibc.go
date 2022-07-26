@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
@@ -116,29 +115,30 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 		receiver := args[3].(common.Address)
 		amount := args[4].(*big.Int)
 		denom := args[5].(string)
-		timeoutTimestamp := uint64(time.Now().UnixNano() + 60*1000000000)
-		timeoutHeight := clienttypes.NewHeight(2, 100000)
+		timeoutTimestamp := uint64(0)
+		timeoutHeight := clienttypes.NewHeight(1, 1000)
 		fmt.Printf(
 			"TransferMethod portId: %s, channelId: %s, sender:%s, receiver: %s, amount: %s, denom: %s, timeoutTimestamp: %d, timeoutHeight: %s\n",
 			portId, channelId, sender, receiver, amount.String(), denom, timeoutTimestamp, timeoutHeight,
 		)
 		token := sdk.NewCoin(denom, sdk.NewInt(amount.Int64()))
+		src, err := sdk.AccAddressFromHex(strings.TrimPrefix(sender.String(), "0x"))
+		if err != nil {
+			return nil, err
+		}
 		msg := &types.MsgTransfer{
 			SourcePort:       portId,
 			SourceChannel:    channelId,
 			Token:            token,
-			Sender:           sender.String(),
+			Sender:           src.String(),
 			Receiver:         receiver.String(),
 			TimeoutHeight:    timeoutHeight,
 			TimeoutTimestamp: timeoutTimestamp,
 		}
 		ic.msgs = append(ic.msgs, msg)
 		stateDB.AppendJournalEntry(ibcMessageChange{ic, caller, receiver, msg})
-		sequence, found := ic.channelKeeper.GetNextSequenceSend(ic.ctx, portId, channelId)
-		if !found {
-			sequence = 1
-		}
-		fmt.Printf("TransferMethod sequence: %d, found: %+v\n", sequence, found)
+		sequence, _ := ic.channelKeeper.GetNextSequenceSend(ic.ctx, portId, channelId)
+		fmt.Printf("TransferMethod sequence: %d\n", sequence)
 		return TransferMethod.Outputs.Pack(new(big.Int).SetUint64(sequence))
 	} else if bytes.Equal(methodID, QueryAckMethod.ID) {
 		args, err := QueryAckMethod.Inputs.Unpack(input[4:])
@@ -159,16 +159,12 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 }
 
 func (ic *IbcContract) Commit(ctx sdk.Context) error {
+	goCtx := sdk.WrapSDKContext(ic.ctx)
 	for _, msg := range ic.msgs {
-		fmt.Printf("Commit: %+v\n", msg)
-		// res, err := ic.transferKeeper.Transfer(ic.ctx.Context(), msg)
-		src, err := sdk.AccAddressFromHex(strings.TrimPrefix(msg.Sender, "0x"))
+		fmt.Printf("Commit: %+v, %s\n", msg, msg.Sender)
+		res, err := ic.transferKeeper.Transfer(goCtx, msg)
+		fmt.Printf("Transfer res: %+v, %+v\n", res, err)
 		if err != nil {
-			return err
-		}
-		if err := ic.transferKeeper.SendTransfer(
-			ctx, msg.SourcePort, msg.SourceChannel, msg.Token, src, msg.Receiver, msg.TimeoutHeight, msg.TimeoutTimestamp,
-		); err != nil {
 			return err
 		}
 	}
