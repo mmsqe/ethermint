@@ -43,7 +43,7 @@ func init() {
 			Type: addressType,
 		}, abi.Argument{
 			Name: "recipient",
-			Type: addressType,
+			Type: stringType,
 		}, abi.Argument{
 			Name: "amount",
 			Type: uint256Type,
@@ -112,7 +112,7 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 		portId := args[0].(string)
 		channelId := args[1].(string)
 		sender := args[2].(common.Address)
-		receiver := args[3].(common.Address)
+		receiver := args[3].(string)
 		amount := args[4].(*big.Int)
 		denom := args[5].(string)
 		timeoutTimestamp := uint64(0)
@@ -131,7 +131,7 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 			SourceChannel:    channelId,
 			Token:            token,
 			Sender:           src.String(),
-			Receiver:         receiver.String(),
+			Receiver:         receiver,
 			TimeoutHeight:    timeoutHeight,
 			TimeoutTimestamp: timeoutTimestamp,
 		}
@@ -174,7 +174,7 @@ func (ic *IbcContract) Commit(ctx sdk.Context) error {
 type ibcMessageChange struct {
 	ic       *IbcContract
 	caller   common.Address
-	receiver common.Address
+	receiver string
 	msg      *types.MsgTransfer
 }
 
