@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
@@ -20,7 +19,7 @@ import (
 
 var (
 	TransferMethod     abi.Method
-	QueryAckMethod     abi.Method
+	HasCommitMethod    abi.Method
 	QueryNextSeqMethod abi.Method
 
 	_ statedb.StatefulPrecompiledContract = (*IbcContract)(nil)
@@ -57,8 +56,8 @@ func init() {
 			Type: uint256Type,
 		}},
 	)
-	QueryAckMethod = abi.NewMethod(
-		"queryAck", "queryAck", abi.Function, "", false, false, abi.Arguments{abi.Argument{
+	HasCommitMethod = abi.NewMethod(
+		"hasCommit", "hasCommit", abi.Function, "", false, false, abi.Arguments{abi.Argument{
 			Name: "portId",
 			Type: stringType,
 		}, abi.Argument{
@@ -136,7 +135,7 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 			portId, channelId, sender, receiver, amount.String(), denom, timeoutTimestamp, timeoutHeight,
 		)
 		token := sdk.NewCoin(denom, sdk.NewInt(amount.Int64()))
-		src, err := sdk.AccAddressFromHex(strings.TrimPrefix(sender.String(), "0x"))
+		src := sdk.AccAddress(common.HexToAddress(sender.String()).Bytes())
 		if err != nil {
 			return nil, err
 		}
@@ -152,10 +151,11 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 		ic.msgs = append(ic.msgs, msg)
 		stateDB.AppendJournalEntry(ibcMessageChange{ic, caller, receiver, msg})
 		sequence, _ := ic.channelKeeper.GetNextSequenceSend(ic.ctx, portId, channelId)
-		fmt.Printf("TransferMethod sequence: %d\n", sequence)
+		status := ic.channelKeeper.HasPacketCommitment(ic.ctx, portId, channelId, sequence)
+		fmt.Printf("TransferMethod sequence: %d, %+v\n", sequence, status)
 		return TransferMethod.Outputs.Pack(new(big.Int).SetUint64(sequence))
-	} else if bytes.Equal(methodID, QueryAckMethod.ID) {
-		args, err := QueryAckMethod.Inputs.Unpack(input[4:])
+	} else if bytes.Equal(methodID, HasCommitMethod.ID) {
+		args, err := HasCommitMethod.Inputs.Unpack(input[4:])
 		if err != nil {
 			return nil, errors.New("fail to unpack input arguments")
 		}
@@ -163,10 +163,10 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 		channelId := args[1].(string)
 		sequence := args[2].(*big.Int)
 		seq := sequence.Uint64()
-		fmt.Printf("QueryAckMethod portId: %s, channelId: %s, sequence: %d\n", portId, channelId, seq)
-		ack, found := ic.channelKeeper.GetPacketAcknowledgement(ic.ctx, portId, channelId, seq)
-		fmt.Printf("QueryAckMethod ack: %+v, found: %+v\n", ack, found)
-		return QueryAckMethod.Outputs.Pack(found)
+		fmt.Printf("HasCommitMethod portId: %s, channelId: %s, sequence: %d\n", portId, channelId, seq)
+		status := ic.channelKeeper.HasPacketCommitment(ic.ctx, portId, channelId, seq)
+		fmt.Printf("HasCommitMethod status: %+v\n", status)
+		return HasCommitMethod.Outputs.Pack(status)
 	} else if bytes.Equal(methodID, QueryNextSeqMethod.ID) {
 		args, err := QueryNextSeqMethod.Inputs.Unpack(input[4:])
 		if err != nil {
