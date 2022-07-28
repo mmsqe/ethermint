@@ -91,13 +91,17 @@ type IbcContract struct {
 	ctx            sdk.Context
 	channelKeeper  *ibcchannelkeeper.Keeper
 	transferKeeper *ibctransferkeeper.Keeper
+	bankKeeper     types.BankKeeper
 	msgs           []*types.MsgTransfer
+	module         string
+	ibcDenom       string
+	ratio          *big.Int
 }
 
-func NewIbcContractCreator(channelKeeper *ibcchannelkeeper.Keeper, transferKeeper *ibctransferkeeper.Keeper) statedb.PrecompiledContractCreator {
+func NewIbcContractCreator(channelKeeper *ibcchannelkeeper.Keeper, transferKeeper *ibctransferkeeper.Keeper, bankKeeper types.BankKeeper, module, ibcDenom string, ratio *big.Int) statedb.PrecompiledContractCreator {
 	return func(ctx sdk.Context) statedb.StatefulPrecompiledContract {
 		msgs := []*types.MsgTransfer{}
-		return &IbcContract{ctx, channelKeeper, transferKeeper, msgs}
+		return &IbcContract{ctx, channelKeeper, transferKeeper, bankKeeper, msgs, module, ibcDenom, ratio}
 	}
 }
 
@@ -186,7 +190,40 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 func (ic *IbcContract) Commit(ctx sdk.Context) error {
 	goCtx := sdk.WrapSDKContext(ic.ctx)
 	for _, msg := range ic.msgs {
-		fmt.Printf("Commit: %+v, %s\n", msg, msg.Sender)
+		acc, err := sdk.AccAddressFromBech32(msg.Sender)
+		if err != nil {
+			return err
+		}
+		// Compute the remainder, we won't transfer anything lower than 10^10
+		c := msg.Token
+		amount8decRem := c.Amount.Mod(sdk.NewIntFromBigInt(ic.ratio))
+		amountToBurn := c.Amount.Sub(amount8decRem)
+		if amountToBurn.IsZero() {
+			// Amount too small
+			continue
+		}
+		coins := sdk.NewCoins(sdk.NewCoin(msg.Token.Denom, amountToBurn))
+		// Send evm tokens to escrow address
+		err = ic.bankKeeper.SendCoinsFromAccountToModule(ctx, acc, ic.module, coins)
+		if err != nil {
+			return err
+		}
+		// Burns the evm tokens
+		if err := ic.bankKeeper.BurnCoins(
+			ctx, ic.module, coins); err != nil {
+			return err
+		}
+
+		// Transfer ibc tokens back to the user
+		// We divide by 10^10 to come back to an 8decimals token
+		amount8dec := c.Amount.Quo(sdk.NewIntFromBigInt(ic.ratio))
+		ibcCoin := sdk.NewCoin(ic.ibcDenom, amount8dec)
+		if err := ic.bankKeeper.SendCoinsFromModuleToAccount(
+			ctx, ic.module, acc, sdk.NewCoins(ibcCoin),
+		); err != nil {
+			return err
+		}
+		msg.Token = ibcCoin
 		res, err := ic.transferKeeper.Transfer(goCtx, msg)
 		fmt.Printf("Transfer res: %+v, %+v\n", res, err)
 		if err != nil {
