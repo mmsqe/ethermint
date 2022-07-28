@@ -353,7 +353,7 @@ func NewEthermintApp(
 
 	contracts := map[common.Address]statedb.PrecompiledContractCreator{
 		common.BigToAddress(big.NewInt(100)): precompiles.NewBankContractCreator(app.BankKeeper),
-		common.BigToAddress(big.NewInt(101)): precompiles.NewIbcContractCreator(&app.IBCKeeper.ChannelKeeper, &app.TransferKeeper),
+		common.BigToAddress(big.NewInt(101)): precompiles.NewIbcContractCreator(&app.IBCKeeper.ChannelKeeper, &app.TransferKeeper, app.BankKeeper, "", "", nil),
 	}
 	app.EvmKeeper = evmkeeper.NewKeeper(
 		appCodec, keys[evmtypes.StoreKey], tkeys[evmtypes.TransientKey], app.GetSubspace(evmtypes.ModuleName),
