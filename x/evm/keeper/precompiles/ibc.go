@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	clienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
 	ibcchannelkeeper "github.com/cosmos/ibc-go/v3/modules/core/04-channel/keeper"
+	ibcchanneltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -50,6 +51,9 @@ func init() {
 		}, abi.Argument{
 			Name: "srcDenom",
 			Type: stringType,
+		}, abi.Argument{
+			Name: "timeout",
+			Type: uint256Type,
 		}},
 		abi.Arguments{abi.Argument{
 			Name: "sequence",
@@ -132,7 +136,8 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 		receiver := args[3].(string)
 		amount := args[4].(*big.Int)
 		denom := args[5].(string)
-		timeoutTimestamp := uint64(0)
+		timeout := args[6].(*big.Int)
+		timeoutTimestamp := timeout.Uint64()
 		timeoutHeight := clienttypes.NewHeight(1, 1000)
 		fmt.Printf(
 			"TransferMethod portId: %s, channelId: %s, sender:%s, receiver: %s, amount: %s, denom: %s, timeoutTimestamp: %d, timeoutHeight: %s\n",
@@ -223,8 +228,21 @@ func (ic *IbcContract) Commit(ctx sdk.Context) error {
 		}
 		msg.Token = ibcCoin
 		res, err := ic.transferKeeper.Transfer(goCtx, msg)
-		fmt.Printf("Transfer res: %+v, %+v\n", res, err)
 		if err != nil {
+			if ibcchanneltypes.ErrPacketTimeout.Is(err) {
+				// Send from escrow address to evm tokens
+				err = ic.bankKeeper.SendCoinsFromAccountToModule(ctx, acc, ic.module, coins)
+				if err != nil {
+					return err
+				}
+				// Mint the evm tokens
+				if err := ic.bankKeeper.MintCoins(
+					ctx, ic.module, coins); err != nil {
+					return err
+				}
+				return nil
+			}
+			fmt.Printf("Transfer res: %+v, %+v\n", res, err)
 			return err
 		}
 	}
