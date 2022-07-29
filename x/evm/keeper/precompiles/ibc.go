@@ -230,14 +230,12 @@ func (ic *IbcContract) Commit(ctx sdk.Context) error {
 		res, err := ic.transferKeeper.Transfer(goCtx, msg)
 		if err != nil {
 			if ibcchanneltypes.ErrPacketTimeout.Is(err) {
-				// Send from escrow address to evm tokens
-				err = ic.bankKeeper.SendCoinsFromAccountToModule(ctx, acc, ic.module, coins)
-				if err != nil {
-					return err
-				}
-				// Mint the evm tokens
 				if err := ic.bankKeeper.MintCoins(
 					ctx, ic.module, coins); err != nil {
+					return err
+				}
+				if err := ic.bankKeeper.SendCoinsFromModuleToAccount(
+					ctx, ic.module, acc, coins); err != nil {
 					return err
 				}
 				return nil
