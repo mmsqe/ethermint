@@ -2,9 +2,12 @@ package precompiles
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
@@ -43,7 +46,7 @@ func init() {
 			Name: "sender",
 			Type: addressType,
 		}, abi.Argument{
-			Name: "recipient",
+			Name: "receiver",
 			Type: stringType,
 		}, abi.Argument{
 			Name: "amount",
@@ -51,6 +54,12 @@ func init() {
 		}, abi.Argument{
 			Name: "srcDenom",
 			Type: stringType,
+		}, abi.Argument{
+			Name: "dstDenom",
+			Type: stringType,
+		}, abi.Argument{
+			Name: "ratio",
+			Type: uint256Type,
 		}, abi.Argument{
 			Name: "timeout",
 			Type: uint256Type,
@@ -96,16 +105,14 @@ type IbcContract struct {
 	channelKeeper  *ibcchannelkeeper.Keeper
 	transferKeeper *ibctransferkeeper.Keeper
 	bankKeeper     types.BankKeeper
-	msgs           []*types.MsgTransfer
+	msgs           []*ibcMessage
 	module         string
-	ibcDenom       string
-	ratio          *big.Int
 }
 
-func NewIbcContractCreator(channelKeeper *ibcchannelkeeper.Keeper, transferKeeper *ibctransferkeeper.Keeper, bankKeeper types.BankKeeper, module, ibcDenom string, ratio *big.Int) statedb.PrecompiledContractCreator {
+func NewIbcContractCreator(channelKeeper *ibcchannelkeeper.Keeper, transferKeeper *ibctransferkeeper.Keeper, bankKeeper types.BankKeeper, module string) statedb.PrecompiledContractCreator {
 	return func(ctx sdk.Context) statedb.StatefulPrecompiledContract {
-		msgs := []*types.MsgTransfer{}
-		return &IbcContract{ctx, channelKeeper, transferKeeper, bankKeeper, msgs, module, ibcDenom, ratio}
+		msgs := []*ibcMessage{}
+		return &IbcContract{ctx, channelKeeper, transferKeeper, bankKeeper, msgs, module}
 	}
 }
 
@@ -135,20 +142,22 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 		sender := args[2].(common.Address)
 		receiver := args[3].(string)
 		amount := args[4].(*big.Int)
-		denom := args[5].(string)
-		timeout := args[6].(*big.Int)
+		srcDenom := args[5].(string)
+		dstDenom := args[6].(string)
+		ratio := args[7].(*big.Int)
+		timeout := args[8].(*big.Int)
 		timeoutTimestamp := timeout.Uint64()
 		timeoutHeight := clienttypes.NewHeight(1, 1000)
 		fmt.Printf(
-			"TransferMethod portId: %s, channelId: %s, sender:%s, receiver: %s, amount: %s, denom: %s, timeoutTimestamp: %d, timeoutHeight: %s\n",
-			portId, channelId, sender, receiver, amount.String(), denom, timeoutTimestamp, timeoutHeight,
+			"TransferMethod portId: %s, channelId: %s, sender:%s, receiver: %s, amount: %s, srcDenom: %s, dstDenom: %s, timeoutTimestamp: %d, timeoutHeight: %s\n",
+			portId, channelId, sender, receiver, amount.String(), srcDenom, dstDenom, timeoutTimestamp, timeoutHeight,
 		)
-		token := sdk.NewCoin(denom, sdk.NewInt(amount.Int64()))
+		token := sdk.NewCoin(srcDenom, sdk.NewInt(amount.Int64()))
 		src := sdk.AccAddress(common.HexToAddress(sender.String()).Bytes())
 		if err != nil {
 			return nil, err
 		}
-		msg := &types.MsgTransfer{
+		transfer := &types.MsgTransfer{
 			SourcePort:       portId,
 			SourceChannel:    channelId,
 			Token:            token,
@@ -157,6 +166,7 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 			TimeoutHeight:    timeoutHeight,
 			TimeoutTimestamp: timeoutTimestamp,
 		}
+		msg := &ibcMessage{transfer, dstDenom, ratio}
 		ic.msgs = append(ic.msgs, msg)
 		stateDB.AppendJournalEntry(ibcMessageChange{ic, caller, receiver, msg})
 		sequence, _ := ic.channelKeeper.GetNextSequenceSend(ic.ctx, portId, channelId)
@@ -195,18 +205,20 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 func (ic *IbcContract) Commit(ctx sdk.Context) error {
 	goCtx := sdk.WrapSDKContext(ic.ctx)
 	for _, msg := range ic.msgs {
-		acc, err := sdk.AccAddressFromBech32(msg.Sender)
+		hash := sha256.Sum256([]byte(fmt.Sprintf("transfer/%s/%s", msg.transfer.SourceChannel, msg.dstDenom)))
+		ibcDenom := fmt.Sprintf("ibc/%s", strings.ToUpper(hex.EncodeToString(hash[:])))
+		acc, err := sdk.AccAddressFromBech32(msg.transfer.Sender)
 		if err != nil {
 			return err
 		}
-		c := msg.Token
-		amount8decRem := c.Amount.Mod(sdk.NewIntFromBigInt(ic.ratio))
+		c := msg.transfer.Token
+		amount8decRem := c.Amount.Mod(sdk.NewIntFromBigInt(msg.ratio))
 		amountToBurn := c.Amount.Sub(amount8decRem)
 		if amountToBurn.IsZero() {
 			// Amount too small
 			continue
 		}
-		coins := sdk.NewCoins(sdk.NewCoin(msg.Token.Denom, amountToBurn))
+		coins := sdk.NewCoins(sdk.NewCoin(msg.transfer.Token.Denom, amountToBurn))
 		// Send evm tokens to escrow address
 		err = ic.bankKeeper.SendCoinsFromAccountToModule(ctx, acc, ic.module, coins)
 		if err != nil {
@@ -219,15 +231,15 @@ func (ic *IbcContract) Commit(ctx sdk.Context) error {
 		}
 
 		// Transfer ibc tokens back to the user
-		amount8dec := c.Amount.Quo(sdk.NewIntFromBigInt(ic.ratio))
-		ibcCoin := sdk.NewCoin(ic.ibcDenom, amount8dec)
+		amount8dec := c.Amount.Quo(sdk.NewIntFromBigInt(msg.ratio))
+		ibcCoin := sdk.NewCoin(ibcDenom, amount8dec)
 		if err := ic.bankKeeper.SendCoinsFromModuleToAccount(
 			ctx, ic.module, acc, sdk.NewCoins(ibcCoin),
 		); err != nil {
 			return err
 		}
-		msg.Token = ibcCoin
-		res, err := ic.transferKeeper.Transfer(goCtx, msg)
+		msg.transfer.Token = ibcCoin
+		res, err := ic.transferKeeper.Transfer(goCtx, msg.transfer)
 		if err != nil {
 			if ibcchanneltypes.ErrPacketTimeout.Is(err) {
 				if err := ic.bankKeeper.MintCoins(
@@ -247,11 +259,17 @@ func (ic *IbcContract) Commit(ctx sdk.Context) error {
 	return nil
 }
 
+type ibcMessage struct {
+	transfer *types.MsgTransfer
+	dstDenom string
+	ratio    *big.Int
+}
+
 type ibcMessageChange struct {
 	ic       *IbcContract
 	caller   common.Address
 	receiver string
-	msg      *types.MsgTransfer
+	msg      *ibcMessage
 }
 
 func (ch ibcMessageChange) Revert(*statedb.StateDB) {
