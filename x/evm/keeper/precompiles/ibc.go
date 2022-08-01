@@ -100,18 +100,22 @@ func init() {
 	)
 }
 
+func (msg ibcMessage) Changed() *big.Int {
+	return new(big.Int).Sub(msg.dirtyAmount, msg.originAmount)
+}
+
 type IbcContract struct {
 	ctx            sdk.Context
 	channelKeeper  *ibcchannelkeeper.Keeper
 	transferKeeper *ibctransferkeeper.Keeper
 	bankKeeper     types.BankKeeper
-	msgs           []*ibcMessage
+	msgs           map[common.Address]map[common.Address]*ibcMessage
 	module         string
 }
 
 func NewIbcContractCreator(channelKeeper *ibcchannelkeeper.Keeper, transferKeeper *ibctransferkeeper.Keeper, bankKeeper types.BankKeeper, module string) statedb.PrecompiledContractCreator {
 	return func(ctx sdk.Context) statedb.StatefulPrecompiledContract {
-		msgs := []*ibcMessage{}
+		msgs := make(map[common.Address]map[common.Address]*ibcMessage)
 		return &IbcContract{ctx, channelKeeper, transferKeeper, bankKeeper, msgs, module}
 	}
 }
@@ -166,9 +170,22 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 			TimeoutHeight:    timeoutHeight,
 			TimeoutTimestamp: timeoutTimestamp,
 		}
-		msg := &ibcMessage{transfer, dstDenom, ratio}
-		ic.msgs = append(ic.msgs, msg)
-		stateDB.AppendJournalEntry(ibcMessageChange{ic, caller, receiver, msg})
+		if _, ok := ic.msgs[caller]; !ok {
+			ic.msgs[caller] = make(map[common.Address]*ibcMessage)
+		}
+		msgs := ic.msgs[caller]
+		msg, ok := msgs[sender]
+		if ok {
+			msg.dirtyAmount = new(big.Int).Sub(msg.dirtyAmount, amount)
+		} else {
+			// query original amount
+			addr := sdk.AccAddress(sender.Bytes())
+			originAmount := ic.bankKeeper.GetBalance(ic.ctx, addr, srcDenom).Amount.BigInt()
+			dirtyAmount := new(big.Int).Sub(originAmount, amount)
+			msg = &ibcMessage{transfer, dstDenom, ratio, originAmount, dirtyAmount}
+			msgs[sender] = msg
+		}
+		stateDB.AppendJournalEntry(ibcMessageChange{ic, caller, sender, msg})
 		sequence, _ := ic.channelKeeper.GetNextSequenceSend(ic.ctx, portID, channelID)
 		status := ic.channelKeeper.HasPacketCommitment(ic.ctx, portID, channelID, sequence)
 		fmt.Printf("TransferMethod sequence: %d, %+v\n", sequence, status)
@@ -204,44 +221,69 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 
 func (ic *IbcContract) Commit(ctx sdk.Context) error {
 	goCtx := sdk.WrapSDKContext(ic.ctx)
-	for _, msg := range ic.msgs {
-		acc, err := sdk.AccAddressFromBech32(msg.transfer.Sender)
-		if err != nil {
-			return err
-		}
-		c := msg.transfer.Token
-		ratio := sdk.NewIntFromBigInt(msg.ratio)
-		amount8decRem := c.Amount.Mod(ratio)
-		amountToBurn := c.Amount.Sub(amount8decRem)
-		if amountToBurn.IsZero() {
-			// Amount too small
-			continue
-		}
-		coins := sdk.NewCoins(sdk.NewCoin(msg.transfer.Token.Denom, amountToBurn))
-		// Send evm tokens to escrow address
-		if err = ic.bankKeeper.SendCoinsFromAccountToModule(
-			ctx, acc, ic.module, coins); err != nil {
-			return err
-		}
-		// Burns the evm tokens
-		if err := ic.bankKeeper.BurnCoins(
-			ctx, ic.module, coins); err != nil {
-			return err
-		}
-		// Transfer ibc tokens back to the user
-		amount8dec := c.Amount.Quo(ratio)
-		hash := sha256.Sum256([]byte(fmt.Sprintf("%s/%s/%s", ibctransfertypes.ModuleName, msg.transfer.SourceChannel, msg.dstDenom)))
-		ibcDenom := fmt.Sprintf("ibc/%s", strings.ToUpper(hex.EncodeToString(hash[:])))
-		ibcCoin := sdk.NewCoin(ibcDenom, amount8dec)
-		if err := ic.bankKeeper.SendCoinsFromModuleToAccount(
-			ctx, ic.module, acc, sdk.NewCoins(ibcCoin),
-		); err != nil {
-			return err
-		}
-		msg.transfer.Token = ibcCoin
-		res, err := ic.transferKeeper.Transfer(goCtx, msg.transfer)
-		if err != nil {
-			if ibcchanneltypes.ErrPacketTimeout.Is(err) {
+	for _, msgs := range ic.msgs {
+		for sender, msg := range msgs {
+			acc, err := sdk.AccAddressFromBech32(msg.transfer.Sender)
+			if err != nil {
+				return err
+			}
+			c := msg.transfer.Token
+			ratio := sdk.NewIntFromBigInt(msg.ratio)
+			amount8decRem := c.Amount.Mod(ratio)
+			amountToBurn := c.Amount.Sub(amount8decRem)
+			if amountToBurn.IsZero() {
+				// Amount too small
+				continue
+			}
+			changed := msgs[sender].Changed()
+			coins := sdk.NewCoins(sdk.NewCoin(msg.transfer.Token.Denom, amountToBurn))
+			amount8dec := c.Amount.Quo(ratio)
+			hash := sha256.Sum256([]byte(fmt.Sprintf("%s/%s/%s", ibctransfertypes.ModuleName, msg.transfer.SourceChannel, msg.dstDenom)))
+			ibcDenom := fmt.Sprintf("ibc/%s", strings.ToUpper(hex.EncodeToString(hash[:])))
+			ibcCoin := sdk.NewCoin(ibcDenom, amount8dec)
+			switch changed.Sign() {
+			case -1:
+				// Send evm tokens to escrow address
+				if err = ic.bankKeeper.SendCoinsFromAccountToModule(
+					ctx, acc, ic.module, coins); err != nil {
+					return err
+				}
+				// Burns the evm tokens
+				if err := ic.bankKeeper.BurnCoins(
+					ctx, ic.module, coins); err != nil {
+					return err
+				}
+				// Transfer ibc tokens back to the user
+				if err := ic.bankKeeper.SendCoinsFromModuleToAccount(
+					ctx, ic.module, acc, sdk.NewCoins(ibcCoin),
+				); err != nil {
+					return err
+				}
+				msg.transfer.Token = ibcCoin
+				res, err := ic.transferKeeper.Transfer(goCtx, msg.transfer)
+				if err != nil {
+					if ibcchanneltypes.ErrPacketTimeout.Is(err) {
+						if err := ic.bankKeeper.MintCoins(
+							ctx, ic.module, coins); err != nil {
+							return err
+						}
+						if err := ic.bankKeeper.SendCoinsFromModuleToAccount(
+							ctx, ic.module, acc, coins); err != nil {
+							return err
+						}
+						return nil
+					}
+					fmt.Printf("Transfer res: %+v, %+v\n", res, err)
+					return err
+				}
+			case 1:
+				// msg.transfer.Token = ibcCoin
+				// res, err := ic.transferKeeper.Transfer(goCtx, msg.transfer)
+				if err := ic.bankKeeper.SendCoinsFromAccountToModule(
+					ctx, acc, ic.module, sdk.NewCoins(ibcCoin),
+				); err != nil {
+					return err
+				}
 				if err := ic.bankKeeper.MintCoins(
 					ctx, ic.module, coins); err != nil {
 					return err
@@ -252,27 +294,29 @@ func (ic *IbcContract) Commit(ctx sdk.Context) error {
 				}
 				return nil
 			}
-			fmt.Printf("Transfer res: %+v, %+v\n", res, err)
-			return err
 		}
 	}
 	return nil
 }
 
 type ibcMessage struct {
-	transfer *ibctransfertypes.MsgTransfer
-	dstDenom string
-	ratio    *big.Int
+	transfer     *ibctransfertypes.MsgTransfer
+	dstDenom     string
+	ratio        *big.Int
+	originAmount *big.Int
+	dirtyAmount  *big.Int
 }
 
 type ibcMessageChange struct {
-	ic       *IbcContract
-	caller   common.Address
-	receiver string
-	msg      *ibcMessage
+	ic     *IbcContract
+	caller common.Address
+	sender common.Address
+	msg    *ibcMessage
 }
 
 func (ch ibcMessageChange) Revert(*statedb.StateDB) {
+	msg := ch.ic.msgs[ch.caller][ch.sender]
+	msg.dirtyAmount = new(big.Int).Add(msg.dirtyAmount, ch.msg.transfer.Token.Amount.BigInt())
 }
 
 func (ch ibcMessageChange) Dirtied() *common.Address {
