@@ -146,6 +146,9 @@ func (ic *IbcContract) Run(evm *vm.EVM, input []byte, caller common.Address, val
 		sender := args[2].(common.Address)
 		receiver := args[3].(string)
 		amount := args[4].(*big.Int)
+		if amount.Sign() <= 0 {
+			return nil, errors.New("invalid amount")
+		}
 		srcDenom := args[5].(string)
 		dstDenom := args[6].(string)
 		ratio := args[7].(*big.Int)
