@@ -7,6 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
+	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 )
 
@@ -31,9 +32,9 @@ func MockWritesIAVL(kvstore storetypes.CommitKVStore, blocks int, writesPerContr
 func BenchIAVL() {
 	db := dbm.NewMemDB()
 	storeDB := dbm.NewPrefixDB(db, []byte(ModulePrefix))
-	// storeKey := storetypes.NewKVStoreKey("evm")
+	storeKey := storetypes.NewKVStoreKey("evm")
 	id := storetypes.CommitID{}
-	store, err := iavl.LoadStore(storeDB, id, false, iavl.DefaultIAVLCacheSize)
+	store, err := iavl.LoadStore(storeDB, log.NewNopLogger(), storeKey, id, false, iavl.DefaultIAVLCacheSize)
 	if err != nil {
 		panic(err)
 	}
