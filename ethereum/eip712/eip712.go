@@ -381,6 +381,7 @@ var (
 	addressType   = reflect.TypeOf(common.Address{})
 	bigIntType    = reflect.TypeOf(big.Int{})
 	cosmIntType   = reflect.TypeOf(sdkmath.Int{})
+	sdkDecType    = reflect.TypeOf(sdk.Dec{})
 	cosmosAnyType = reflect.TypeOf(&codectypes.Any{})
 )
 
@@ -433,7 +434,8 @@ func typToEth(typ reflect.Type) string {
 		if typ.ConvertibleTo(hashType) ||
 			typ.ConvertibleTo(addressType) ||
 			typ.ConvertibleTo(bigIntType) ||
-			typ.ConvertibleTo(cosmIntType) {
+			typ.ConvertibleTo(cosmIntType) ||
+			typ.ConvertibleTo(sdkDecType) {
 			return str
 		}
 	}
