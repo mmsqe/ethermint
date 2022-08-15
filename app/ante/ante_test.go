@@ -2,6 +2,7 @@ package ante_test
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 
@@ -418,8 +419,27 @@ func (suite AnteTestSuite) TestAnteHandler() {
 			}, true, false, false,
 		},
 	}
-
-	for _, tc := range testCases {
+	fmt.Println("testCases: ", len(testCases))
+	ts := []struct {
+		name      string
+		txFn      func() sdk.Tx
+		checkTx   bool
+		reCheckTx bool
+		expPass   bool
+	}{
+		{
+			"success- DeliverTx EIP712 create validator",
+			func() sdk.Tx {
+				from := acc.GetAddress()
+				coinAmount := sdk.NewCoin(evmtypes.DefaultEVMDenom, sdk.NewInt(20))
+				amount := sdk.NewCoins(coinAmount)
+				gas := uint64(200000)
+				txBuilder := suite.CreateTestEIP712MsgCreateValidator(from, privKey, "ethermint_9000-1", gas, amount)
+				return txBuilder.GetTx()
+			}, false, false, true,
+		},
+	}
+	for _, tc := range ts {
 		suite.Run(tc.name, func() {
 			setup()
 

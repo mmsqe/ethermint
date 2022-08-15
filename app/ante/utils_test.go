@@ -267,6 +267,20 @@ func (suite *AnteTestSuite) CreateTestEIP712TxBuilderMsgDelegate(from sdk.AccAdd
 	return suite.CreateTestEIP712CosmosTxBuilder(from, priv, chainId, gas, gasAmount, msgSend)
 }
 
+func (suite *AnteTestSuite) CreateTestEIP712MsgCreateValidator(from sdk.AccAddress, priv cryptotypes.PrivKey, chainId string, gas uint64, gasAmount sdk.Coins) client.TxBuilder {
+	rate := sdk.OneDec()
+	msgCreate, err := types3.NewMsgCreateValidator(
+		sdk.ValAddress(from.Bytes()),
+		priv.PubKey(),
+		sdk.NewCoin(evmtypes.DefaultEVMDenom, sdk.NewInt(20)),
+		types3.NewDescription("moniker", "indentity", "website", "contract", "details"),
+		types3.NewCommissionRates(rate, rate, rate),
+		sdk.OneInt(),
+	)
+	suite.Require().NoError(err)
+	return suite.CreateTestEIP712CosmosTxBuilder(from, priv, chainId, gas, gasAmount, msgCreate)
+}
+
 func (suite *AnteTestSuite) CreateTestEIP712CosmosTxBuilder(
 	from sdk.AccAddress, priv cryptotypes.PrivKey, chainId string, gas uint64, gasAmount sdk.Coins, msg sdk.Msg,
 ) client.TxBuilder {
@@ -281,6 +295,10 @@ func (suite *AnteTestSuite) CreateTestEIP712CosmosTxBuilder(
 
 	// GenerateTypedData TypedData
 	var ethermintCodec codec.ProtoCodecMarshaler
+	registry := codectypes.NewInterfaceRegistry()
+	types.RegisterInterfaces(registry)
+	ethermintCodec = codec.NewProtoCodec(registry)
+
 	fee := legacytx.NewStdFee(gas, gasAmount)
 	accNumber := suite.app.AccountKeeper.GetAccount(suite.ctx, from).GetAccountNumber()
 
