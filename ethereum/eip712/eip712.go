@@ -226,7 +226,7 @@ func traverseFields(
 				return sdkerrors.Wrap(err, "failed to unpack Any in msg struct")
 			}
 
-			fieldType = reflect.TypeOf(anyWrapper)
+			fieldType = stringType
 			field = reflect.ValueOf(anyWrapper)
 
 			// then continue as normal
@@ -383,6 +383,7 @@ var (
 	cosmIntType   = reflect.TypeOf(sdkmath.Int{})
 	sdkDecType    = reflect.TypeOf(sdk.Dec{})
 	cosmosAnyType = reflect.TypeOf(&codectypes.Any{})
+	stringType    = reflect.TypeOf("")
 )
 
 // typToEth supports only basic types and arrays of basic types.
