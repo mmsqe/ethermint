@@ -162,34 +162,23 @@ func extractMsgTypes(cdc codectypes.AnyUnpacker, msgTypeName string, msg sdk.Msg
 		},
 		msgTypeName: {},
 	}
-	if _, ok := aminoMap["msg"]; ok {
-		rootTypes["Tx"] = []apitypes.Type{
-			{Name: "account_number", Type: "string"},
-			{Name: "chain_id", Type: "string"},
-			{Name: "fee", Type: "Fee"},
-			{Name: "memo", Type: "string"},
-			{Name: "msgs", Type: "Msg[]"},
-			{Name: "sequence", Type: "string"},
-			// Note timeout_height was removed because it was not getting filled with the legacyTx
-			// {Name: "timeout_height", Type: "string"},
-		}
+	_, ok := aminoMap["msg"]
+	rootTypes["Tx"] = []apitypes.Type{
+		{Name: "account_number", Type: "string"},
+		{Name: "chain_id", Type: "string"},
+		{Name: "fee", Type: "Fee"},
+		{Name: "memo", Type: "string"},
+		{Name: "msgs", Type: "Msg[]"},
+		{Name: "sequence", Type: "string"},
+		// Note timeout_height was removed because it was not getting filled with the legacyTx
+		// {Name: "timeout_height", Type: "string"},
+	}
+	if ok {
 		rootTypes["Msg"] = []apitypes.Type{
 			{Name: "type", Type: "string"},
 			{Name: "value", Type: msgTypeName},
 		}
-	} else {
-		rootTypes["Tx"] = []apitypes.Type{
-			{Name: "account_number", Type: "string"},
-			{Name: "chain_id", Type: "string"},
-			{Name: "fee", Type: "Fee"},
-			{Name: "memo", Type: "string"},
-			{Name: "msgs", Type: msgTypeName + "[]"},
-			{Name: "sequence", Type: "string"},
-			// Note timeout_height was removed because it was not getting filled with the legacyTx
-			// {Name: "timeout_height", Type: "string"},
-		}
 	}
-
 	if err := walkFields(cdc, rootTypes, msgTypeName, msg, aminoMap); err != nil {
 		return nil, err
 	}
