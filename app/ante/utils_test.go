@@ -12,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	types2 "github.com/cosmos/cosmos-sdk/x/bank/types"
+	evtypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
 	types3 "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/evmos/ethermint/ethereum/eip712"
@@ -40,6 +41,9 @@ import (
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
+	types5 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )
 
@@ -267,6 +271,69 @@ func (suite *AnteTestSuite) CreateTestEIP712TxBuilderMsgDelegate(from sdk.AccAdd
 	return suite.CreateTestEIP712CosmosTxBuilder(from, priv, chainId, gas, gasAmount, msgSend)
 }
 
+func (suite *AnteTestSuite) CreateTestEIP712MsgCreateValidator(from sdk.AccAddress, priv cryptotypes.PrivKey, chainId string, gas uint64, gasAmount sdk.Coins) client.TxBuilder {
+	// Build MsgCreateValidator
+	valAddr := sdk.ValAddress(from.Bytes())
+
+	msgCreate, err := types3.NewMsgCreateValidator(
+		valAddr,
+		priv.PubKey(),
+		sdk.NewCoin(evmtypes.DefaultEVMDenom, sdk.NewInt(20)),
+		// TODO: can this values be empty strings?
+		types3.NewDescription("moniker", "indentity", "website", "security_contract", "details"),
+		types3.NewCommissionRates(sdk.OneDec(), sdk.OneDec(), sdk.OneDec()),
+		sdk.OneInt(),
+	)
+	suite.Require().NoError(err)
+	return suite.CreateTestEIP712CosmosTxBuilder(from, priv, chainId, gas, gasAmount, msgCreate)
+}
+
+func (suite *AnteTestSuite) CreateTestEIP712SubmitProposal(from sdk.AccAddress, priv cryptotypes.PrivKey, chainId string, gas uint64, gasAmount sdk.Coins, deposit sdk.Coins) client.TxBuilder {
+	proposal, ok := types5.ContentFromProposalType("My proposal", "My description", types5.ProposalTypeText)
+	suite.Require().True(ok)
+	msgSubmit, err := types5.NewMsgSubmitProposal(proposal, deposit, from)
+	suite.Require().NoError(err)
+	return suite.CreateTestEIP712CosmosTxBuilder(from, priv, chainId, gas, gasAmount, msgSubmit)
+}
+
+func (suite *AnteTestSuite) CreateTestEIP712GrantAllowance(from sdk.AccAddress, priv cryptotypes.PrivKey, chainId string, gas uint64, gasAmount sdk.Coins) client.TxBuilder {
+	spendLimit := sdk.NewCoins(sdk.NewInt64Coin(evmtypes.DefaultEVMDenom, 10))
+	threeHours := time.Now().Add(3 * time.Hour)
+	basic := &feegrant.BasicAllowance{
+		SpendLimit: spendLimit,
+		Expiration: &threeHours,
+	}
+	granted := tests.GenerateAddress()
+	grantedAddr := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, granted.Bytes())
+	msgGrant, err := feegrant.NewMsgGrantAllowance(basic, from, grantedAddr.GetAddress())
+	suite.Require().NoError(err)
+	return suite.CreateTestEIP712CosmosTxBuilder(from, priv, chainId, gas, gasAmount, msgGrant)
+}
+
+func (suite *AnteTestSuite) CreateTestEIP712MsgEditValidator(from sdk.AccAddress, priv cryptotypes.PrivKey, chainId string, gas uint64, gasAmount sdk.Coins) client.TxBuilder {
+	valAddr := sdk.ValAddress(from.Bytes())
+	msgEdit := types3.NewMsgEditValidator(
+		valAddr,
+		types3.NewDescription("moniker", "identity", "website", "security_contract", "details"),
+		nil,
+		nil,
+	)
+	return suite.CreateTestEIP712CosmosTxBuilder(from, priv, chainId, gas, gasAmount, msgEdit)
+}
+
+func (suite *AnteTestSuite) CreateTestEIP712MsgSubmitEvidence(from sdk.AccAddress, priv cryptotypes.PrivKey, chainId string, gas uint64, gasAmount sdk.Coins) client.TxBuilder {
+	pk := ed25519.GenPrivKey()
+	msgEvidence, err := evtypes.NewMsgSubmitEvidence(from, &evtypes.Equivocation{
+		Height:           11,
+		Time:             time.Now().UTC(),
+		Power:            100,
+		ConsensusAddress: pk.PubKey().Address().String(),
+	})
+	suite.Require().NoError(err)
+
+	return suite.CreateTestEIP712CosmosTxBuilder(from, priv, chainId, gas, gasAmount, msgEvidence)
+}
+
 func (suite *AnteTestSuite) CreateTestEIP712CosmosTxBuilder(
 	from sdk.AccAddress, priv cryptotypes.PrivKey, chainId string, gas uint64, gasAmount sdk.Coins, msg sdk.Msg,
 ) client.TxBuilder {
@@ -281,6 +348,10 @@ func (suite *AnteTestSuite) CreateTestEIP712CosmosTxBuilder(
 
 	// GenerateTypedData TypedData
 	var ethermintCodec codec.ProtoCodecMarshaler
+	registry := codectypes.NewInterfaceRegistry()
+	types.RegisterInterfaces(registry)
+	ethermintCodec = codec.NewProtoCodec(registry)
+
 	fee := legacytx.NewStdFee(gas, gasAmount)
 	accNumber := suite.app.AccountKeeper.GetAccount(suite.ctx, from).GetAccountNumber()
 
