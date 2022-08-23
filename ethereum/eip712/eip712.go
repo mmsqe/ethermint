@@ -163,6 +163,7 @@ func extractMsgTypes(cdc codectypes.AnyUnpacker, msgTypeName string, msg sdk.Msg
 		msgTypeName: {},
 	}
 	_, ok := aminoMap["msg"]
+	fmt.Printf("aminoMap: %+v\n", aminoMap)
 	rootTypes["Tx"] = []apitypes.Type{
 		{Name: "account_number", Type: "string"},
 		{Name: "chain_id", Type: "string"},
@@ -242,6 +243,7 @@ func traverseFields(
 			field = v.Field(i)
 		}
 
+		fmt.Printf("any-field: %+v, %+v\n", field, i)
 		fieldType := t.Field(i).Type
 		fieldName := jsonNameFromTag(t.Field(i).Tag)
 
@@ -251,8 +253,8 @@ func traverseFields(
 			if !ok {
 				return sdkerrors.Wrapf(sdkerrors.ErrPackAny, "%T", field.Interface())
 			}
-
 			if _, ok := aminoMap[fieldName]; ok {
+				fmt.Printf("any-ok: %+v, %+v\n", any, fieldName)
 				anyWrapper := &cosmosAnyWrapper{
 					Type: any.TypeUrl,
 				}
@@ -264,7 +266,7 @@ func traverseFields(
 				fieldType = reflect.TypeOf(anyWrapper)
 				field = reflect.ValueOf(anyWrapper)
 			} else {
-
+				fmt.Printf("any-not-ok: %+v, %+v\n", any, fieldName)
 				var Value interface{}
 				if err := cdc.UnpackAny(any, &Value); err != nil {
 					return sdkerrors.Wrap(err, "failed to unpack Any in msg struct")
