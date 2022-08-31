@@ -2,6 +2,7 @@ package filters
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	coretypes "github.com/tendermint/tendermint/rpc/core/types"
-	rpcclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -78,14 +78,14 @@ type PublicFilterAPI struct {
 }
 
 // NewPublicAPI returns a new PublicFilterAPI instance.
-func NewPublicAPI(logger log.Logger, clientCtx client.Context, tmWSClient *rpcclient.WSClient, backend Backend) *PublicFilterAPI {
+func NewPublicAPI(logger log.Logger, clientCtx client.Context, backend Backend) *PublicFilterAPI {
 	logger = logger.With("api", "filter")
 	api := &PublicFilterAPI{
 		logger:    logger,
 		clientCtx: clientCtx,
 		backend:   backend,
 		filters:   make(map[rpc.ID]*filter),
-		events:    NewEventSystem(logger, tmWSClient),
+		events:    NewEventSystem(logger, clientCtx.Client),
 	}
 
 	go api.timeoutLoop()
@@ -138,7 +138,7 @@ func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 
 	api.filters[pendingTxSub.ID()] = &filter{typ: filters.PendingTransactionsSubscription, deadline: time.NewTimer(deadline), hashes: make([]common.Hash, 0), s: pendingTxSub}
 
-	go func(txsCh <-chan coretypes.ResultEvent, errCh <-chan error) {
+	go func(txsCh <-chan *coretypes.ResultEvents, errCh <-chan error) {
 		defer cancelSubs()
 
 		for {
@@ -151,28 +151,29 @@ func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 					return
 				}
 
-				data, ok := ev.Data.(tmtypes.EventDataTx)
-				if !ok {
-					api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", ev.Data))
-					continue
-				}
+				for _, item := range ev.Items {
+					var data tmtypes.EventDataTx
+					if err := json.Unmarshal(item.Data, &data); err != nil {
+						api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", item.Data))
+						continue
+					}
+					tx, err := api.clientCtx.TxConfig.TxDecoder()(data.Tx)
+					if err != nil {
+						api.logger.Debug("fail to decode tx", "error", err.Error())
+						continue
+					}
 
-				tx, err := api.clientCtx.TxConfig.TxDecoder()(data.Tx)
-				if err != nil {
-					api.logger.Debug("fail to decode tx", "error", err.Error())
-					continue
-				}
-
-				api.filtersMu.Lock()
-				if f, found := api.filters[pendingTxSub.ID()]; found {
-					for _, msg := range tx.GetMsgs() {
-						ethTx, ok := msg.(*evmtypes.MsgEthereumTx)
-						if ok {
-							f.hashes = append(f.hashes, ethTx.AsTransaction().Hash())
+					api.filtersMu.Lock()
+					if f, found := api.filters[pendingTxSub.ID()]; found {
+						for _, msg := range tx.GetMsgs() {
+							ethTx, ok := msg.(*evmtypes.MsgEthereumTx)
+							if ok {
+								f.hashes = append(f.hashes, ethTx.AsTransaction().Hash())
+							}
 						}
 					}
+					api.filtersMu.Unlock()
 				}
-				api.filtersMu.Unlock()
 			case <-errCh:
 				api.filtersMu.Lock()
 				delete(api.filters, pendingTxSub.ID())
@@ -204,7 +205,7 @@ func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Su
 		return nil, err
 	}
 
-	go func(txsCh <-chan coretypes.ResultEvent) {
+	go func(txsCh <-chan *coretypes.ResultEvents) {
 		defer cancelSubs()
 
 		for {
@@ -217,22 +218,24 @@ func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Su
 					return
 				}
 
-				data, ok := ev.Data.(tmtypes.EventDataTx)
-				if !ok {
-					api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", ev.Data))
-					continue
-				}
+				for _, item := range ev.Items {
+					var data tmtypes.EventDataTx
+					if err := json.Unmarshal(item.Data, &data); err != nil {
+						api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", item.Data))
+						continue
+					}
 
-				tx, err := api.clientCtx.TxConfig.TxDecoder()(data.Tx)
-				if err != nil {
-					api.logger.Debug("fail to decode tx", "error", err.Error())
-					continue
-				}
+					tx, err := api.clientCtx.TxConfig.TxDecoder()(data.Tx)
+					if err != nil {
+						api.logger.Debug("fail to decode tx", "error", err.Error())
+						continue
+					}
 
-				for _, msg := range tx.GetMsgs() {
-					ethTx, ok := msg.(*evmtypes.MsgEthereumTx)
-					if ok {
-						_ = notifier.Notify(rpcSub.ID, ethTx.AsTransaction().Hash())
+					for _, msg := range tx.GetMsgs() {
+						ethTx, ok := msg.(*evmtypes.MsgEthereumTx)
+						if ok {
+							_ = notifier.Notify(rpcSub.ID, ethTx.AsTransaction().Hash())
+						}
 					}
 				}
 			case <-rpcSub.Err():
@@ -268,7 +271,7 @@ func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
 
 	api.filters[headerSub.ID()] = &filter{typ: filters.BlocksSubscription, deadline: time.NewTimer(deadline), hashes: []common.Hash{}, s: headerSub}
 
-	go func(headersCh <-chan coretypes.ResultEvent, errCh <-chan error) {
+	go func(headersCh <-chan *coretypes.ResultEvents, errCh <-chan error) {
 		defer cancelSubs()
 
 		for {
@@ -280,21 +283,20 @@ func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
 					api.filtersMu.Unlock()
 					return
 				}
-
-				data, ok := ev.Data.(tmtypes.EventDataNewBlockHeader)
-				if !ok {
-					api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", ev.Data))
-					continue
+				for _, item := range ev.Items {
+					var data tmtypes.EventDataNewBlockHeader
+					if err := json.Unmarshal(item.Data, &data); err != nil {
+						api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", item.Data))
+						continue
+					}
+					baseFee := types.BaseFeeFromEvents(data.ResultBeginBlock.Events)
+					header := types.EthHeaderFromTendermint(data.Header, ethtypes.Bloom{}, baseFee)
+					api.filtersMu.Lock()
+					if f, found := api.filters[headerSub.ID()]; found {
+						f.hashes = append(f.hashes, header.Hash())
+					}
+					api.filtersMu.Unlock()
 				}
-
-				baseFee := types.BaseFeeFromEvents(data.ResultBeginBlock.Events)
-
-				header := types.EthHeaderFromTendermint(data.Header, ethtypes.Bloom{}, baseFee)
-				api.filtersMu.Lock()
-				if f, found := api.filters[headerSub.ID()]; found {
-					f.hashes = append(f.hashes, header.Hash())
-				}
-				api.filtersMu.Unlock()
 			case <-errCh:
 				api.filtersMu.Lock()
 				delete(api.filters, headerSub.ID())
@@ -322,7 +324,7 @@ func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, er
 		return &rpc.Subscription{}, err
 	}
 
-	go func(headersCh <-chan coretypes.ResultEvent) {
+	go func(headersCh <-chan *coretypes.ResultEvents) {
 		defer cancelSubs()
 
 		for {
@@ -332,18 +334,18 @@ func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, er
 					headersSub.Unsubscribe(api.events)
 					return
 				}
+				for _, item := range ev.Items {
+					var data tmtypes.EventDataNewBlockHeader
+					if err := json.Unmarshal(item.Data, &data); err != nil {
+						api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", item.Data))
+						continue
+					}
+					baseFee := types.BaseFeeFromEvents(data.ResultBeginBlock.Events)
 
-				data, ok := ev.Data.(tmtypes.EventDataNewBlockHeader)
-				if !ok {
-					api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", ev.Data))
-					continue
+					// TODO: fetch bloom from events
+					header := types.EthHeaderFromTendermint(data.Header, ethtypes.Bloom{}, baseFee)
+					_ = notifier.Notify(rpcSub.ID, header)
 				}
-
-				baseFee := types.BaseFeeFromEvents(data.ResultBeginBlock.Events)
-
-				// TODO: fetch bloom from events
-				header := types.EthHeaderFromTendermint(data.Header, ethtypes.Bloom{}, baseFee)
-				_ = notifier.Notify(rpcSub.ID, header)
 			case <-rpcSub.Err():
 				headersSub.Unsubscribe(api.events)
 				return
@@ -372,7 +374,7 @@ func (api *PublicFilterAPI) Logs(ctx context.Context, crit filters.FilterCriteri
 		return &rpc.Subscription{}, err
 	}
 
-	go func(logsCh <-chan coretypes.ResultEvent) {
+	go func(logsCh <-chan *coretypes.ResultEvents) {
 		defer cancelSubs()
 
 		for {
@@ -382,32 +384,30 @@ func (api *PublicFilterAPI) Logs(ctx context.Context, crit filters.FilterCriteri
 					logsSub.Unsubscribe(api.events)
 					return
 				}
+				for _, item := range ev.Items {
+					// filter only events from EVM module txs
+					if item.Event != evmtypes.TypeMsgEthereumTx {
+						// ignore transaction as it's not from the evm module
+						return
+					}
 
-				// filter only events from EVM module txs
-				_, isMsgEthereumTx := ev.Events[evmtypes.TypeMsgEthereumTx]
+					var dataTx tmtypes.EventDataTx
+					if err := json.Unmarshal(item.Data, &dataTx); err != nil {
+						api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", item.Data))
+						continue
+					}
 
-				if !isMsgEthereumTx {
-					// ignore transaction as it's not from the evm module
-					return
-				}
+					txResponse, err := evmtypes.DecodeTxResponse(dataTx.TxResult.Result.Data)
+					if err != nil {
+						api.logger.Error("fail to decode tx response", "error", err)
+						return
+					}
 
-				// get transaction result data
-				dataTx, ok := ev.Data.(tmtypes.EventDataTx)
-				if !ok {
-					api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", ev.Data))
-					continue
-				}
+					logs := FilterLogs(evmtypes.LogsToEthereum(txResponse.Logs), crit.FromBlock, crit.ToBlock, crit.Addresses, crit.Topics)
 
-				txResponse, err := evmtypes.DecodeTxResponse(dataTx.TxResult.Result.Data)
-				if err != nil {
-					api.logger.Error("fail to decode tx response", "error", err)
-					return
-				}
-
-				logs := FilterLogs(evmtypes.LogsToEthereum(txResponse.Logs), crit.FromBlock, crit.ToBlock, crit.Addresses, crit.Topics)
-
-				for _, log := range logs {
-					_ = notifier.Notify(rpcSub.ID, log)
+					for _, log := range logs {
+						_ = notifier.Notify(rpcSub.ID, log)
+					}
 				}
 			case <-rpcSub.Err(): // client send an unsubscribe request
 				logsSub.Unsubscribe(api.events)
@@ -457,7 +457,7 @@ func (api *PublicFilterAPI) NewFilter(criteria filters.FilterCriteria) (rpc.ID, 
 
 	api.filters[filterID] = &filter{typ: filters.LogsSubscription, crit: criteria, deadline: time.NewTimer(deadline), hashes: []common.Hash{}, s: logsSub}
 
-	go func(eventCh <-chan coretypes.ResultEvent) {
+	go func(eventCh <-chan *coretypes.ResultEvents) {
 		defer cancelSubs()
 
 		for {
@@ -469,25 +469,26 @@ func (api *PublicFilterAPI) NewFilter(criteria filters.FilterCriteria) (rpc.ID, 
 					api.filtersMu.Unlock()
 					return
 				}
-				dataTx, ok := ev.Data.(tmtypes.EventDataTx)
-				if !ok {
-					api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", ev.Data))
-					continue
-				}
+				for _, item := range ev.Items {
+					var dataTx tmtypes.EventDataTx
+					if err := json.Unmarshal(item.Data, &dataTx); err != nil {
+						api.logger.Debug("event data type mismatch", "type", fmt.Sprintf("%T", item.Data))
+						continue
+					}
+					txResponse, err := evmtypes.DecodeTxResponse(dataTx.TxResult.Result.Data)
+					if err != nil {
+						api.logger.Error("fail to decode tx response", "error", err)
+						return
+					}
 
-				txResponse, err := evmtypes.DecodeTxResponse(dataTx.TxResult.Result.Data)
-				if err != nil {
-					api.logger.Error("fail to decode tx response", "error", err)
-					return
-				}
+					logs := FilterLogs(evmtypes.LogsToEthereum(txResponse.Logs), criteria.FromBlock, criteria.ToBlock, criteria.Addresses, criteria.Topics)
 
-				logs := FilterLogs(evmtypes.LogsToEthereum(txResponse.Logs), criteria.FromBlock, criteria.ToBlock, criteria.Addresses, criteria.Topics)
-
-				api.filtersMu.Lock()
-				if f, found := api.filters[filterID]; found {
-					f.logs = append(f.logs, logs...)
+					api.filtersMu.Lock()
+					if f, found := api.filters[filterID]; found {
+						f.logs = append(f.logs, logs...)
+					}
+					api.filtersMu.Unlock()
 				}
-				api.filtersMu.Unlock()
 			case <-logsSub.Err():
 				api.filtersMu.Lock()
 				delete(api.filters, filterID)
