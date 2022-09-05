@@ -102,21 +102,6 @@ func (es *EventSystem) subscribe(sub *Subscription) (*Subscription, pubsub.Unsub
 	}
 
 	filter := coretypes.EventFilter{Query: query}
-	defaultAfter := ""
-	defaultMaxItems := 1
-	after := sub.after
-	if after == defaultAfter {
-		res, resErr := es.client.Events(ctx, &coretypes.RequestEvents{
-			Filter:   &filter,
-			MaxItems: defaultMaxItems,
-			Before:   fmt.Sprintf("%016x-%04x", time.Now().UnixNano(), 0),
-		})
-		if resErr == nil {
-			after = res.Newest
-		} else {
-			err = resErr
-		}
-	}
 
 	if err != nil {
 		sub.err <- err
@@ -137,8 +122,8 @@ func (es *EventSystem) subscribe(sub *Subscription) (*Subscription, pubsub.Unsub
 			default:
 				res, err := es.client.Events(ctx, &coretypes.RequestEvents{
 					Filter:   &filter,
-					MaxItems: defaultMaxItems,
-					After:    after,
+					MaxItems: 1,
+					After:    sub.after,
 					WaitTime: 30 * time.Second,
 				})
 				if err != nil {
@@ -149,15 +134,37 @@ func (es *EventSystem) subscribe(sub *Subscription) (*Subscription, pubsub.Unsub
 					return
 				}
 				retry = maxRetry
-				eventCh <- res
 
+				items := res.Items
 				if len(res.Items) > 0 {
-					if !res.More {
-						after = res.Newest
-					} else {
-						after = res.Items[len(res.Items)-1].Cursor
+					var before string
+					for res.More {
+						if res != nil {
+							before = res.Items[len(res.Items)-1].Cursor
+						}
+						res, err = es.client.Events(ctx, &coretypes.RequestEvents{
+							Filter:   &filter,
+							MaxItems: 100,
+							Before:   before,
+						})
+						if err != nil {
+							if retry--; retry >= 0 {
+								continue
+							}
+							sub.err <- err
+							return
+						}
+						retry = maxRetry
+						items = append(items, res.Items...)
+					}
+					sub.after = res.Newest
+					hashes := make([]string, len(items))
+					for i, item := range items {
+						hashes[i] = item.Cursor
 					}
 				}
+				res.Items = items
+				eventCh <- res
 			}
 		}
 	}()
@@ -203,7 +210,6 @@ func (es *EventSystem) subscribeLogs(crit filters.FilterCriteria) (*Subscription
 		event:    evmEvents,
 		logsCrit: crit,
 		created:  time.Now().UTC(),
-		after:    "",
 		err:      make(chan error, 1),
 	}
 	return es.subscribe(sub)
@@ -216,7 +222,6 @@ func (es EventSystem) SubscribeNewHeads() (*Subscription, pubsub.UnsubscribeFunc
 		typ:     filters.BlocksSubscription,
 		event:   headerEvents,
 		created: time.Now().UTC(),
-		after:   "",
 		err:     make(chan error, 1),
 	}
 	return es.subscribe(sub)
@@ -229,7 +234,6 @@ func (es EventSystem) SubscribePendingTxs() (*Subscription, pubsub.UnsubscribeFu
 		typ:     filters.PendingTransactionsSubscription,
 		event:   txEvents,
 		created: time.Now().UTC(),
-		after:   "",
 		err:     make(chan error, 1),
 	}
 	return es.subscribe(sub)
