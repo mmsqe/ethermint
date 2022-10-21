@@ -254,10 +254,10 @@ func (suite *KeeperTestSuite) DeployTestContract(t require.TestingT, owner commo
 		Data: (*hexutil.Bytes)(&data),
 	})
 	require.NoError(t, err)
-
 	res, err := suite.queryClient.EstimateGas(ctx, &types.EthCallRequest{
-		Args:   args,
-		GasCap: uint64(config.DefaultGasCap),
+		Args:            args,
+		GasCap:          uint64(config.DefaultGasCap),
+		ProposerAddress: suite.ctx.BlockHeader().ProposerAddress,
 	})
 	require.NoError(t, err)
 
@@ -305,8 +305,9 @@ func (suite *KeeperTestSuite) TransferERC20Token(t require.TestingT, contractAdd
 	args, err := json.Marshal(&types.TransactionArgs{To: &contractAddr, From: &from, Data: (*hexutil.Bytes)(&transferData)})
 	require.NoError(t, err)
 	res, err := suite.queryClient.EstimateGas(ctx, &types.EthCallRequest{
-		Args:   args,
-		GasCap: 25_000_000,
+		Args:            args,
+		GasCap:          25_000_000,
+		ProposerAddress: suite.ctx.BlockHeader().ProposerAddress,
 	})
 	require.NoError(t, err)
 
@@ -362,8 +363,9 @@ func (suite *KeeperTestSuite) DeployTestMessageCall(t require.TestingT) common.A
 	require.NoError(t, err)
 
 	res, err := suite.queryClient.EstimateGas(ctx, &types.EthCallRequest{
-		Args:   args,
-		GasCap: uint64(config.DefaultGasCap),
+		Args:            args,
+		GasCap:          uint64(config.DefaultGasCap),
+		ProposerAddress: suite.ctx.BlockHeader().ProposerAddress,
 	})
 	require.NoError(t, err)
 
