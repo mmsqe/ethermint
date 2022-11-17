@@ -123,6 +123,15 @@ schema = 3
   [mod."github.com/cosmos/go-bip39"]
     version = "v1.0.0"
     hash = "sha256-Qm2aC2vaS8tjtMUbHmlBSagOSqbduEEDwc51qvQaBmA="
+<<<<<<< HEAD
+=======
+  [mod."github.com/cosmos/gogoproto"]
+    version = "v1.4.3"
+    hash = "sha256-Y/NL76ay/oAl8mS3skkK5ula0/xudqbwW1o22lZjKRg="
+  [mod."github.com/cosmos/gorocksdb"]
+    version = "v1.2.0"
+    hash = "sha256-209TcVuXc5s/TcOvNlaQ1HEJAUDTEK3nxPhs+d8TEcY="
+>>>>>>> 6455785c (fix: protogen scripts were not correctly implemented (#1466))
   [mod."github.com/cosmos/iavl"]
     version = "v0.19.5"
     hash = "sha256-8PerCyxQrBCtr2zkhgriqauhCSoIe580dsYpZ44o+cE="

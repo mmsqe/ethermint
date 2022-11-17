@@ -110,6 +110,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (rpc) [#1557](https://github.com/evmos/ethermint/pull/1557) Patch GasUsed before the fix of revert gas refund logic when transaction reverted for `eth_getTransactionReceipt`.
 * (ante) [#1566](https://github.com/evmos/ethermint/pull/1566) Fix `gasWanted` on `EthGasConsumeDecorator` ante handler when running transaction in `ReCheckMode`
 * (rpc) [#1591](https://github.com/evmos/ethermint/pull/1591) Fix block number returned in opcode for debug trace related api.
+* (proto) [#1466](https://github.com/evmos/ethermint/pull/1466) Fix proto scripts and upgrade them to mirror current cosmos-sdk scripts 
 
 ## [v0.19.3] - 2022-10-14
 
@@ -243,7 +244,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (evm) [tharsis#1088](https://github.com/evmos/ethermint/pull/1088) Fix ability to append log in tx post processing.
 * (rpc) [tharsis#1081](https://github.com/evmos/ethermint/pull/1081) fix `debug_getBlockRlp`/`debug_printBlock` don't filter failed transactions.
 * (ante) [tharsis#1111](https://github.com/evmos/ethermint/pull/1111) Move CanTransfer decorator before GasConsume decorator
-* (types) [tharsis#1112](https://github.com/cosmos/ethermint/pull/1112) Add `GetBaseAccount` to avoid invalid account error when create vesting account.
+* (types) [tharsis#1112](https://github.com/evmos/ethermint/pull/1112) Add `GetBaseAccount` to avoid invalid account error when create vesting account.
 
 ## [v0.15.0] - 2022-05-09
 
@@ -679,7 +680,7 @@ the Tracer type used to collect execution traces from the EVM transaction execut
 
 ### Improvements
 
-* (deps) [tharsis#615](https://github.com/cosmos/ethermint/pull/615) Bump Cosmos SDK version to [v0.39.2](https://github.com/cosmos/cosmos-sdk/tag/v0.39.2)
+* (deps) [tharsis#615](https://github.com/cosmos/ethermint/pull/615) Bump Cosmos SDK version to [v0.39.2](https://github.com/cosmos/cosmos-sdk/releases/tag/v0.39.2)
 * (deps) [tharsis#610](https://github.com/cosmos/ethermint/pull/610) Update Go dependency to 1.15+.
 * (evm) [tharsis#603](https://github.com/cosmos/ethermint/pull/603) Add state transition params that enable or disable the EVM `Call` and `Create` operations.
 * (deps) [tharsis#602](https://github.com/cosmos/ethermint/pull/602) Bump tendermint version to [v0.33.9](https://github.com/tendermint/tendermint/releases/tag/v0.33.9)
