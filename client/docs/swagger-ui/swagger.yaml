@@ -1301,6 +1301,18 @@ paths:
           required: false
           type: string
           format: uint64
+        - name: proposer_address
+          description: the proposer of the requested block.
+          in: query
+          required: false
+          type: string
+          format: byte
+        - name: chain_id
+          description: the eip155 chain id parsed from the requested block header.
+          in: query
+          required: false
+          type: string
+          format: int64
       tags:
         - Query
   /ethermint/evm/v1/eth_call:
@@ -1599,6 +1611,18 @@ paths:
           required: false
           type: string
           format: uint64
+        - name: proposer_address
+          description: the proposer of the requested block.
+          in: query
+          required: false
+          type: string
+          format: byte
+        - name: chain_id
+          description: the eip155 chain id parsed from the requested block header.
+          in: query
+          required: false
+          type: string
+          format: int64
       tags:
         - Query
   /ethermint/evm/v1/params:
@@ -2515,6 +2539,18 @@ paths:
           required: false
           type: string
           format: date-time
+        - name: proposer_address
+          description: the proposer of the requested block.
+          in: query
+          required: false
+          type: string
+          format: byte
+        - name: chain_id
+          description: the eip155 chain id parsed from the requested block header.
+          in: query
+          required: false
+          type: string
+          format: int64
       tags:
         - Query
   /ethermint/evm/v1/trace_tx:
@@ -2961,6 +2997,18 @@ paths:
           required: false
           type: string
           format: date-time
+        - name: proposer_address
+          description: the proposer of the requested block.
+          in: query
+          required: false
+          type: string
+          format: byte
+        - name: chain_id
+          description: the eip155 chain id parsed from the requested block header.
+          in: query
+          required: false
+          type: string
+          format: int64
       tags:
         - Query
   /ethermint/evm/v1/validator_account/{cons_address}:

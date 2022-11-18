@@ -488,7 +488,7 @@ func (suite *KeeperTestSuite) TestResetGasMeterAndConsumeGas() {
 func (suite *KeeperTestSuite) TestEVMConfig() {
 	suite.SetupTest()
 	proposerAddress := suite.ctx.BlockHeader().ProposerAddress
-	cfg, err := suite.app.EvmKeeper.EVMConfig(suite.ctx, proposerAddress)
+	cfg, err := suite.app.EvmKeeper.EVMConfig(suite.ctx, proposerAddress, big.NewInt(9000))
 	suite.Require().NoError(err)
 	suite.Require().Equal(types.DefaultParams(), cfg.Params)
 	// london hardfork is enabled by default
