@@ -4,13 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sdkmath "cosmossdk.io/math"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/ethereum/go-ethereum/common"
 	rpctypes "github.com/evmos/ethermint/rpc/types"
-	ethermint "github.com/evmos/ethermint/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 	"github.com/pkg/errors"
 	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
@@ -81,12 +77,6 @@ func (b *Backend) TraceTransaction(hash common.Hash, config *evmtypes.TraceConfi
 		return nil, fmt.Errorf("invalid transaction type %T", tx)
 	}
 
-	tmp, err := ethermint.ParseChainID(blk.Block.ChainID)
-	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "failed to parse chainID: %s", blk.Block.ChainID)
-	}
-	chainID := sdkmath.NewIntFromBigInt(tmp)
-
 	traceTxRequest := evmtypes.QueryTraceTxRequest{
 		Msg:             ethMessage,
 		Predecessors:    predecessors,
@@ -94,7 +84,7 @@ func (b *Backend) TraceTransaction(hash common.Hash, config *evmtypes.TraceConfi
 		BlockTime:       blk.Block.Time,
 		BlockHash:       common.Bytes2Hex(blk.BlockID.Hash),
 		ProposerAddress: sdk.ConsAddress(blk.Block.ProposerAddress),
-		ChainId:         &chainID,
+		ChainId:         b.chainID.Int64(),
 	}
 
 	if config != nil {
@@ -166,12 +156,6 @@ func (b *Backend) TraceBlock(height rpctypes.BlockNumber,
 	}
 	ctxWithHeight := rpctypes.ContextWithHeight(int64(contextHeight))
 
-	tmp, err := ethermint.ParseChainID(block.Block.ChainID)
-	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "failed to parse chainID: %s", block.Block.ChainID)
-	}
-	chainID := sdkmath.NewIntFromBigInt(tmp)
-
 	traceBlockRequest := &evmtypes.QueryTraceBlockRequest{
 		Txs:             txsMessages,
 		TraceConfig:     config,
@@ -179,7 +163,7 @@ func (b *Backend) TraceBlock(height rpctypes.BlockNumber,
 		BlockTime:       block.Block.Time,
 		BlockHash:       common.Bytes2Hex(block.BlockID.Hash),
 		ProposerAddress: sdk.ConsAddress(block.Block.ProposerAddress),
-		ChainId:         &chainID,
+		ChainId:         b.chainID.Int64(),
 	}
 
 	res, err := b.queryClient.TraceBlock(ctxWithHeight, traceBlockRequest)
