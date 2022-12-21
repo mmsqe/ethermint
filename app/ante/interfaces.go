@@ -24,8 +24,8 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/evmos/ethermint/x/evm/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
+	evm "github.com/evmos/ethermint/x/evm/vm"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 )
 
@@ -43,10 +43,9 @@ type EVMKeeper interface {
 
 	WithContext(ctx sdk.Context)
 	ResetRefundTransient(ctx sdk.Context)
-	NewEVM(msg core.Message, cfg *types.EVMConfig, tracer vm.EVMLogger) evm.EVM
+	NewEVM(msg core.Message, cfg *evmtypes.EVMConfig, tracer vm.EVMLogger) evm.EVM
 	GetCodeHash(addr common.Address) common.Hash
 	DeductTxCostsFromUserBalance(ctx sdk.Context, fees sdk.Coins, from common.Address) error
-	GetBalance(ctx sdk.Context, addr common.Address) *big.Int
 	ResetTransientGasUsed(ctx sdk.Context)
 	GetTxIndexTransient(ctx sdk.Context) uint64
 	GetChainConfig(ctx sdk.Context) evmtypes.ChainConfig

@@ -206,11 +206,11 @@ func (k Keeper) Code(c context.Context, req *types.QueryCodeRequest) (*types.Que
 	k.WithContext(ctx)
 
 	address := common.HexToAddress(req.Address)
-	acct := k.GetAccountWithoutBalance(ctx, address)
+	acct := k.GetAccountWithoutBalance(address)
 
 	var code []byte
 	if acct != nil && acct.IsContract() {
-		code = k.GetCode(common.BytesToHash(acct.CodeHash))
+		code = k.GetCode(address)
 	}
 	return &types.QueryCodeResponse{
 		Code: code,
@@ -439,19 +439,14 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 		}
 	}
 
-	tx := req.Msg.AsTransaction()
-	txConfig.TxHash = tx.Hash()
-	if len(req.Predecessors) > 0 {
-		txConfig.TxIndex++
-	}
-
 	var tracerConfig json.RawMessage
 	if req.TraceConfig != nil && req.TraceConfig.TracerJsonConfig != "" {
 		// ignore error. default to no traceConfig
 		_ = json.Unmarshal([]byte(req.TraceConfig.TracerJsonConfig), &tracerConfig)
 	}
-
-	result, err := k.traceTx(ctx, cfg, signer, req.TxIndex, tx, req.TraceConfig, false, tracerConfig)
+	tx := req.Msg.AsTransaction()
+	txIndex := k.GetTxIndexTransient(ctx)
+	result, err := k.traceTx(ctx, cfg, signer, txIndex, tx, req.TraceConfig, false, tracerConfig)
 	if err != nil {
 		// error will be returned with detail status from traceTx
 		return nil, err
@@ -600,8 +595,9 @@ func (k *Keeper) traceTx(
 	}()
 	k.SetTxHashTransient(txHash)
 	k.SetTxIndexTransient(txIndex)
-
+	// res no use?
 	res, err := k.ApplyMessageWithConfig(msg, tracer, commitMessage, cfg)
+	fmt.Println("mm-res: ", len(res.Logs))
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

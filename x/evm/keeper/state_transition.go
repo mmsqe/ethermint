@@ -99,6 +99,7 @@ func (k *Keeper) NewEVM(
 // module parameters. The config generated uses the default JumpTable from the EVM.
 func (k Keeper) VMConfig(cfg *types.EVMConfig, tracer vm.EVMLogger) vm.Config {
 	noBaseFee := true
+	ctx := k.Ctx()
 	if types.IsLondon(cfg.ChainConfig, ctx.BlockHeight()) {
 		noBaseFee = k.feeMarketKeeper.GetParams(ctx).NoBaseFee
 	}
@@ -274,13 +275,13 @@ func (k *Keeper) ApplyTransaction(tx *ethtypes.Transaction) (*types.MsgEthereumT
 		GasUsed:           res.GasUsed,
 		BlockHash:         common.BytesToHash(ctx.HeaderHash()),
 		BlockNumber:       big.NewInt(ctx.BlockHeight()),
-		TransactionIndex:  uint(k.GetTxIndexTransient()),
+		TransactionIndex:  uint(k.GetTxIndexTransient(ctx)),
 	}
 
 	if !res.Failed() {
 		receipt.Status = ethtypes.ReceiptStatusSuccessful
 		// Only call hooks if tx executed successfully.
-		if err = k.PostTxProcessing(msg.From(), tx.To(), receipt); err != nil {
+		if err = k.PostTxProcessing(msg, receipt); err != nil {
 			// If hooks return error, revert the whole tx.
 			res.VmError = types.ErrPostTxProcessing.Error()
 			k.Logger(ctx).Error("tx post processing failed", "error", err)
@@ -312,7 +313,7 @@ func (k *Keeper) ApplyTransaction(tx *ethtypes.Transaction) (*types.MsgEthereumT
 
 	k.IncreaseTxIndexTransient()
 
-	totalGasUsed, err := k.AddTransientGasUsed(ctx, res.GasUsed)
+	totalGasUsed, err := k.AddTransientGasUsed(res.GasUsed)
 	if err != nil {
 		return nil, errorsmod.Wrap(err, "failed to add transient gas used")
 	}
@@ -468,7 +469,7 @@ func (k *Keeper) ApplyMessageWithConfig(
 	// is considerably higher than GasUsed to stay more aligned with Tendermint gas mechanics
 	// for more info https://github.com/evmos/ethermint/issues/1085
 	gasLimit := sdk.NewDec(int64(msg.Gas()))
-	minGasMultiplier := k.GetMinGasMultiplier(ctx)
+	minGasMultiplier := k.GetMinGasMultiplier()
 	minimumGasUsed := gasLimit.Mul(minGasMultiplier)
 
 	if msg.Gas() < leftoverGas {

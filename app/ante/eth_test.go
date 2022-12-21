@@ -16,7 +16,7 @@ import (
 
 func (suite AnteTestSuite) TestNewEthAccountVerificationDecorator() {
 	dec := ante.NewEthAccountVerificationDecorator(
-		suite.app.AccountKeeper, suite.app.EvmKeeper,
+		suite.app.AccountKeeper, suite.app.BankKeeper, suite.app.EvmKeeper,
 	)
 
 	addr := tests.GenerateAddress()

@@ -21,6 +21,7 @@ import (
 	"math/big"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -226,7 +227,7 @@ func (k *Keeper) GetNonce(addr common.Address) uint64 {
 	cosmosAddr := sdk.AccAddress(addr.Bytes())
 	nonce, err := k.accountKeeper.GetSequence(ctx, cosmosAddr)
 	if err != nil {
-		k.Logger().Error(
+		k.Logger(ctx).Error(
 			"account not found",
 			"ethereum-address", addr.Hex(),
 			"cosmos-address", cosmosAddr.String(),
@@ -471,7 +472,7 @@ func (k *Keeper) GetRefund() uint64 {
 // State
 // ----------------------------------------------------------------------------
 
-func doGetState(ctx sdk.Context, storeKey sdk.StoreKey, addr common.Address, key common.Hash) common.Hash {
+func doGetState(ctx sdk.Context, storeKey storetypes.StoreKey, addr common.Address, key common.Hash) common.Hash {
 	store := prefix.NewStore(ctx.KVStore(storeKey), types.AddressStoragePrefix(addr))
 
 	value := store.Get(key.Bytes())
@@ -509,10 +510,7 @@ func (k *Keeper) SetState(addr common.Address, key, value common.Hash) {
 	if k.HasStateError() {
 		return
 	}
-}
 
-// SetState update contract storage, delete if value is empty.
-func (k *Keeper) SetState(addr common.Address, key common.Hash, value []byte) {
 	ctx := k.Ctx()
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.AddressStoragePrefix(addr))
 
@@ -794,7 +792,7 @@ func (k *Keeper) AddLog(log *ethtypes.Log) {
 	ctx := k.Ctx()
 
 	log.BlockHash = common.BytesToHash(ctx.HeaderHash())
-	log.TxIndex = uint(k.GetTxIndexTransient())
+	log.TxIndex = uint(k.GetTxIndexTransient(ctx))
 	log.TxHash = k.GetTxHashTransient()
 
 	log.Index = uint(k.GetLogSizeTransient())

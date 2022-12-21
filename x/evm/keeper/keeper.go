@@ -143,8 +143,8 @@ func (k *Keeper) CachedContextsEmpty() bool {
 }
 
 // Logger returns a module-specific logger.
-func (k Keeper) Logger() log.Logger {
-	return k.Ctx().Logger().With("module", types.ModuleName)
+func (k Keeper) Logger(ctx sdk.Context) log.Logger {
+	return ctx.Logger().With("module", types.ModuleName)
 }
 
 // WithContext clears the context stack, and set the initial context.
@@ -153,8 +153,8 @@ func (k *Keeper) WithContext(ctx sdk.Context) {
 }
 
 // WithChainID sets the chain id to the local variable in the keeper
-func (k *Keeper) WithChainID() {
-	chainID, err := ethermint.ParseChainID(k.Ctx().ChainID())
+func (k *Keeper) WithChainID(ctx sdk.Context) {
+	chainID, err := ethermint.ParseChainID(ctx.ChainID())
 	if err != nil {
 		panic(err)
 	}
@@ -177,8 +177,8 @@ func (k Keeper) ChainID() *big.Int {
 // ----------------------------------------------------------------------------
 
 // EmitBlockBloomEvent emit block bloom events
-func (k Keeper) EmitBlockBloomEvent(bloom ethtypes.Bloom) {
-	k.Ctx().EventManager().EmitEvent(
+func (k Keeper) EmitBlockBloomEvent(ctx sdk.Context, bloom ethtypes.Bloom) {
+	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			types.EventTypeBlockBloom,
 			sdk.NewAttribute(types.AttributeKeyEthereumBloom, string(bloom.Bytes())),
@@ -234,7 +234,7 @@ func (k Keeper) SetTxIndexTransient(index uint64) {
 }
 
 // GetTxIndexTransient returns EVM transaction index on the current block.
-func (k Keeper) GetTxIndexTransient() uint64 {
+func (k Keeper) GetTxIndexTransient(ctx sdk.Context) uint64 {
 	store := k.Ctx().TransientStore(k.transientKey)
 	bz := store.Get(types.KeyPrefixTransientTxIndex)
 	if len(bz) == 0 {
@@ -247,12 +247,12 @@ func (k Keeper) GetTxIndexTransient() uint64 {
 // IncreaseTxIndexTransient fetches the current EVM tx index from the transient store, increases its
 // value by one and then sets the new index back to the transient store.
 func (k Keeper) IncreaseTxIndexTransient() {
-	txIndex := k.GetTxIndexTransient()
+	txIndex := k.GetTxIndexTransient(k.Ctx())
 	k.SetTxIndexTransient(txIndex + 1)
 }
 
 // ResetRefundTransient resets the available refund amount to 0
-func (k Keeper) ResetRefundTransient() {
+func (k Keeper) ResetRefundTransient(ctx sdk.Context) {
 	store := k.Ctx().TransientStore(k.transientKey)
 	store.Set(types.KeyPrefixTransientRefund, sdk.Uint64ToBigEndian(0))
 }
@@ -320,7 +320,7 @@ func (k Keeper) IncreaseLogSizeTransient() {
 // ----------------------------------------------------------------------------
 
 // GetAccountStorage return state storage associated with an account
-func (k Keeper) GetAccountStorage(address common.Address) (types.Storage, error) {
+func (k Keeper) GetAccountStorage(ctx sdk.Context, address common.Address) (types.Storage, error) {
 	storage := types.Storage{}
 
 	err := k.ForEachStorage(address, func(key, value common.Hash) bool {
@@ -395,15 +395,15 @@ func (k *Keeper) SetHooks(eh types.EvmHooks) *Keeper {
 }
 
 // PostTxProcessing delegate the call to the hooks. If no hook has been registered, this function returns with a `nil` error
-func (k *Keeper) PostTxProcessing(from common.Address, to *common.Address, receipt *ethtypes.Receipt) error {
+func (k *Keeper) PostTxProcessing(msg core.Message, receipt *ethtypes.Receipt) error {
 	if k.hooks == nil {
 		return nil
 	}
-	return k.hooks.PostTxProcessing(k.Ctx(), from, to, receipt)
+	return k.hooks.PostTxProcessing(k.Ctx(), msg, receipt)
 }
 
 // Tracer return a default vm.Tracer based on current keeper state
-func (k Keeper) Tracer(msg core.Message, ethCfg *params.ChainConfig) vm.Tracer {
+func (k Keeper) Tracer(msg core.Message, ethCfg *params.ChainConfig) vm.EVMLogger {
 	return types.NewTracer(k.tracer, msg, ethCfg, k.Ctx().BlockHeight())
 }
 
@@ -432,11 +432,11 @@ func (k *Keeper) GetAccountWithoutBalance(addr common.Address) *statedb.Account 
 // - `nil`: london hardfork not enabled.
 // - `0`: london hardfork enabled but feemarket is not enabled.
 // - `n`: both london hardfork and feemarket are enabled.
-func (k Keeper) GetBaseFee(ethCfg *params.ChainConfig) *big.Int {
-	return k.getBaseFee(types.IsLondon(ethCfg, k.Ctx().BlockHeight()))
+func (k Keeper) GetBaseFee(ctx sdk.Context, ethCfg *params.ChainConfig) *big.Int {
+	return k.getBaseFee(ctx, types.IsLondon(ethCfg, k.Ctx().BlockHeight()))
 }
 
-func (k Keeper) getBaseFee(london bool) *big.Int {
+func (k Keeper) getBaseFee(ctx sdk.Context, london bool) *big.Int {
 	if !london {
 		return nil
 	}
@@ -459,7 +459,7 @@ func (k Keeper) GetMinGasMultiplier() sdk.Dec {
 }
 
 // ResetTransientGasUsed reset gas used to prepare for execution of current cosmos tx, called in ante handler.
-func (k Keeper) ResetTransientGasUsed() {
+func (k Keeper) ResetTransientGasUsed(ctx sdk.Context) {
 	store := k.Ctx().TransientStore(k.transientKey)
 	store.Delete(types.KeyPrefixTransientGasUsed)
 }

@@ -34,15 +34,17 @@ import (
 
 // EthAccountVerificationDecorator validates an account balance checks
 type EthAccountVerificationDecorator struct {
-	ak        evmtypes.AccountKeeper
-	evmKeeper EVMKeeper
+	ak         evmtypes.AccountKeeper
+	bankKeeper evmtypes.BankKeeper
+	evmKeeper  EVMKeeper
 }
 
 // NewEthAccountVerificationDecorator creates a new EthAccountVerificationDecorator
-func NewEthAccountVerificationDecorator(ak evmtypes.AccountKeeper, ek EVMKeeper) EthAccountVerificationDecorator {
+func NewEthAccountVerificationDecorator(ak evmtypes.AccountKeeper, bankKeeper evmtypes.BankKeeper, ek EVMKeeper) EthAccountVerificationDecorator {
 	return EthAccountVerificationDecorator{
-		ak:        ak,
-		evmKeeper: ek,
+		ak:         ak,
+		bankKeeper: bankKeeper,
+		evmKeeper:  ek,
 	}
 }
 
@@ -96,7 +98,7 @@ func (avd EthAccountVerificationDecorator) AnteHandle(
 			avd.ak.SetAccount(ctx, acc)
 		}
 
-		if err := evmkeeper.CheckSenderBalance(ctx, avd.bankKeeper, from, txData, evmDenom); err != nil {
+		if err := keeper.CheckSenderBalance(ctx, avd.bankKeeper, from, txData, evmDenom); err != nil {
 			return ctx, errortypes.Wrap(err, "failed to check sender balance")
 		}
 	}
