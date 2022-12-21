@@ -33,7 +33,6 @@ import (
 	"github.com/evmos/ethermint/server/config"
 	"github.com/evmos/ethermint/tests"
 	ethermint "github.com/evmos/ethermint/types"
-	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 
@@ -188,6 +187,7 @@ func (suite *KeeperTestSuite) SetupApp(checkTx bool) {
 		ConsensusHash:      tmhash.Sum([]byte("consensus")),
 		LastResultsHash:    tmhash.Sum([]byte("last_result")),
 	})
+	suite.app.EvmKeeper.WithContext(suite.ctx)
 
 	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.app.InterfaceRegistry())
 	types.RegisterQueryServer(queryHelper, suite.app.EvmKeeper)
@@ -233,14 +233,11 @@ func (suite *KeeperTestSuite) Commit() {
 
 	// update ctx
 	suite.ctx = suite.app.BaseApp.NewContext(false, header)
+	suite.app.EvmKeeper.WithContext(suite.ctx)
 
 	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.app.InterfaceRegistry())
 	types.RegisterQueryServer(queryHelper, suite.app.EvmKeeper)
 	suite.queryClient = types.NewQueryClient(queryHelper)
-}
-
-func (suite *KeeperTestSuite) StateDB() *statedb.StateDB {
-	return statedb.New(suite.ctx, suite.app.EvmKeeper, statedb.NewEmptyTxConfig(common.BytesToHash(suite.ctx.HeaderHash().Bytes())))
 }
 
 // DeployTestContract deploy a test erc20 contract and returns the contract address
@@ -251,7 +248,7 @@ func (suite *KeeperTestSuite) DeployTestContract(t require.TestingT, owner commo
 	ctorArgs, err := types.ERC20Contract.ABI.Pack("", owner, supply)
 	require.NoError(t, err)
 
-	nonce := suite.app.EvmKeeper.GetNonce(suite.ctx, suite.address)
+	nonce := suite.app.EvmKeeper.GetNonce(suite.address)
 
 	data := append(types.ERC20Contract.Bin, ctorArgs...)
 	args, err := json.Marshal(&types.TransactionArgs{
@@ -316,7 +313,7 @@ func (suite *KeeperTestSuite) TransferERC20Token(t require.TestingT, contractAdd
 	})
 	require.NoError(t, err)
 
-	nonce := suite.app.EvmKeeper.GetNonce(suite.ctx, suite.address)
+	nonce := suite.app.EvmKeeper.GetNonce(suite.address)
 
 	var ercTransferTx *types.MsgEthereumTx
 	if suite.enableFeemarket {
@@ -374,7 +371,7 @@ func (suite *KeeperTestSuite) DeployTestMessageCall(t require.TestingT) common.A
 	})
 	require.NoError(t, err)
 
-	nonce := suite.app.EvmKeeper.GetNonce(suite.ctx, suite.address)
+	nonce := suite.app.EvmKeeper.GetNonce(suite.address)
 
 	var erc20DeployTx *types.MsgEthereumTx
 	if suite.enableFeemarket {
@@ -484,43 +481,4 @@ func (suite *KeeperTestSuite) TestGetAccountStorage() {
 		})
 	}
 
-}
-
-func (suite *KeeperTestSuite) TestGetAccountOrEmpty() {
-	empty := statedb.Account{
-		Balance:  new(big.Int),
-		CodeHash: types.EmptyCodeHash,
-	}
-
-	supply := big.NewInt(100)
-	contractAddr := suite.DeployTestContract(suite.T(), suite.address, supply)
-
-	testCases := []struct {
-		name     string
-		addr     common.Address
-		expEmpty bool
-	}{
-		{
-			"unexisting account - get empty",
-			common.Address{},
-			true,
-		},
-		{
-			"existing contract account",
-			contractAddr,
-			false,
-		},
-	}
-
-	for _, tc := range testCases {
-		suite.Run(tc.name, func() {
-			res := suite.app.EvmKeeper.GetAccountOrEmpty(suite.ctx, tc.addr)
-			if tc.expEmpty {
-				suite.Require().Equal(empty, res)
-			} else {
-				suite.Require().NotEqual(empty, res)
-			}
-
-		})
-	}
 }

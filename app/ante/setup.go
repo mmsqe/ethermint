@@ -110,7 +110,7 @@ func (vbd EthValidateBasicDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simu
 	if ctx.IsReCheckTx() {
 		return next(ctx, tx, simulate)
 	}
-
+	vbd.evmKeeper.WithContext(ctx)
 	err := tx.ValidateBasic()
 	// ErrNoSignatures is fine with eth tx
 	if err != nil && !errors.Is(err, errortypes.ErrNoSignatures) {

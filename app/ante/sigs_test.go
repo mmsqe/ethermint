@@ -4,7 +4,6 @@ import (
 	"math/big"
 
 	"github.com/evmos/ethermint/tests"
-	"github.com/evmos/ethermint/x/evm/statedb"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 
@@ -15,11 +14,11 @@ func (suite AnteTestSuite) TestSignatures() {
 	addr, privKey := tests.NewAddrKey()
 	to := tests.GenerateAddress()
 
-	acc := statedb.NewEmptyAccount()
-	acc.Nonce = 1
-	acc.Balance = big.NewInt(10000000000)
+	acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
+	suite.Require().NoError(acc.SetSequence(1))
+	suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
 
-	suite.app.EvmKeeper.SetAccount(suite.ctx, addr, *acc)
+	suite.app.EvmKeeper.AddBalance(addr, big.NewInt(10000000000))
 	msgEthereumTx := evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), 1, &to, big.NewInt(10), 100000, big.NewInt(1), nil, nil, nil, nil)
 	msgEthereumTx.From = addr.Hex()
 

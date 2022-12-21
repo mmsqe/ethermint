@@ -17,7 +17,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
-	"github.com/evmos/ethermint/x/evm/statedb"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
@@ -140,23 +139,23 @@ func (suite *ImporterTestSuite) TestImportBlocks() {
 		})
 		ctx := suite.app.NewContext(false, tmheader)
 		ctx = ctx.WithBlockHeight(tmheader.Height)
-		vmdb := statedb.New(ctx, suite.app.EvmKeeper, statedb.NewEmptyTxConfig(common.BytesToHash(ctx.HeaderHash().Bytes())))
+		suite.app.EvmKeeper.WithContext(ctx)
 
 		if chainConfig.DAOForkSupport && chainConfig.DAOForkBlock != nil && chainConfig.DAOForkBlock.Cmp(block.Number()) == 0 {
-			applyDAOHardFork(vmdb)
+			applyDAOHardFork(suite.app.EvmKeeper)
 		}
 
 		for _, tx := range block.Transactions() {
 
 			receipt, gas, err := applyTransaction(
-				ctx, chainConfig, chainContext, nil, gp, suite.app.EvmKeeper, vmdb, header, tx, usedGas, vmConfig,
+				chainConfig, chainContext, nil, gp, suite.app.EvmKeeper, header, tx, usedGas, vmConfig,
 			)
 			suite.Require().NoError(err, "failed to apply tx at block %d; tx: %X; gas %d; receipt:%v", block.NumberU64(), tx.Hash(), gas, receipt)
 			suite.Require().NotNil(receipt)
 		}
 
 		// apply mining rewards
-		accumulateRewards(chainConfig, vmdb, header, block.Uncles())
+		accumulateRewards(chainConfig, suite.app.EvmKeeper, header, block.Uncles())
 
 		// simulate BaseApp EndBlocker commitment
 		endBR := types.RequestEndBlock{Height: tmheader.Height}
@@ -174,7 +173,7 @@ func (suite *ImporterTestSuite) TestImportBlocks() {
 // reward. The total reward consists of the static block reward and rewards for
 // included uncles. The coinbase of each uncle block is also rewarded.
 func accumulateRewards(
-	config *ethparams.ChainConfig, vmdb ethvm.StateDB,
+	config *ethparams.ChainConfig, evmKeeper *evmkeeper.Keeper,
 	header *ethtypes.Header, uncles []*ethtypes.Header,
 ) {
 	// select the correct block reward based on chain progression
@@ -192,12 +191,12 @@ func accumulateRewards(
 		r.Sub(r, header.Number)
 		r.Mul(r, blockReward)
 		r.Div(r, rewardBig8)
-		vmdb.AddBalance(uncle.Coinbase, r)
+		evmKeeper.AddBalance(uncle.Coinbase, r)
 		r.Div(blockReward, rewardBig32)
 		reward.Add(reward, r)
 	}
 
-	vmdb.AddBalance(header.Coinbase, reward)
+	evmKeeper.AddBalance(header.Coinbase, reward)
 }
 
 // ApplyDAOHardFork modifies the state database according to the DAO hard-fork
@@ -206,15 +205,15 @@ func accumulateRewards(
 // Code is pulled from go-ethereum 1.9 because the StateDB interface does not include the
 // SetBalance function implementation
 // Ref: https://github.com/ethereum/go-ethereum/blob/52f2461774bcb8cdd310f86b4bc501df5b783852/consensus/misc/dao.go#L74
-func applyDAOHardFork(vmdb ethvm.StateDB) {
+func applyDAOHardFork(evmKeeper *evmkeeper.Keeper) {
 	// Retrieve the contract to refund balances into
-	if !vmdb.Exist(ethparams.DAORefundContract) {
-		vmdb.CreateAccount(ethparams.DAORefundContract)
+	if !evmKeeper.Exist(ethparams.DAORefundContract) {
+		evmKeeper.CreateAccount(ethparams.DAORefundContract)
 	}
 
 	// Move every DAO account and extra-balance account funds into the refund contract
 	for _, addr := range ethparams.DAODrainList() {
-		vmdb.AddBalance(ethparams.DAORefundContract, vmdb.GetBalance(addr))
+		evmKeeper.AddBalance(ethparams.DAORefundContract, evmKeeper.GetBalance(addr))
 	}
 }
 
@@ -225,8 +224,8 @@ func applyDAOHardFork(vmdb ethvm.StateDB) {
 // Function is also pulled from go-ethereum 1.9 because of the incompatible usage
 // Ref: https://github.com/ethereum/go-ethereum/blob/52f2461774bcb8cdd310f86b4bc501df5b783852/core/state_processor.go#L88
 func applyTransaction(
-	ctx sdk.Context, config *ethparams.ChainConfig, bc ethcore.ChainContext, author *common.Address,
-	gp *ethcore.GasPool, evmKeeper *evmkeeper.Keeper, vmdb *statedb.StateDB, header *ethtypes.Header,
+	config *ethparams.ChainConfig, bc ethcore.ChainContext, author *common.Address,
+	gp *ethcore.GasPool, evmKeeper *evmkeeper.Keeper, header *ethtypes.Header,
 	tx *ethtypes.Transaction, usedGas *uint64, cfg ethvm.Config,
 ) (*ethtypes.Receipt, uint64, error) {
 	msg, err := tx.AsMessage(ethtypes.MakeSigner(config, header.Number), sdk.ZeroInt().BigInt())
@@ -240,7 +239,7 @@ func applyTransaction(
 
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
-	vmenv := ethvm.NewEVM(blockCtx, txCtx, vmdb, config, cfg)
+	vmenv := ethvm.NewEVM(blockCtx, txCtx, evmKeeper, config, cfg)
 
 	// Apply the transaction to the current state (included in the env)
 	execResult, err := ethcore.ApplyMessage(vmenv, msg, gp)
@@ -264,11 +263,11 @@ func applyTransaction(
 	}
 
 	// Set the receipt logs and create a bloom for filtering
-	receipt.Logs = vmdb.Logs()
+	receipt.Logs = evmKeeper.GetTxLogsTransient(tx.Hash())
 	receipt.Bloom = ethtypes.CreateBloom(ethtypes.Receipts{receipt})
 	receipt.BlockHash = header.Hash()
 	receipt.BlockNumber = header.Number
-	receipt.TransactionIndex = uint(evmKeeper.GetTxIndexTransient(ctx))
+	receipt.TransactionIndex = uint(evmKeeper.GetTxIndexTransient())
 
 	return receipt, execResult.UsedGas, err
 }

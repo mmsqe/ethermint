@@ -10,7 +10,6 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/evmos/ethermint/x/evm/keeper"
-	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 )
 
@@ -64,25 +63,18 @@ func (suite *KeeperTestSuite) TestEvmHooks() {
 		suite.app.EvmKeeper.SetHooks(keeper.NewMultiEvmHooks(hook))
 
 		k := suite.app.EvmKeeper
-		ctx := suite.ctx
 		txHash := common.BigToHash(big.NewInt(1))
-		vmdb := statedb.New(ctx, k, statedb.NewTxConfig(
-			common.BytesToHash(ctx.HeaderHash().Bytes()),
-			txHash,
-			0,
-			0,
-		))
-
-		vmdb.AddLog(&ethtypes.Log{
+		k.SetTxHashTransient(txHash)
+		k.AddLog(&ethtypes.Log{
 			Topics:  []common.Hash{},
 			Address: suite.address,
 		})
-		logs := vmdb.Logs()
+		logs := k.GetTxLogsTransient(txHash)
 		receipt := &ethtypes.Receipt{
 			TxHash: txHash,
 			Logs:   logs,
 		}
-		result := k.PostTxProcessing(ctx, ethtypes.Message{}, receipt)
+		result := k.PostTxProcessing(ethtypes.Message{}, receipt)
 
 		tc.expFunc(hook, result)
 	}
