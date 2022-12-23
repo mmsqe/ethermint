@@ -5,7 +5,6 @@ import (
 
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 )
 
@@ -14,7 +13,6 @@ func (suite *KeeperTestSuite) TestEthereumTx() {
 		err             error
 		msg             *types.MsgEthereumTx
 		signer          ethtypes.Signer
-		vmdb            *statedb.StateDB
 		chainCfg        *params.ChainConfig
 		expectedGasUsed uint64
 	)
@@ -28,7 +26,7 @@ func (suite *KeeperTestSuite) TestEthereumTx() {
 			"Deploy contract tx - insufficient gas",
 			func() {
 				msg, err = suite.createContractMsgTx(
-					vmdb.GetNonce(suite.address),
+					suite.app.EvmKeeper.GetNonce(suite.address),
 					signer,
 					chainCfg,
 					big.NewInt(1),
@@ -41,7 +39,7 @@ func (suite *KeeperTestSuite) TestEthereumTx() {
 			"Transfer funds tx",
 			func() {
 				msg, _, err = newEthMsgTx(
-					vmdb.GetNonce(suite.address),
+					suite.app.EvmKeeper.GetNonce(suite.address),
 					suite.ctx.BlockHeight(),
 					suite.address,
 					chainCfg,
@@ -64,7 +62,6 @@ func (suite *KeeperTestSuite) TestEthereumTx() {
 			keeperParams := suite.app.EvmKeeper.GetParams(suite.ctx)
 			chainCfg = keeperParams.ChainConfig.EthereumConfig(suite.app.EvmKeeper.ChainID())
 			signer = ethtypes.LatestSignerForChainID(suite.app.EvmKeeper.ChainID())
-			vmdb = suite.StateDB()
 
 			tc.malleate()
 			res, err := suite.app.EvmKeeper.EthereumTx(suite.ctx, msg)

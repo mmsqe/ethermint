@@ -37,6 +37,7 @@ func InitGenesis(
 	accountKeeper types.AccountKeeper,
 	data types.GenesisState,
 ) []abci.ValidatorUpdate {
+	k.WithContext(ctx)
 	k.WithChainID(ctx)
 
 	k.SetParams(ctx, data.Params)
@@ -72,11 +73,9 @@ func InitGenesis(
 			panic(fmt.Sprintf("%s account: %s , evm state codehash: %v, ethAccount codehash: %v, evm state code: %s\n",
 				s, account.Address, codeHash, ethAcct.GetCodeHash(), account.Code))
 		}
-
-		k.SetCode(ctx, codeHash.Bytes(), code)
-
+		k.SetCode(address, code)
 		for _, storage := range account.Storage {
-			k.SetState(ctx, address, common.HexToHash(storage.Key), common.HexToHash(storage.Value).Bytes())
+			k.SetState(address, common.HexToHash(storage.Key), common.HexToHash(storage.Value))
 		}
 	}
 
@@ -85,6 +84,8 @@ func InitGenesis(
 
 // ExportGenesis exports genesis state of the EVM module
 func ExportGenesis(ctx sdk.Context, k *keeper.Keeper, ak types.AccountKeeper) *types.GenesisState {
+	k.WithContext(ctx)
+
 	var ethGenAccounts []types.GenesisAccount
 	ak.IterateAccounts(ctx, func(account authtypes.AccountI) bool {
 		ethAccount, ok := account.(ethermint.EthAccountI)
@@ -95,11 +96,14 @@ func ExportGenesis(ctx sdk.Context, k *keeper.Keeper, ak types.AccountKeeper) *t
 
 		addr := ethAccount.EthAddress()
 
-		storage := k.GetAccountStorage(ctx, addr)
+		storage, err := k.GetAccountStorage(ctx, addr)
+		if err != nil {
+			panic(err)
+		}
 
 		genAccount := types.GenesisAccount{
 			Address: addr.String(),
-			Code:    common.Bytes2Hex(k.GetCode(ctx, ethAccount.GetCodeHash())),
+			Code:    common.Bytes2Hex(k.GetCode(addr)),
 			Storage: storage,
 		}
 

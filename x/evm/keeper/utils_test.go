@@ -203,12 +203,9 @@ func (suite *KeeperTestSuite) TestCheckSenderBalance() {
 		},
 	}
 
-	vmdb := suite.StateDB()
-	vmdb.AddBalance(suite.address, hundredInt.BigInt())
-	balance := vmdb.GetBalance(suite.address)
+	suite.app.EvmKeeper.AddBalance(suite.address, hundredInt.BigInt())
+	balance := suite.app.EvmKeeper.GetBalance(suite.address)
 	suite.Require().Equal(balance, hundredInt.BigInt())
-	err := vmdb.Commit()
-	suite.Require().NoError(err, "Unexpected error while committing to vmdb: %d", err)
 
 	for i, tc := range testCases {
 		suite.Run(tc.name, func() {
@@ -237,10 +234,12 @@ func (suite *KeeperTestSuite) TestCheckSenderBalance() {
 
 			txData, _ := evmtypes.UnpackTxData(tx.Data)
 
-			acct := suite.app.EvmKeeper.GetAccountOrEmpty(suite.ctx, suite.address)
 			err := keeper.CheckSenderBalance(
-				sdkmath.NewIntFromBigInt(acct.Balance),
+				suite.app.EvmKeeper.Ctx(),
+				suite.app.BankKeeper,
+				suite.address[:],
 				txData,
+				evmtypes.DefaultEVMDenom,
 			)
 
 			if tc.expectPass {
@@ -436,7 +435,6 @@ func (suite *KeeperTestSuite) TestVerifyFeeAndDeductTxCostsFromUserBalance() {
 		suite.Run(tc.name, func() {
 			suite.enableFeemarket = tc.enableFeemarket
 			suite.SetupTest()
-			vmdb := suite.StateDB()
 
 			if tc.malleate != nil {
 				tc.malleate()
@@ -455,29 +453,33 @@ func (suite *KeeperTestSuite) TestVerifyFeeAndDeductTxCostsFromUserBalance() {
 				} else {
 					gasTipCap = tc.gasTipCap
 				}
-				vmdb.AddBalance(suite.address, initBalance.BigInt())
-				balance := vmdb.GetBalance(suite.address)
+				suite.app.EvmKeeper.AddBalance(suite.address, initBalance.BigInt())
+				balance := suite.app.EvmKeeper.GetBalance(suite.address)
 				suite.Require().Equal(balance, initBalance.BigInt())
 			} else {
 				if tc.gasPrice != nil {
 					gasPrice = tc.gasPrice.BigInt()
 				}
 
-				vmdb.AddBalance(suite.address, hundredInt.BigInt())
-				balance := vmdb.GetBalance(suite.address)
+				suite.app.EvmKeeper.AddBalance(suite.address, hundredInt.BigInt())
+				balance := suite.app.EvmKeeper.GetBalance(suite.address)
 				suite.Require().Equal(balance, hundredInt.BigInt())
 			}
-			err := vmdb.Commit()
-			suite.Require().NoError(err, "Unexpected error while committing to vmdb: %d", err)
 
 			tx := evmtypes.NewTx(zeroInt.BigInt(), 1, &suite.address, amount, tc.gasLimit, gasPrice, gasFeeCap, gasTipCap, nil, tc.accessList)
 			tx.From = tc.from
 
 			txData, _ := evmtypes.UnpackTxData(tx.Data)
 
-			ethCfg := suite.app.EvmKeeper.GetChainConfig(suite.ctx).EthereumConfig(nil)
-			baseFee := suite.app.EvmKeeper.GetBaseFee(suite.ctx, ethCfg)
-			priority := evmtypes.GetTxPriority(txData, baseFee)
+			fees, err := suite.app.EvmKeeper.DeductTxCostsFromUserBalance(
+				suite.app.EvmKeeper.Ctx(),
+				*tx,
+				txData,
+				evmtypes.DefaultEVMDenom,
+				false,
+				false,
+				suite.enableFeemarket, // london
+			)
 
 			fees, err := keeper.VerifyFee(txData, evmtypes.DefaultEVMDenom, baseFee, false, false, suite.ctx.IsCheckTx())
 			if tc.expectPassVerify {

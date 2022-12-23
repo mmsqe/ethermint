@@ -14,11 +14,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 	"github.com/evmos/ethermint/tests"
-	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 )
 
@@ -26,38 +24,39 @@ func (suite *KeeperTestSuite) TestCreateAccount() {
 	testCases := []struct {
 		name     string
 		addr     common.Address
-		malleate func(vm.StateDB, common.Address)
-		callback func(vm.StateDB, common.Address)
+		malleate func(common.Address)
+		callback func(common.Address)
 	}{
 		{
 			"reset account (keep balance)",
 			suite.address,
-			func(vmdb vm.StateDB, addr common.Address) {
-				vmdb.AddBalance(addr, big.NewInt(100))
-				suite.Require().NotZero(vmdb.GetBalance(addr).Int64())
+			func(addr common.Address) {
+				suite.app.EvmKeeper.AddBalance(addr, big.NewInt(100))
+				suite.Require().NotZero(suite.app.EvmKeeper.GetBalance(addr).Int64())
 			},
-			func(vmdb vm.StateDB, addr common.Address) {
-				suite.Require().Equal(vmdb.GetBalance(addr).Int64(), int64(100))
+			func(addr common.Address) {
+				suite.Require().Equal(suite.app.EvmKeeper.GetBalance(addr).Int64(), int64(100))
 			},
 		},
 		{
 			"create account",
 			tests.GenerateAddress(),
-			func(vmdb vm.StateDB, addr common.Address) {
-				suite.Require().False(vmdb.Exist(addr))
+			func(addr common.Address) {
+				acc := suite.app.AccountKeeper.GetAccount(suite.ctx, addr.Bytes())
+				suite.Require().Nil(acc)
 			},
-			func(vmdb vm.StateDB, addr common.Address) {
-				suite.Require().True(vmdb.Exist(addr))
+			func(addr common.Address) {
+				acc := suite.app.AccountKeeper.GetAccount(suite.ctx, addr.Bytes())
+				suite.Require().NotNil(acc)
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			tc.malleate(vmdb, tc.addr)
-			vmdb.CreateAccount(tc.addr)
-			tc.callback(vmdb, tc.addr)
+			tc.malleate(tc.addr)
+			suite.app.EvmKeeper.CreateAccount(tc.addr)
+			tc.callback(tc.addr)
 		})
 	}
 }
@@ -81,16 +80,15 @@ func (suite *KeeperTestSuite) TestAddBalance() {
 		{
 			"negative amount",
 			big.NewInt(-1),
-			false, // seems to be consistent with go-ethereum's implementation
+			true,
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			prev := vmdb.GetBalance(suite.address)
-			vmdb.AddBalance(suite.address, tc.amount)
-			post := vmdb.GetBalance(suite.address)
+			prev := suite.app.EvmKeeper.GetBalance(suite.address)
+			suite.app.EvmKeeper.AddBalance(suite.address, tc.amount)
+			post := suite.app.EvmKeeper.GetBalance(suite.address)
 
 			if tc.isNoOp {
 				suite.Require().Equal(prev.Int64(), post.Int64())
@@ -105,45 +103,44 @@ func (suite *KeeperTestSuite) TestSubBalance() {
 	testCases := []struct {
 		name     string
 		amount   *big.Int
-		malleate func(vm.StateDB)
+		malleate func()
 		isNoOp   bool
 	}{
 		{
 			"positive amount, below zero",
 			big.NewInt(100),
-			func(vm.StateDB) {},
-			false,
+			func() {},
+			true,
 		},
 		{
-			"positive amount, above zero",
+			"positive amount, below zero",
 			big.NewInt(50),
-			func(vmdb vm.StateDB) {
-				vmdb.AddBalance(suite.address, big.NewInt(100))
+			func() {
+				suite.app.EvmKeeper.AddBalance(suite.address, big.NewInt(100))
 			},
 			false,
 		},
 		{
 			"zero amount",
 			big.NewInt(0),
-			func(vm.StateDB) {},
+			func() {},
 			true,
 		},
 		{
 			"negative amount",
 			big.NewInt(-1),
-			func(vm.StateDB) {},
-			false,
+			func() {},
+			true,
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			tc.malleate(vmdb)
+			tc.malleate()
 
-			prev := vmdb.GetBalance(suite.address)
-			vmdb.SubBalance(suite.address, tc.amount)
-			post := vmdb.GetBalance(suite.address)
+			prev := suite.app.EvmKeeper.GetBalance(suite.address)
+			suite.app.EvmKeeper.SubBalance(suite.address, tc.amount)
+			post := suite.app.EvmKeeper.GetBalance(suite.address)
 
 			if tc.isNoOp {
 				suite.Require().Equal(prev.Int64(), post.Int64())
@@ -159,30 +156,29 @@ func (suite *KeeperTestSuite) TestGetNonce() {
 		name          string
 		address       common.Address
 		expectedNonce uint64
-		malleate      func(vm.StateDB)
+		malleate      func()
 	}{
 		{
 			"account not found",
 			tests.GenerateAddress(),
 			0,
-			func(vm.StateDB) {},
+			func() {},
 		},
 		{
 			"existing account",
 			suite.address,
 			1,
-			func(vmdb vm.StateDB) {
-				vmdb.SetNonce(suite.address, 1)
+			func() {
+				suite.app.EvmKeeper.SetNonce(suite.address, 1)
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			tc.malleate(vmdb)
+			tc.malleate()
 
-			nonce := vmdb.GetNonce(tc.address)
+			nonce := suite.app.EvmKeeper.GetNonce(tc.address)
 			suite.Require().Equal(tc.expectedNonce, nonce)
 		})
 	}
@@ -211,9 +207,8 @@ func (suite *KeeperTestSuite) TestSetNonce() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			vmdb.SetNonce(tc.address, tc.nonce)
-			nonce := vmdb.GetNonce(tc.address)
+			suite.app.EvmKeeper.SetNonce(tc.address, tc.nonce)
+			nonce := suite.app.EvmKeeper.GetNonce(tc.address)
 			suite.Require().Equal(tc.nonce, nonce)
 		})
 	}
@@ -228,36 +223,35 @@ func (suite *KeeperTestSuite) TestGetCodeHash() {
 		name     string
 		address  common.Address
 		expHash  common.Hash
-		malleate func(vm.StateDB)
+		malleate func()
 	}{
 		{
 			"account not found",
 			tests.GenerateAddress(),
-			common.Hash{},
-			func(vm.StateDB) {},
+			common.BytesToHash(types.EmptyCodeHash),
+			func() {},
 		},
 		{
 			"account not EthAccount type, EmptyCodeHash",
 			addr,
 			common.BytesToHash(types.EmptyCodeHash),
-			func(vm.StateDB) {},
+			func() {},
 		},
 		{
 			"existing account",
 			suite.address,
 			crypto.Keccak256Hash([]byte("codeHash")),
-			func(vmdb vm.StateDB) {
-				vmdb.SetCode(suite.address, []byte("codeHash"))
+			func() {
+				suite.app.EvmKeeper.SetCode(suite.address, []byte("codeHash"))
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			tc.malleate(vmdb)
+			tc.malleate()
 
-			hash := vmdb.GetCodeHash(tc.address)
+			hash := suite.app.EvmKeeper.GetCodeHash(tc.address)
 			suite.Require().Equal(tc.expHash, hash)
 		})
 	}
@@ -302,10 +296,9 @@ func (suite *KeeperTestSuite) TestSetCode() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			prev := vmdb.GetCode(tc.address)
-			vmdb.SetCode(tc.address, tc.code)
-			post := vmdb.GetCode(tc.address)
+			prev := suite.app.EvmKeeper.GetCode(tc.address)
+			suite.app.EvmKeeper.SetCode(tc.address, tc.code)
+			post := suite.app.EvmKeeper.GetCode(tc.address)
 
 			if tc.isNoOp {
 				suite.Require().Equal(prev, post)
@@ -313,7 +306,9 @@ func (suite *KeeperTestSuite) TestSetCode() {
 				suite.Require().Equal(tc.code, post)
 			}
 
-			suite.Require().Equal(len(post), vmdb.GetCodeSize(tc.address))
+			suite.Require().Equal(len(post), suite.app.EvmKeeper.GetCodeSize(tc.address))
+
+			suite.app.EvmKeeper.ClearStateError()
 		})
 	}
 }
@@ -355,21 +350,21 @@ func (suite *KeeperTestSuite) TestKeeperSetCode() {
 func (suite *KeeperTestSuite) TestRefund() {
 	testCases := []struct {
 		name      string
-		malleate  func(vm.StateDB)
+		malleate  func()
 		expRefund uint64
 		expPanic  bool
 	}{
 		{
 			"success - add and subtract refund",
-			func(vmdb vm.StateDB) {
-				vmdb.AddRefund(11)
+			func() {
+				suite.app.EvmKeeper.AddRefund(11)
 			},
 			1,
 			false,
 		},
 		{
 			"fail - subtract amount > current refund",
-			func(vm.StateDB) {
+			func() {
 			},
 			0,
 			true,
@@ -378,15 +373,18 @@ func (suite *KeeperTestSuite) TestRefund() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			tc.malleate(vmdb)
+			tc.malleate()
 
 			if tc.expPanic {
-				suite.Require().Panics(func() { vmdb.SubRefund(10) })
+				suite.Require().Panics(func() { suite.app.EvmKeeper.SubRefund(10) })
 			} else {
-				vmdb.SubRefund(10)
-				suite.Require().Equal(tc.expRefund, vmdb.GetRefund())
+				suite.app.EvmKeeper.SubRefund(10)
+				suite.Require().Equal(tc.expRefund, suite.app.EvmKeeper.GetRefund())
 			}
+
+			// clear and reset refund from store
+			suite.app.EvmKeeper.ResetRefundTransient(suite.ctx)
+			suite.Require().Zero(suite.app.EvmKeeper.GetRefund())
 		})
 	}
 }
@@ -410,9 +408,8 @@ func (suite *KeeperTestSuite) TestState() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			vmdb.SetState(suite.address, tc.key, tc.value)
-			value := vmdb.GetState(suite.address, tc.key)
+			suite.app.EvmKeeper.SetState(suite.address, tc.key, tc.value)
+			value := suite.app.EvmKeeper.GetState(suite.address, tc.key)
 			suite.Require().Equal(tc.value, value)
 		})
 	}
@@ -423,36 +420,31 @@ func (suite *KeeperTestSuite) TestCommittedState() {
 	value1 := common.BytesToHash([]byte("value1"))
 	value2 := common.BytesToHash([]byte("value2"))
 
-	vmdb := suite.StateDB()
-	vmdb.SetState(suite.address, key, value1)
-	vmdb.Commit()
+	suite.app.EvmKeeper.SetState(suite.address, key, value1)
 
-	vmdb = suite.StateDB()
-	vmdb.SetState(suite.address, key, value2)
-	tmp := vmdb.GetState(suite.address, key)
+	suite.app.EvmKeeper.Snapshot()
+
+	suite.app.EvmKeeper.SetState(suite.address, key, value2)
+	tmp := suite.app.EvmKeeper.GetState(suite.address, key)
 	suite.Require().Equal(value2, tmp)
-	tmp = vmdb.GetCommittedState(suite.address, key)
+	tmp = suite.app.EvmKeeper.GetCommittedState(suite.address, key)
 	suite.Require().Equal(value1, tmp)
-	vmdb.Commit()
 
-	vmdb = suite.StateDB()
-	tmp = vmdb.GetCommittedState(suite.address, key)
+	suite.app.EvmKeeper.CommitCachedContexts()
+
+	tmp = suite.app.EvmKeeper.GetCommittedState(suite.address, key)
 	suite.Require().Equal(value2, tmp)
 }
 
 func (suite *KeeperTestSuite) TestSuicide() {
 	code := []byte("code")
-	db := suite.StateDB()
 	// Add code to account
-	db.SetCode(suite.address, code)
-	suite.Require().Equal(code, db.GetCode(suite.address))
+	suite.app.EvmKeeper.SetCode(suite.address, code)
+	suite.Require().Equal(code, suite.app.EvmKeeper.GetCode(suite.address))
 	// Add state to account
 	for i := 0; i < 5; i++ {
-		db.SetState(suite.address, common.BytesToHash([]byte(fmt.Sprintf("key%d", i))), common.BytesToHash([]byte(fmt.Sprintf("value%d", i))))
+		suite.app.EvmKeeper.SetState(suite.address, common.BytesToHash([]byte(fmt.Sprintf("key%d", i))), common.BytesToHash([]byte(fmt.Sprintf("value%d", i))))
 	}
-
-	suite.Require().NoError(db.Commit())
-	db = suite.StateDB()
 
 	// Generate 2nd address
 	privkey, _ := ethsecp256k1.GenerateKey()
@@ -461,88 +453,82 @@ func (suite *KeeperTestSuite) TestSuicide() {
 	addr2 := crypto.PubkeyToAddress(key.PublicKey)
 
 	// Add code and state to account 2
-	db.SetCode(addr2, code)
-	suite.Require().Equal(code, db.GetCode(addr2))
+	suite.app.EvmKeeper.SetCode(addr2, code)
 	for i := 0; i < 5; i++ {
 		db.SetState(addr2, common.BytesToHash([]byte(fmt.Sprintf("key%d", i))), common.BytesToHash([]byte(fmt.Sprintf("value%d", i))))
 	}
 
 	// Call Suicide
-	suite.Require().Equal(true, db.Suicide(suite.address))
+	suite.Require().Equal(true, suite.app.EvmKeeper.Suicide(suite.address))
 
 	// Check suicided is marked
-	suite.Require().Equal(true, db.HasSuicided(suite.address))
-
-	// Commit state
-	suite.Require().NoError(db.Commit())
-	db = suite.StateDB()
-
+	suite.Require().Equal(true, suite.app.EvmKeeper.HasSuicided(suite.address))
 	// Check code is deleted
-	suite.Require().Nil(db.GetCode(suite.address))
+	suite.Require().Nil(suite.app.EvmKeeper.GetCode(suite.address))
 	// Check state is deleted
 	var storage types.Storage
-	suite.app.EvmKeeper.ForEachStorage(suite.ctx, suite.address, func(key, value common.Hash) bool {
+	err := suite.app.EvmKeeper.ForEachStorage(suite.address, func(key, value common.Hash) bool {
 		storage = append(storage, types.NewState(key, value))
 		return true
 	})
+	suite.Require().NoError(err)
 	suite.Require().Equal(0, len(storage))
 
-	// Check account is deleted
-	suite.Require().Equal(common.Hash{}, db.GetCodeHash(suite.address))
-
-	// Check code is still present in addr2 and suicided is false
-	suite.Require().NotNil(db.GetCode(addr2))
-	suite.Require().Equal(false, db.HasSuicided(addr2))
+	// Check CodeHash is emptied
+	suite.Require().Equal(common.BytesToHash(types.EmptyCodeHash).Bytes(), suite.app.EvmKeeper.GetCodeHash(suite.address).Bytes())
 }
 
 func (suite *KeeperTestSuite) TestExist() {
 	testCases := []struct {
 		name     string
 		address  common.Address
-		malleate func(vm.StateDB)
+		malleate func()
 		exists   bool
 	}{
-		{"success, account exists", suite.address, func(vm.StateDB) {}, true},
-		{"success, has suicided", suite.address, func(vmdb vm.StateDB) {
-			vmdb.Suicide(suite.address)
+		{"success, account exists", suite.address, func() {}, true},
+		{"success, has suicided", suite.address, func() {
+			suite.app.EvmKeeper.Suicide(suite.address)
 		}, true},
-		{"success, account doesn't exist", tests.GenerateAddress(), func(vm.StateDB) {}, false},
+		{"success, account doesn't exist", tests.GenerateAddress(), func() {}, false},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			tc.malleate(vmdb)
+			tc.malleate()
 
-			suite.Require().Equal(tc.exists, vmdb.Exist(tc.address))
+			suite.Require().Equal(tc.exists, suite.app.EvmKeeper.Exist(tc.address))
 		})
 	}
 }
 
 func (suite *KeeperTestSuite) TestEmpty() {
+	addr := tests.GenerateAddress()
+	baseAcc := &authtypes.BaseAccount{Address: sdk.AccAddress(addr.Bytes()).String()}
+	suite.app.AccountKeeper.SetAccount(suite.ctx, baseAcc)
+
 	testCases := []struct {
 		name     string
 		address  common.Address
-		malleate func(vm.StateDB)
+		malleate func()
 		empty    bool
 	}{
-		{"empty, account exists", suite.address, func(vm.StateDB) {}, true},
+		{"empty, account exists", suite.address, func() {}, true},
+		{"not empty, non ethereum account", addr, func() {}, false},
 		{
 			"not empty, positive balance",
 			suite.address,
-			func(vmdb vm.StateDB) { vmdb.AddBalance(suite.address, big.NewInt(100)) },
+			func() { suite.app.EvmKeeper.AddBalance(suite.address, big.NewInt(100)) },
 			false,
 		},
-		{"empty, account doesn't exist", tests.GenerateAddress(), func(vm.StateDB) {}, true},
+		{"empty, account doesn't exist", tests.GenerateAddress(), func() {}, true},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
 			suite.SetupTest()
-			vmdb := suite.StateDB()
-			tc.malleate(vmdb)
+			tc.malleate()
 
-			suite.Require().Equal(tc.empty, vmdb.Empty(tc.address))
+			suite.Require().Equal(tc.empty, suite.app.EvmKeeper.Empty(tc.address))
 		})
 	}
 }
@@ -554,52 +540,53 @@ func (suite *KeeperTestSuite) TestSnapshot() {
 
 	testCases := []struct {
 		name     string
-		malleate func(vm.StateDB)
+		malleate func()
 	}{
-		{"simple revert", func(vmdb vm.StateDB) {
-			revision := vmdb.Snapshot()
+		{"simple revert", func() {
+			revision := suite.app.EvmKeeper.Snapshot()
 			suite.Require().Zero(revision)
 
-			vmdb.SetState(suite.address, key, value1)
-			suite.Require().Equal(value1, vmdb.GetState(suite.address, key))
+			suite.app.EvmKeeper.SetState(suite.address, key, value1)
+			suite.Require().Equal(value1, suite.app.EvmKeeper.GetState(suite.address, key))
 
-			vmdb.RevertToSnapshot(revision)
+			suite.app.EvmKeeper.RevertToSnapshot(revision)
 
 			// reverted
-			suite.Require().Equal(common.Hash{}, vmdb.GetState(suite.address, key))
+			suite.Require().Equal(common.Hash{}, suite.app.EvmKeeper.GetState(suite.address, key))
 		}},
-		{"nested snapshot/revert", func(vmdb vm.StateDB) {
-			revision1 := vmdb.Snapshot()
+		{"nested snapshot/revert", func() {
+			revision1 := suite.app.EvmKeeper.Snapshot()
 			suite.Require().Zero(revision1)
 
-			vmdb.SetState(suite.address, key, value1)
+			suite.app.EvmKeeper.SetState(suite.address, key, value1)
 
-			revision2 := vmdb.Snapshot()
+			revision2 := suite.app.EvmKeeper.Snapshot()
 
-			vmdb.SetState(suite.address, key, value2)
-			suite.Require().Equal(value2, vmdb.GetState(suite.address, key))
+			suite.app.EvmKeeper.SetState(suite.address, key, value2)
+			suite.Require().Equal(value2, suite.app.EvmKeeper.GetState(suite.address, key))
 
-			vmdb.RevertToSnapshot(revision2)
-			suite.Require().Equal(value1, vmdb.GetState(suite.address, key))
+			suite.app.EvmKeeper.RevertToSnapshot(revision2)
+			suite.Require().Equal(value1, suite.app.EvmKeeper.GetState(suite.address, key))
 
-			vmdb.RevertToSnapshot(revision1)
-			suite.Require().Equal(common.Hash{}, vmdb.GetState(suite.address, key))
+			suite.app.EvmKeeper.RevertToSnapshot(revision1)
+			suite.Require().Equal(common.Hash{}, suite.app.EvmKeeper.GetState(suite.address, key))
 		}},
-		{"jump revert", func(vmdb vm.StateDB) {
-			revision1 := vmdb.Snapshot()
-			vmdb.SetState(suite.address, key, value1)
-			vmdb.Snapshot()
-			vmdb.SetState(suite.address, key, value2)
-			vmdb.RevertToSnapshot(revision1)
-			suite.Require().Equal(common.Hash{}, vmdb.GetState(suite.address, key))
+		{"jump revert", func() {
+			revision1 := suite.app.EvmKeeper.Snapshot()
+			suite.app.EvmKeeper.SetState(suite.address, key, value1)
+			suite.app.EvmKeeper.Snapshot()
+			suite.app.EvmKeeper.SetState(suite.address, key, value2)
+			suite.app.EvmKeeper.RevertToSnapshot(revision1)
+			suite.Require().Equal(common.Hash{}, suite.app.EvmKeeper.GetState(suite.address, key))
 		}},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
 			suite.SetupTest()
-			vmdb := suite.StateDB()
-			tc.malleate(vmdb)
+			tc.malleate()
+			// the test case should finish in clean state
+			suite.Require().True(suite.app.EvmKeeper.CachedContextsEmpty())
 		})
 	}
 }
@@ -637,6 +624,7 @@ func (suite *KeeperTestSuite) TestAddLog() {
 
 	tx2 := suite.CreateTestTx(msg2, privKey)
 	msg2, _ = tx2.GetMsgs()[0].(*types.MsgEthereumTx)
+	txHash2 := msg2.AsTransaction().Hash()
 
 	msg3 := types.NewTx(big.NewInt(1), 0, &suite.address, big.NewInt(1), 100000, nil, big.NewInt(1), big.NewInt(1), []byte("test"), nil)
 	msg3.From = addr.Hex()
@@ -650,55 +638,92 @@ func (suite *KeeperTestSuite) TestAddLog() {
 
 	tx4 := suite.CreateTestTx(msg4, privKey)
 	msg4, _ = tx4.GetMsgs()[0].(*types.MsgEthereumTx)
+	txHash4 := msg4.AsTransaction().Hash()
 
 	testCases := []struct {
 		name        string
 		hash        common.Hash
 		log, expLog *ethtypes.Log // pre and post populating log fields
-		malleate    func(vm.StateDB)
+		malleate    func()
 	}{
 		{
 			"tx hash from message",
 			txHash,
 			&ethtypes.Log{
 				Address: addr,
-				Topics:  make([]common.Hash, 0),
 			},
 			&ethtypes.Log{
 				Address: addr,
 				TxHash:  txHash,
 				Topics:  make([]common.Hash, 0),
 			},
-			func(vm.StateDB) {},
+			func() {},
+		},
+		{
+			"log index keep increasing in new tx",
+			txHash2,
+			&ethtypes.Log{
+				Address: addr,
+			},
+			&ethtypes.Log{
+				Address: addr,
+				TxHash:  txHash2,
+				TxIndex: 1,
+				Index:   1,
+				Topics:  make([]common.Hash, 0),
+			},
+			func() {
+				suite.app.EvmKeeper.SetTxHashTransient(txHash)
+				suite.app.EvmKeeper.AddLog(&ethtypes.Log{
+					Address: addr,
+				})
+				suite.app.EvmKeeper.IncreaseTxIndexTransient()
+			},
 		},
 		{
 			"dynamicfee tx hash from message",
 			txHash3,
 			&ethtypes.Log{
 				Address: addr,
-				Topics:  make([]common.Hash, 0),
 			},
 			&ethtypes.Log{
 				Address: addr,
 				TxHash:  txHash3,
 				Topics:  make([]common.Hash, 0),
 			},
-			func(vm.StateDB) {},
+			func() {},
+		},
+		{
+			"log index keep increasing in new dynamicfee tx",
+			txHash4,
+			&ethtypes.Log{
+				Address: addr,
+			},
+			&ethtypes.Log{
+				Address: addr,
+				TxHash:  txHash4,
+				TxIndex: 1,
+				Index:   1,
+				Topics:  make([]common.Hash, 0),
+			},
+			func() {
+				suite.app.EvmKeeper.SetTxHashTransient(txHash)
+				suite.app.EvmKeeper.AddLog(&ethtypes.Log{
+					Address: addr,
+				})
+				suite.app.EvmKeeper.IncreaseTxIndexTransient()
+			},
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
 			suite.SetupTest()
-			vmdb := statedb.New(suite.ctx, suite.app.EvmKeeper, statedb.NewTxConfig(
-				common.BytesToHash(suite.ctx.HeaderHash().Bytes()),
-				tc.hash,
-				0, 0,
-			))
-			tc.malleate(vmdb)
+			tc.malleate()
 
-			vmdb.AddLog(tc.log)
-			logs := vmdb.Logs()
+			suite.app.EvmKeeper.SetTxHashTransient(tc.hash)
+			suite.app.EvmKeeper.AddLog(tc.log)
+			logs := suite.app.EvmKeeper.GetTxLogsTransient(tc.hash)
 			suite.Require().Equal(1, len(logs))
 			suite.Require().Equal(tc.expLog, logs[0])
 		})
@@ -713,19 +738,18 @@ func (suite *KeeperTestSuite) TestPrepareAccessList() {
 		{Address: tests.GenerateAddress(), StorageKeys: []common.Hash{common.BytesToHash([]byte("key1"))}},
 	}
 
-	vmdb := suite.StateDB()
-	vmdb.PrepareAccessList(suite.address, &dest, precompiles, accesses)
+	suite.app.EvmKeeper.PrepareAccessList(suite.address, &dest, precompiles, accesses)
 
-	suite.Require().True(vmdb.AddressInAccessList(suite.address))
-	suite.Require().True(vmdb.AddressInAccessList(dest))
+	suite.Require().True(suite.app.EvmKeeper.AddressInAccessList(suite.address))
+	suite.Require().True(suite.app.EvmKeeper.AddressInAccessList(dest))
 
 	for _, precompile := range precompiles {
-		suite.Require().True(vmdb.AddressInAccessList(precompile))
+		suite.Require().True(suite.app.EvmKeeper.AddressInAccessList(precompile))
 	}
 
 	for _, access := range accesses {
 		for _, key := range access.StorageKeys {
-			addrOK, slotOK := vmdb.SlotInAccessList(access.Address, key)
+			addrOK, slotOK := suite.app.EvmKeeper.SlotInAccessList(access.Address, key)
 			suite.Require().True(addrOK, access.Address.Hex())
 			suite.Require().True(slotOK, key.Hex())
 		}
@@ -743,9 +767,8 @@ func (suite *KeeperTestSuite) TestAddAddressToAccessList() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			vmdb.AddAddressToAccessList(tc.addr)
-			addrOk := vmdb.AddressInAccessList(tc.addr)
+			suite.app.EvmKeeper.AddAddressToAccessList(tc.addr)
+			addrOk := suite.app.EvmKeeper.AddressInAccessList(tc.addr)
 			suite.Require().True(addrOk, tc.addr.Hex())
 		})
 	}
@@ -765,30 +788,28 @@ func (suite *KeeperTestSuite) AddSlotToAccessList() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			vmdb := suite.StateDB()
-			vmdb.AddSlotToAccessList(tc.addr, tc.slot)
-			addrOk, slotOk := vmdb.SlotInAccessList(tc.addr, tc.slot)
+			suite.app.EvmKeeper.AddSlotToAccessList(tc.addr, tc.slot)
+			addrOk, slotOk := suite.app.EvmKeeper.SlotInAccessList(tc.addr, tc.slot)
 			suite.Require().True(addrOk, tc.addr.Hex())
 			suite.Require().True(slotOk, tc.slot.Hex())
 		})
 	}
 }
 
-// FIXME skip for now
-func (suite *KeeperTestSuite) _TestForEachStorage() {
+func (suite *KeeperTestSuite) TestForEachStorage() {
 	var storage types.Storage
 
 	testCase := []struct {
 		name      string
-		malleate  func(vm.StateDB)
+		malleate  func()
 		callback  func(key, value common.Hash) (stop bool)
 		expValues []common.Hash
 	}{
 		{
 			"aggregate state",
-			func(vmdb vm.StateDB) {
+			func() {
 				for i := 0; i < 5; i++ {
-					vmdb.SetState(suite.address, common.BytesToHash([]byte(fmt.Sprintf("key%d", i))), common.BytesToHash([]byte(fmt.Sprintf("value%d", i))))
+					suite.app.EvmKeeper.SetState(suite.address, common.BytesToHash([]byte(fmt.Sprintf("key%d", i))), common.BytesToHash([]byte(fmt.Sprintf("value%d", i))))
 				}
 			},
 			func(key, value common.Hash) bool {
@@ -805,9 +826,9 @@ func (suite *KeeperTestSuite) _TestForEachStorage() {
 		},
 		{
 			"filter state",
-			func(vmdb vm.StateDB) {
-				vmdb.SetState(suite.address, common.BytesToHash([]byte("key")), common.BytesToHash([]byte("value")))
-				vmdb.SetState(suite.address, common.BytesToHash([]byte("filterkey")), common.BytesToHash([]byte("filtervalue")))
+			func() {
+				suite.app.EvmKeeper.SetState(suite.address, common.BytesToHash([]byte("key")), common.BytesToHash([]byte("value")))
+				suite.app.EvmKeeper.SetState(suite.address, common.BytesToHash([]byte("filterkey")), common.BytesToHash([]byte("filtervalue")))
 			},
 			func(key, value common.Hash) bool {
 				if value == common.BytesToHash([]byte("filtervalue")) {
@@ -825,10 +846,9 @@ func (suite *KeeperTestSuite) _TestForEachStorage() {
 	for _, tc := range testCase {
 		suite.Run(tc.name, func() {
 			suite.SetupTest() // reset
-			vmdb := suite.StateDB()
-			tc.malleate(vmdb)
+			tc.malleate()
 
-			err := vmdb.ForEachStorage(suite.address, tc.callback)
+			err := suite.app.EvmKeeper.ForEachStorage(suite.address, tc.callback)
 			suite.Require().NoError(err)
 			suite.Require().Equal(len(tc.expValues), len(storage), fmt.Sprintf("Expected values:\n%v\nStorage Values\n%v", tc.expValues, storage))
 
@@ -841,104 +861,5 @@ func (suite *KeeperTestSuite) _TestForEachStorage() {
 			suite.Require().ElementsMatch(tc.expValues, vals)
 		})
 		storage = types.Storage{}
-	}
-}
-
-func (suite *KeeperTestSuite) TestSetBalance() {
-	amount := big.NewInt(-10)
-
-	testCases := []struct {
-		name     string
-		addr     common.Address
-		malleate func()
-		expErr   bool
-	}{
-		{
-			"address without funds - invalid amount",
-			suite.address,
-			func() {},
-			true,
-		},
-		{
-			"mint to address",
-			suite.address,
-			func() {
-				amount = big.NewInt(100)
-			},
-			false,
-		},
-		{
-			"burn from address",
-			suite.address,
-			func() {
-				amount = big.NewInt(60)
-			},
-			false,
-		},
-		{
-			"address with funds - invalid amount",
-			suite.address,
-			func() {
-				amount = big.NewInt(-10)
-			},
-			true,
-		},
-	}
-
-	for _, tc := range testCases {
-		suite.Run(tc.name, func() {
-			suite.SetupTest()
-			tc.malleate()
-			err := suite.app.EvmKeeper.SetBalance(suite.ctx, tc.addr, amount)
-			if tc.expErr {
-				suite.Require().Error(err)
-			} else {
-				balance := suite.app.EvmKeeper.GetBalance(suite.ctx, tc.addr)
-				suite.Require().NoError(err)
-				suite.Require().Equal(amount, balance)
-			}
-
-		})
-	}
-}
-
-func (suite *KeeperTestSuite) TestDeleteAccount() {
-	supply := big.NewInt(100)
-	contractAddr := suite.DeployTestContract(suite.T(), suite.address, supply)
-
-	testCases := []struct {
-		name   string
-		addr   common.Address
-		expErr bool
-	}{
-		{
-			"remove address",
-			suite.address,
-			false,
-		},
-		{
-			"remove unexistent address - returns nil error",
-			common.HexToAddress("unexistent_address"),
-			false,
-		},
-		{
-			"remove deployed contract",
-			contractAddr,
-			false,
-		},
-	}
-
-	for _, tc := range testCases {
-		suite.Run(tc.name, func() {
-			suite.SetupTest()
-			err := suite.app.EvmKeeper.DeleteAccount(suite.ctx, tc.addr)
-			if tc.expErr {
-				suite.Require().Error(err)
-			} else {
-				suite.Require().NoError(err)
-				balance := suite.app.EvmKeeper.GetBalance(suite.ctx, tc.addr)
-				suite.Require().Equal(new(big.Int), balance)
-			}
-		})
 	}
 }

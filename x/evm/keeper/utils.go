@@ -106,22 +106,26 @@ func VerifyFee(
 // CheckSenderBalance validates that the tx cost value is positive and that the
 // sender has enough funds to pay for the fees and value of the transaction.
 func CheckSenderBalance(
-	balance sdkmath.Int,
+	ctx sdk.Context,
+	bankKeeper evmtypes.BankKeeper,
+	sender sdk.AccAddress,
 	txData evmtypes.TxData,
+	denom string,
 ) error {
+	balance := bankKeeper.GetBalance(ctx, sender, denom)
 	cost := txData.Cost()
 
 	if cost.Sign() < 0 {
-		return errorsmod.Wrapf(
+		return errortypes.Wrapf(
 			errortypes.ErrInvalidCoins,
-			"tx cost (%s) is negative and invalid", cost,
+			"tx cost (%s%s) is negative and invalid", cost, denom,
 		)
 	}
 
-	if balance.IsNegative() || balance.BigInt().Cmp(cost) < 0 {
-		return errorsmod.Wrapf(
+	if balance.IsNegative() || balance.Amount.BigInt().Cmp(cost) < 0 {
+		return errortypes.Wrapf(
 			errortypes.ErrInsufficientFunds,
-			"sender balance < tx cost (%s < %s)", balance, txData.Cost(),
+			"sender balance < tx cost (%s < %s%s)", balance, txData.Cost(), denom,
 		)
 	}
 	return nil

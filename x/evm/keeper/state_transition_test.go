@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/evmos/ethermint/tests"
 	"github.com/evmos/ethermint/x/evm/keeper"
-	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
@@ -37,6 +36,7 @@ func (suite *KeeperTestSuite) TestGetHashFn() {
 			uint64(suite.ctx.BlockHeight()),
 			func() {
 				suite.ctx = suite.ctx.WithHeaderHash(tmhash.Sum([]byte("header")))
+				suite.app.EvmKeeper.WithContext(suite.ctx)
 			},
 			common.BytesToHash(tmhash.Sum([]byte("header"))),
 		},
@@ -47,6 +47,7 @@ func (suite *KeeperTestSuite) TestGetHashFn() {
 				header := tmproto.Header{}
 				header.Height = suite.ctx.BlockHeight()
 				suite.ctx = suite.ctx.WithBlockHeader(header)
+				suite.app.EvmKeeper.WithContext(suite.ctx)
 			},
 			common.Hash{},
 		},
@@ -55,6 +56,7 @@ func (suite *KeeperTestSuite) TestGetHashFn() {
 			uint64(suite.ctx.BlockHeight()),
 			func() {
 				suite.ctx = suite.ctx.WithBlockHeader(header)
+				suite.app.EvmKeeper.WithContext(suite.ctx)
 			},
 			common.BytesToHash(hash),
 		},
@@ -63,6 +65,7 @@ func (suite *KeeperTestSuite) TestGetHashFn() {
 			1,
 			func() {
 				suite.ctx = suite.ctx.WithBlockHeight(10)
+				suite.app.EvmKeeper.WithContext(suite.ctx)
 			},
 			common.Hash{},
 		},
@@ -72,6 +75,7 @@ func (suite *KeeperTestSuite) TestGetHashFn() {
 			func() {
 				suite.app.StakingKeeper.SetHistoricalInfo(suite.ctx, 1, &stakingtypes.HistoricalInfo{})
 				suite.ctx = suite.ctx.WithBlockHeight(10)
+				suite.app.EvmKeeper.WithContext(suite.ctx)
 			},
 			common.Hash{},
 		},
@@ -84,6 +88,7 @@ func (suite *KeeperTestSuite) TestGetHashFn() {
 				}
 				suite.app.StakingKeeper.SetHistoricalInfo(suite.ctx, 1, histInfo)
 				suite.ctx = suite.ctx.WithBlockHeight(10)
+				suite.app.EvmKeeper.WithContext(suite.ctx)
 			},
 			common.BytesToHash(hash),
 		},
@@ -101,7 +106,7 @@ func (suite *KeeperTestSuite) TestGetHashFn() {
 
 			tc.malleate()
 
-			hash := suite.app.EvmKeeper.GetHashFn(suite.ctx)(tc.height)
+			hash := suite.app.EvmKeeper.GetHashFn()(tc.height)
 			suite.Require().Equal(tc.expHash, hash)
 		})
 	}
@@ -121,6 +126,7 @@ func (suite *KeeperTestSuite) TestGetCoinbaseAddress() {
 				header := suite.ctx.BlockHeader()
 				header.ProposerAddress = []byte{}
 				suite.ctx = suite.ctx.WithBlockHeader(header)
+				suite.app.EvmKeeper.WithContext(suite.ctx)
 			},
 			false,
 		},
@@ -148,6 +154,7 @@ func (suite *KeeperTestSuite) TestGetCoinbaseAddress() {
 				_, found := suite.app.StakingKeeper.GetValidatorByConsAddr(suite.ctx, valConsAddr.Bytes())
 				suite.Require().True(found)
 
+				suite.app.EvmKeeper.WithContext(suite.ctx)
 				suite.Require().NotEmpty(suite.ctx.BlockHeader().ProposerAddress)
 			},
 			true,
@@ -261,10 +268,10 @@ func (suite *KeeperTestSuite) TestGetEthIntrinsicGas() {
 			signer := ethtypes.LatestSignerForChainID(suite.app.EvmKeeper.ChainID())
 
 			suite.ctx = suite.ctx.WithBlockHeight(tc.height)
+			suite.app.EvmKeeper.WithContext(suite.ctx)
 
-			nonce := suite.app.EvmKeeper.GetNonce(suite.ctx, suite.address)
 			m, err := newNativeMessage(
-				nonce,
+				suite.app.EvmKeeper.GetNonce(suite.address),
 				suite.ctx.BlockHeight(),
 				suite.address,
 				ethCfg,
@@ -276,7 +283,7 @@ func (suite *KeeperTestSuite) TestGetEthIntrinsicGas() {
 			)
 			suite.Require().NoError(err)
 
-			gas, err := suite.app.EvmKeeper.GetEthIntrinsicGas(suite.ctx, m, ethCfg, tc.isContractCreation)
+			gas, err := suite.app.EvmKeeper.GetEthIntrinsicGas(m, ethCfg, tc.isContractCreation)
 			if tc.noError {
 				suite.Require().NoError(err)
 			} else {
@@ -330,16 +337,15 @@ func (suite *KeeperTestSuite) TestGasToRefund() {
 		suite.Run(fmt.Sprintf("Case %s", tc.name), func() {
 			suite.mintFeeCollector = true
 			suite.SetupTest() // reset
-			vmdb := suite.StateDB()
-			vmdb.AddRefund(10)
+			suite.app.EvmKeeper.AddRefund(10)
 
 			if tc.expPanic {
 				panicF := func() {
-					keeper.GasToRefund(vmdb.GetRefund(), tc.gasconsumed, tc.refundQuotient)
+					suite.app.EvmKeeper.GasToRefund(tc.gasconsumed, tc.refundQuotient)
 				}
 				suite.Require().Panics(panicF)
 			} else {
-				gr := keeper.GasToRefund(vmdb.GetRefund(), tc.gasconsumed, tc.refundQuotient)
+				gr := suite.app.EvmKeeper.GasToRefund(tc.gasconsumed, tc.refundQuotient)
 				suite.Require().Equal(tc.expGasRefund, gr)
 			}
 		})
@@ -398,7 +404,7 @@ func (suite *KeeperTestSuite) TestRefundGas() {
 			malleate: func() {
 				keeperParams := suite.app.EvmKeeper.GetParams(suite.ctx)
 				m, err = suite.createContractGethMsg(
-					suite.StateDB().GetNonce(suite.address),
+					suite.app.EvmKeeper.GetNonce(suite.address),
 					ethtypes.LatestSignerForChainID(suite.app.EvmKeeper.ChainID()),
 					keeperParams.ChainConfig.EthereumConfig(suite.app.EvmKeeper.ChainID()),
 					big.NewInt(-100),
@@ -416,10 +422,9 @@ func (suite *KeeperTestSuite) TestRefundGas() {
 			keeperParams := suite.app.EvmKeeper.GetParams(suite.ctx)
 			ethCfg := keeperParams.ChainConfig.EthereumConfig(suite.app.EvmKeeper.ChainID())
 			signer := ethtypes.LatestSignerForChainID(suite.app.EvmKeeper.ChainID())
-			vmdb := suite.StateDB()
 
 			m, err = newNativeMessage(
-				vmdb.GetNonce(suite.address),
+				suite.app.EvmKeeper.GetNonce(suite.address),
 				suite.ctx.BlockHeight(),
 				suite.address,
 				ethCfg,
@@ -431,7 +436,7 @@ func (suite *KeeperTestSuite) TestRefundGas() {
 			)
 			suite.Require().NoError(err)
 
-			vmdb.AddRefund(params.TxGas)
+			suite.app.EvmKeeper.AddRefund(params.TxGas)
 
 			if tc.leftoverGas > m.Gas() {
 				return
@@ -442,10 +447,10 @@ func (suite *KeeperTestSuite) TestRefundGas() {
 			}
 
 			gasUsed := m.Gas() - tc.leftoverGas
-			refund := keeper.GasToRefund(vmdb.GetRefund(), gasUsed, tc.refundQuotient)
+			refund := suite.app.EvmKeeper.GasToRefund(gasUsed, tc.refundQuotient)
 			suite.Require().Equal(tc.expGasRefund, refund)
 
-			err = suite.app.EvmKeeper.RefundGas(suite.ctx, m, refund, "aphoton")
+			err = suite.app.EvmKeeper.RefundGas(m, refund, "aphoton")
 			if tc.noError {
 				suite.Require().NoError(err)
 			} else {
@@ -502,8 +507,10 @@ func (suite *KeeperTestSuite) TestResetGasMeterAndConsumeGas() {
 			panicF := func() {
 				gm := sdk.NewGasMeter(10)
 				gm.ConsumeGas(tc.gasConsumed, "")
-				ctx := suite.ctx.WithGasMeter(gm)
-				suite.app.EvmKeeper.ResetGasMeterAndConsumeGas(ctx, tc.gasUsed)
+				suite.ctx = suite.ctx.WithGasMeter(gm)
+				suite.app.EvmKeeper.WithContext(suite.ctx)
+
+				suite.app.EvmKeeper.ResetGasMeterAndConsumeGas(tc.gasUsed)
 			}
 
 			if tc.expPanic {
@@ -528,8 +535,7 @@ func (suite *KeeperTestSuite) TestEVMConfig() {
 
 func (suite *KeeperTestSuite) TestContractDeployment() {
 	contractAddress := suite.DeployTestContract(suite.T(), suite.address, big.NewInt(10000000000000))
-	db := suite.StateDB()
-	suite.Require().Greater(db.GetCodeSize(contractAddress), 0)
+	suite.Require().Greater(suite.app.EvmKeeper.GetCodeSize(contractAddress), 0)
 }
 
 func (suite *KeeperTestSuite) TestApplyMessage() {
@@ -543,11 +549,10 @@ func (suite *KeeperTestSuite) TestApplyMessage() {
 	keeperParams := suite.app.EvmKeeper.GetParams(suite.ctx)
 	chainCfg := keeperParams.ChainConfig.EthereumConfig(suite.app.EvmKeeper.ChainID())
 	signer := ethtypes.LatestSignerForChainID(suite.app.EvmKeeper.ChainID())
-	tracer := suite.app.EvmKeeper.Tracer(suite.ctx, msg, config.ChainConfig)
-	vmdb := suite.StateDB()
+	tracer := suite.app.EvmKeeper.Tracer(msg, config.ChainConfig)
 
 	msg, err = newNativeMessage(
-		vmdb.GetNonce(suite.address),
+		suite.app.EvmKeeper.GetNonce(suite.address),
 		suite.ctx.BlockHeight(),
 		suite.address,
 		chainCfg,
@@ -559,7 +564,7 @@ func (suite *KeeperTestSuite) TestApplyMessage() {
 	)
 	suite.Require().NoError(err)
 
-	res, err := suite.app.EvmKeeper.ApplyMessage(suite.ctx, msg, tracer, true)
+	res, err := suite.app.EvmKeeper.ApplyMessage(msg, tracer, true)
 
 	suite.Require().NoError(err)
 	suite.Require().Equal(expectedGasUsed, res.GasUsed)
@@ -574,8 +579,6 @@ func (suite *KeeperTestSuite) TestApplyMessageWithConfig() {
 		config          *types.EVMConfig
 		keeperParams    types.Params
 		signer          ethtypes.Signer
-		vmdb            *statedb.StateDB
-		txConfig        statedb.TxConfig
 		chainCfg        *params.ChainConfig
 	)
 
@@ -588,7 +591,7 @@ func (suite *KeeperTestSuite) TestApplyMessageWithConfig() {
 			"messsage applied ok",
 			func() {
 				msg, err = newNativeMessage(
-					vmdb.GetNonce(suite.address),
+					suite.app.EvmKeeper.GetNonce(suite.address),
 					suite.ctx.BlockHeight(),
 					suite.address,
 					chainCfg,
@@ -607,7 +610,7 @@ func (suite *KeeperTestSuite) TestApplyMessageWithConfig() {
 			func() {
 				config.Params.EnableCall = false
 				msg, err = newNativeMessage(
-					vmdb.GetNonce(suite.address),
+					suite.app.EvmKeeper.GetNonce(suite.address),
 					suite.ctx.BlockHeight(),
 					suite.address,
 					chainCfg,
@@ -624,7 +627,7 @@ func (suite *KeeperTestSuite) TestApplyMessageWithConfig() {
 		{
 			"create contract tx with config param EnableCreate = false",
 			func() {
-				msg, err = suite.createContractGethMsg(vmdb.GetNonce(suite.address), signer, chainCfg, big.NewInt(1))
+				msg, err = suite.createContractGethMsg(suite.app.EvmKeeper.GetNonce(suite.address), signer, chainCfg, big.NewInt(1))
 				suite.Require().NoError(err)
 				config.Params.EnableCreate = false
 			},
@@ -644,11 +647,9 @@ func (suite *KeeperTestSuite) TestApplyMessageWithConfig() {
 			keeperParams = suite.app.EvmKeeper.GetParams(suite.ctx)
 			chainCfg = keeperParams.ChainConfig.EthereumConfig(suite.app.EvmKeeper.ChainID())
 			signer = ethtypes.LatestSignerForChainID(suite.app.EvmKeeper.ChainID())
-			vmdb = suite.StateDB()
-			txConfig = suite.app.EvmKeeper.TxConfig(suite.ctx, common.Hash{})
 
 			tc.malleate()
-			res, err := suite.app.EvmKeeper.ApplyMessageWithConfig(suite.ctx, msg, nil, true, config, txConfig)
+			res, err := suite.app.EvmKeeper.ApplyMessageWithConfig(msg, nil, true, config)
 
 			if tc.expErr {
 				suite.Require().Error(err)

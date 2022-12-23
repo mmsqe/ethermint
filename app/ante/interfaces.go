@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/evmos/ethermint/x/evm/statedb"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 	evm "github.com/evmos/ethermint/x/evm/vm"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
@@ -39,14 +38,16 @@ type DynamicFeeEVMKeeper interface {
 
 // EVMKeeper defines the expected keeper interface used on the Eth AnteHandler
 type EVMKeeper interface {
-	statedb.Keeper
+	vm.StateDB
 	DynamicFeeEVMKeeper
 
-	NewEVM(ctx sdk.Context, msg core.Message, cfg *evmtypes.EVMConfig, tracer vm.EVMLogger, stateDB vm.StateDB) evm.EVM
+	WithContext(ctx sdk.Context)
+	ResetRefundTransient(ctx sdk.Context)
+	NewEVM(msg core.Message, cfg *evmtypes.EVMConfig, tracer vm.EVMLogger) evm.EVM
+	GetCodeHash(addr common.Address) common.Hash
 	DeductTxCostsFromUserBalance(ctx sdk.Context, fees sdk.Coins, from common.Address) error
-	GetBalance(ctx sdk.Context, addr common.Address) *big.Int
-	ResetTransientGasUsed(ctx sdk.Context)
-	GetTxIndexTransient(ctx sdk.Context) uint64
+	ResetTransientGasUsed()
+	GetTxIndexTransient() uint64
 	GetChainConfig(ctx sdk.Context) evmtypes.ChainConfig
 	GetEVMDenom(ctx sdk.Context) string
 	GetEnableCreate(ctx sdk.Context) bool

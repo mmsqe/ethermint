@@ -55,7 +55,7 @@ func (esc EthSetupContextDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 
 	// Reset transient gas used to prepare the execution of current cosmos tx.
 	// Transient gas-used is necessary to sum the gas-used of cosmos tx, when it contains multiple eth msgs.
-	esc.evmKeeper.ResetTransientGasUsed(ctx)
+	esc.evmKeeper.ResetTransientGasUsed()
 	return next(newCtx, tx, simulate)
 }
 
@@ -73,7 +73,7 @@ func NewEthEmitEventDecorator(evmKeeper EVMKeeper) EthEmitEventDecorator {
 func (eeed EthEmitEventDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
 	// After eth tx passed ante handler, the fee is deducted and nonce increased, it shouldn't be ignored by json-rpc,
 	// we need to emit some basic events at the very end of ante handler to be indexed by tendermint.
-	txIndex := eeed.evmKeeper.GetTxIndexTransient(ctx)
+	txIndex := eeed.evmKeeper.GetTxIndexTransient()
 	for i, msg := range tx.GetMsgs() {
 		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
 		if !ok {
@@ -111,6 +111,7 @@ func (vbd EthValidateBasicDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simu
 		return next(ctx, tx, simulate)
 	}
 
+	vbd.evmKeeper.WithContext(ctx)
 	err := tx.ValidateBasic()
 	// ErrNoSignatures is fine with eth tx
 	if err != nil && !errors.Is(err, errortypes.ErrNoSignatures) {

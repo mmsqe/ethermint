@@ -16,7 +16,6 @@ import (
 func BenchmarkCreateAccountNew(b *testing.B) {
 	suite := KeeperTestSuite{}
 	suite.SetupTest()
-	vmdb := suite.StateDB()
 
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -25,27 +24,25 @@ func BenchmarkCreateAccountNew(b *testing.B) {
 		b.StopTimer()
 		addr := tests.GenerateAddress()
 		b.StartTimer()
-		vmdb.CreateAccount(addr)
+		suite.app.EvmKeeper.CreateAccount(addr)
 	}
 }
 
 func BenchmarkCreateAccountExisting(b *testing.B) {
 	suite := KeeperTestSuite{}
 	suite.SetupTest()
-	vmdb := suite.StateDB()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		vmdb.CreateAccount(suite.address)
+		suite.app.EvmKeeper.CreateAccount(suite.address)
 	}
 }
 
 func BenchmarkAddBalance(b *testing.B) {
 	suite := KeeperTestSuite{}
 	suite.SetupTest()
-	vmdb := suite.StateDB()
 
 	amt := big.NewInt(10)
 
@@ -53,14 +50,13 @@ func BenchmarkAddBalance(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		vmdb.AddBalance(suite.address, amt)
+		suite.app.EvmKeeper.AddBalance(suite.address, amt)
 	}
 }
 
 func BenchmarkSetCode(b *testing.B) {
 	suite := KeeperTestSuite{}
 	suite.SetupTest()
-	vmdb := suite.StateDB()
 
 	hash := crypto.Keccak256Hash([]byte("code")).Bytes()
 
@@ -68,14 +64,13 @@ func BenchmarkSetCode(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		vmdb.SetCode(suite.address, hash)
+		suite.app.EvmKeeper.SetCode(suite.address, hash)
 	}
 }
 
 func BenchmarkSetState(b *testing.B) {
 	suite := KeeperTestSuite{}
 	suite.SetupTest()
-	vmdb := suite.StateDB()
 
 	hash := crypto.Keccak256Hash([]byte("topic")).Bytes()
 
@@ -83,14 +78,13 @@ func BenchmarkSetState(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		vmdb.SetCode(suite.address, hash)
+		suite.app.EvmKeeper.SetCode(suite.address, hash)
 	}
 }
 
 func BenchmarkAddLog(b *testing.B) {
 	suite := KeeperTestSuite{}
 	suite.SetupTest()
-	vmdb := suite.StateDB()
 
 	topic := crypto.Keccak256Hash([]byte("topic"))
 	txHash := crypto.Keccak256Hash([]byte("tx_hash"))
@@ -100,7 +94,7 @@ func BenchmarkAddLog(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		vmdb.AddLog(&ethtypes.Log{
+		suite.app.EvmKeeper.AddLog(&ethtypes.Log{
 			Address:     suite.address,
 			Topics:      []common.Hash{topic},
 			Data:        []byte("data"),
@@ -117,19 +111,18 @@ func BenchmarkAddLog(b *testing.B) {
 func BenchmarkSnapshot(b *testing.B) {
 	suite := KeeperTestSuite{}
 	suite.SetupTest()
-	vmdb := suite.StateDB()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		target := vmdb.Snapshot()
+		target := suite.app.EvmKeeper.Snapshot()
 		require.Equal(b, i, target)
 	}
 
 	for i := b.N - 1; i >= 0; i-- {
 		require.NotPanics(b, func() {
-			vmdb.RevertToSnapshot(i)
+			suite.app.EvmKeeper.RevertToSnapshot(i)
 		})
 	}
 }
@@ -137,7 +130,6 @@ func BenchmarkSnapshot(b *testing.B) {
 func BenchmarkSubBalance(b *testing.B) {
 	suite := KeeperTestSuite{}
 	suite.SetupTest()
-	vmdb := suite.StateDB()
 
 	amt := big.NewInt(10)
 
@@ -145,49 +137,46 @@ func BenchmarkSubBalance(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		vmdb.SubBalance(suite.address, amt)
+		suite.app.EvmKeeper.SubBalance(suite.address, amt)
 	}
 }
 
 func BenchmarkSetNonce(b *testing.B) {
 	suite := KeeperTestSuite{}
 	suite.SetupTest()
-	vmdb := suite.StateDB()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		vmdb.SetNonce(suite.address, 1)
+		suite.app.EvmKeeper.SetNonce(suite.address, 1)
 	}
 }
 
 func BenchmarkAddRefund(b *testing.B) {
 	suite := KeeperTestSuite{}
 	suite.SetupTest()
-	vmdb := suite.StateDB()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		vmdb.AddRefund(1)
+		suite.app.EvmKeeper.AddRefund(1)
 	}
 }
 
 func BenchmarkSuicide(b *testing.B) {
 	suite := KeeperTestSuite{}
 	suite.SetupTest()
-	vmdb := suite.StateDB()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		addr := tests.GenerateAddress()
-		vmdb.CreateAccount(addr)
+		suite.app.EvmKeeper.CreateAccount(addr)
 		b.StartTimer()
 
-		vmdb.Suicide(addr)
+		suite.app.EvmKeeper.Suicide(addr)
 	}
 }
