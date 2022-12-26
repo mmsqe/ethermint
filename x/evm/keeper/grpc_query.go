@@ -349,12 +349,7 @@ func (k Keeper) EstimateGas(c context.Context, req *types.EthCallRequest) (*type
 			msg.AccessList(),
 			msg.IsFake(),
 		)
-		now := time.Now()
 		rsp, err = k.ApplyMessageWithConfig(msg, nil, false, cfg)
-		diff := time.Since(now)
-		if diff > time.Millisecond {
-			fmt.Printf("mm-total: %+v\n", diff)
-		}
 		if err != nil {
 			if errors.Is(err, core.ErrIntrinsicGas) {
 				return true, nil, nil // Special case, raise gas limit

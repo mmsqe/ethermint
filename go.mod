@@ -198,6 +198,8 @@ replace (
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
 	// https://github.com/mmsqe/cosmos-sdk/commit/c3e0a88fce8dfc059569a8cb245e16fbfe2d7595
 	github.com/cosmos/cosmos-sdk => ../cosmos-sdk
+
+	github.com/ethereum/go-ethereum => ../go-ethereum
 	// Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
 	// TODO Remove it: https://github.com/cosmos/cosmos-sdk/issues/10409
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.7.0

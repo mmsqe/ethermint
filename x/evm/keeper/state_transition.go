@@ -16,7 +16,9 @@
 package keeper
 
 import (
+	"fmt"
 	"math/big"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 
@@ -430,10 +432,20 @@ func (k *Keeper) ApplyMessageWithConfig(
 		// - reset sender's nonce to msg.Nonce() before calling evm.
 		// - increase sender's nonce by one no matter the result.
 		k.SetNonce(sender.Address(), msg.Nonce())
+		now := time.Now()
 		ret, _, leftoverGas, vmErr = evm.Create(sender, msg.Data(), leftoverGas, msg.Value())
+		diff := time.Since(now)
+		if diff > time.Millisecond {
+			fmt.Printf("mm-Create: %+v\n", diff)
+		}
 		k.SetNonce(sender.Address(), msg.Nonce()+1)
 	} else {
+		now := time.Now()
 		ret, leftoverGas, vmErr = evm.Call(sender, *msg.To(), msg.Data(), leftoverGas, msg.Value())
+		diff := time.Since(now)
+		if diff > time.Millisecond {
+			fmt.Printf("mm-Call: %+v\n", diff)
+		}
 	}
 
 	refundQuotient := params.RefundQuotient
