@@ -41,10 +41,10 @@ class Ethermint:
         if self._w3 is None:
             if self._use_websockets:
                 self._w3 = web3.Web3(
-                    web3.providers.WebsocketProvider(self.w3_ws_endpoint)
+                    web3.providers.WebsocketProvider(self.w3_ws_endpoint, request_kwargs={"timeout": 20}),
                 )
             else:
-                self._w3 = web3.Web3(web3.providers.HTTPProvider(self.w3_http_endpoint))
+                self._w3 = web3.Web3(web3.providers.HTTPProvider(self.w3_http_endpoint, request_kwargs={"timeout": 20}))
         return self._w3
 
     def base_port(self, i):
