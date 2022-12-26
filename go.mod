@@ -196,6 +196,7 @@ replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.1.7-0.20210622111912-ef00f8ac3d76
 	// ics23 patch for dragonberry
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
+	// https://github.com/mmsqe/cosmos-sdk/commit/c3e0a88fce8dfc059569a8cb245e16fbfe2d7595
 	github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 	// Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
 	// TODO Remove it: https://github.com/cosmos/cosmos-sdk/issues/10409
