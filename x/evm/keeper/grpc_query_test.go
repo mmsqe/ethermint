@@ -1251,7 +1251,7 @@ func (suite *KeeperTestSuite) TestEthCall() {
 	)
 
 	address := tests.GenerateAddress()
-	suite.Require().Equal(uint64(0), suite.app.EvmKeeper.GetNonce(suite.ctx, address))
+	suite.Require().Equal(uint64(0), suite.app.EvmKeeper.GetNonce(address))
 	supply := sdkmath.NewIntWithDecimal(1000, 18).BigInt()
 
 	hexBigInt := hexutil.Big(*big.NewInt(1))

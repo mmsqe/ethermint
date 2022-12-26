@@ -153,7 +153,6 @@ func (s *AnteTestSuite) BuildTestEthTx(
 ) *evmtypes.MsgEthereumTx {
 	chainID := s.app.EvmKeeper.ChainID()
 	nonce := s.app.EvmKeeper.GetNonce(
-		s.ctx,
 		common.BytesToAddress(from.Bytes()),
 	)
 

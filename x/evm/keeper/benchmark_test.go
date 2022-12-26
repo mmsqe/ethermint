@@ -150,7 +150,7 @@ func DoBenchmarkDeepContextStack(b *testing.B, depth int) {
 	end := []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 
 	suite := KeeperTestSuite{}
-	suite.DoSetupTest(b)
+	suite.SetupApp(false)
 
 	transientKey := suite.app.GetTKey(types.TransientKey)
 

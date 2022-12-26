@@ -208,7 +208,6 @@ func generateKey() (*ethsecp256k1.PrivKey, sdk.AccAddress) {
 
 func getNonce(addressBytes []byte) uint64 {
 	return s.app.EvmKeeper.GetNonce(
-		s.ctx,
 		common.BytesToAddress(addressBytes),
 	)
 }
