@@ -166,7 +166,7 @@ require (
 	github.com/tendermint/btcd v0.1.1 // indirect
 	github.com/tendermint/crypto v0.0.0-20191022145703-50d29ede1e15 // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
-	github.com/tidwall/btree v1.5.2 // indirect
+	github.com/tidwall/btree v1.6.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
 	github.com/ulikunitz/xz v0.5.8 // indirect
@@ -196,7 +196,7 @@ replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.1.7-0.20210622111912-ef00f8ac3d76
 	// ics23 patch for dragonberry
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
-	// https://github.com/mmsqe/cosmos-sdk/commit/c3e0a88fce8dfc059569a8cb245e16fbfe2d7595
+	// https://github.com/mmsqe/cosmos-sdk/commit/b70733be33cea023042153c2b0614192ceda3414
 	github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 
 	github.com/ethereum/go-ethereum => ../go-ethereum
