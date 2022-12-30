@@ -391,6 +391,7 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 	signer := ethtypes.MakeSigner(cfg.ChainConfig, big.NewInt(ctx.BlockHeight()))
 
 	txConfig := statedb.NewEmptyTxConfig(common.BytesToHash(ctx.HeaderHash().Bytes()))
+	var lastDB *statedb.StateDB
 	for i, tx := range req.Predecessors {
 		ethTx := tx.AsTransaction()
 		msg, err := ethTx.AsMessage(signer, cfg.BaseFee)
@@ -399,7 +400,12 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 		}
 		txConfig.TxHash = ethTx.Hash()
 		txConfig.TxIndex = uint(i)
-		rsp, err := k.ApplyMessageWithConfig(ctx, msg, types.NewNoOpTracer(), true, cfg, txConfig)
+		stateDB := statedb.New(ctx, &k, txConfig)
+		if lastDB != nil {
+			stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
+		}
+		lastDB = stateDB
+		rsp, err := k.ApplyMessageWithStateDB(ctx, msg, types.NewNoOpTracer(), true, cfg, txConfig, stateDB)
 		if err != nil {
 			continue
 		}
@@ -412,7 +418,11 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 		txConfig.TxIndex++
 	}
 
-	result, _, err := k.traceTx(ctx, cfg, txConfig, signer, tx, req.TraceConfig, false)
+	stateDB := statedb.New(ctx, &k, txConfig)
+	if lastDB != nil {
+		stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
+	}
+	result, _, err := k.traceTx(ctx, cfg, txConfig, stateDB, signer, tx, req.TraceConfig, false)
 	if err != nil {
 		// error will be returned with detail status from traceTx
 		return nil, err
@@ -470,7 +480,7 @@ func (k Keeper) TraceBlock(c context.Context, req *types.QueryTraceBlockRequest)
 		ethTx := tx.AsTransaction()
 		txConfig.TxHash = ethTx.Hash()
 		txConfig.TxIndex = uint(i)
-		traceResult, logIndex, err := k.traceTx(ctx, cfg, txConfig, signer, ethTx, req.TraceConfig, true)
+		traceResult, logIndex, err := k.traceTx(ctx, cfg, txConfig, nil, signer, ethTx, req.TraceConfig, true)
 		if err != nil {
 			result.Error = err.Error()
 		} else {
@@ -495,6 +505,7 @@ func (k *Keeper) traceTx(
 	ctx sdk.Context,
 	cfg *types.EVMConfig,
 	txConfig statedb.TxConfig,
+	stateDB *statedb.StateDB,
 	signer ethtypes.Signer,
 	tx *ethtypes.Transaction,
 	traceConfig *types.TraceConfig,
@@ -562,7 +573,7 @@ func (k *Keeper) traceTx(
 		}
 	}()
 
-	res, err := k.ApplyMessageWithConfig(ctx, msg, tracer, commitMessage, cfg, txConfig)
+	res, err := k.ApplyMessageWithStateDB(ctx, msg, tracer, commitMessage, cfg, txConfig, stateDB)
 	if err != nil {
 		return nil, 0, status.Error(codes.Internal, err.Error())
 	}

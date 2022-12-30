@@ -461,3 +461,11 @@ func (s *StateDB) Commit() error {
 	}
 	return nil
 }
+
+func (s *StateDB) GetAddressToAccessList() *accessList {
+	return s.accessList
+}
+
+func (s *StateDB) SetAddressToAccessList(accessList *accessList) {
+	s.accessList = accessList
+}
