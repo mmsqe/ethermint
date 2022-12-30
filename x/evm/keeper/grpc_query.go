@@ -422,6 +422,10 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 	if lastDB != nil {
 		stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
 	}
+	stateDB := statedb.New(ctx, &k, txConfig)
+	if lastDB != nil {
+		stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
+	}
 	result, _, err := k.traceTx(ctx, cfg, txConfig, stateDB, signer, tx, req.TraceConfig, false)
 	if err != nil {
 		// error will be returned with detail status from traceTx

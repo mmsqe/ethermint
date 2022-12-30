@@ -381,6 +381,16 @@ func (s *StateDB) AddAddressToAccessList(addr common.Address) {
 	}
 }
 
+// GetAddressToAccessList return full access list
+func (s *StateDB) GetAddressToAccessList() *accessList {
+	return s.accessList
+}
+
+// SetAddressToAccessList overwrite with new access list
+func (s *StateDB) SetAddressToAccessList(accessList *accessList) {
+	s.accessList = accessList
+}
+
 // AddSlotToAccessList adds the given (address, slot)-tuple to the access list
 func (s *StateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
 	addrMod, slotMod := s.accessList.AddSlot(addr, slot)
@@ -460,12 +470,4 @@ func (s *StateDB) Commit() error {
 		}
 	}
 	return nil
-}
-
-func (s *StateDB) GetAddressToAccessList() *accessList {
-	return s.accessList
-}
-
-func (s *StateDB) SetAddressToAccessList(accessList *accessList) {
-	s.accessList = accessList
 }
