@@ -24,6 +24,7 @@
         'block-range-cap': 10000,
         'logs-cap': 10000,
         'fix-revert-gas-refund-height': 1,
+        'fix-clear-access-list-height': 1,
       },
     },
     validators: [{
