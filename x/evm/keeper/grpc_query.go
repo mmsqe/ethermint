@@ -390,7 +390,6 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 	}
 	height := ctx.BlockHeight()
 	signer := ethtypes.MakeSigner(cfg.ChainConfig, big.NewInt(height))
-	patch := false
 	txConfig := statedb.NewEmptyTxConfig(common.BytesToHash(ctx.HeaderHash().Bytes()))
 	var lastDB *statedb.StateDB
 	for i, tx := range req.Predecessors {
@@ -402,7 +401,8 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 		txConfig.TxHash = ethTx.Hash()
 		txConfig.TxIndex = uint(i)
 		var stateDB *statedb.StateDB
-		if patch {
+		if height < req.FixClearAccessListHeight {
+			fmt.Println("mm-patch", height, req.FixClearAccessListHeight)
 			stateDB = statedb.New(ctx, &k, txConfig)
 			if lastDB != nil {
 				stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
@@ -422,10 +422,6 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 		txConfig.TxIndex++
 	}
 
-	stateDB := statedb.New(ctx, &k, txConfig)
-	if lastDB != nil {
-		stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
-	}
 	stateDB := statedb.New(ctx, &k, txConfig)
 	if lastDB != nil {
 		stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())

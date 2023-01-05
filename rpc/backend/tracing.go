@@ -88,13 +88,14 @@ func (b *Backend) TraceTransaction(hash common.Hash, config *evmtypes.TraceConfi
 	chainID := sdkmath.NewIntFromBigInt(tmp)
 
 	traceTxRequest := evmtypes.QueryTraceTxRequest{
-		Msg:             ethMessage,
-		Predecessors:    predecessors,
-		BlockNumber:     blk.Block.Height,
-		BlockTime:       blk.Block.Time,
-		BlockHash:       common.Bytes2Hex(blk.BlockID.Hash),
-		ProposerAddress: sdk.ConsAddress(blk.Block.ProposerAddress),
-		ChainId:         &chainID,
+		Msg:                      ethMessage,
+		Predecessors:             predecessors,
+		BlockNumber:              blk.Block.Height,
+		BlockTime:                blk.Block.Time,
+		BlockHash:                common.Bytes2Hex(blk.BlockID.Hash),
+		ProposerAddress:          sdk.ConsAddress(blk.Block.ProposerAddress),
+		ChainId:                  &chainID,
+		FixClearAccessListHeight: b.cfg.JSONRPC.FixClearAccessListHeight,
 	}
 
 	if config != nil {
