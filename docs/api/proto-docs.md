@@ -795,6 +795,7 @@ QueryTraceBlockRequest defines TraceTx request
 | `block_time` | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | block time |
 | `proposer_address` | [bytes](#bytes) |  | the proposer of the requested block |
 | `chain_id` | [string](#string) |  | the eip155 chain id parsed from the requested block header |
+| `fix_clear_access_list_height` | [int64](#int64) |  | fix_clear_access_list_height defines the upgrade height for fix clear access list before processing each transaction |
 
 
 

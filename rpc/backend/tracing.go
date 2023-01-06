@@ -174,13 +174,14 @@ func (b *Backend) TraceBlock(height rpctypes.BlockNumber,
 	chainID := sdkmath.NewIntFromBigInt(tmp)
 
 	traceBlockRequest := &evmtypes.QueryTraceBlockRequest{
-		Txs:             txsMessages,
-		TraceConfig:     config,
-		BlockNumber:     block.Block.Height,
-		BlockTime:       block.Block.Time,
-		BlockHash:       common.Bytes2Hex(block.BlockID.Hash),
-		ProposerAddress: sdk.ConsAddress(block.Block.ProposerAddress),
-		ChainId:         &chainID,
+		Txs:                      txsMessages,
+		TraceConfig:              config,
+		BlockNumber:              block.Block.Height,
+		BlockTime:                block.Block.Time,
+		BlockHash:                common.Bytes2Hex(block.BlockID.Hash),
+		ProposerAddress:          sdk.ConsAddress(block.Block.ProposerAddress),
+		ChainId:                  &chainID,
+		FixClearAccessListHeight: b.cfg.JSONRPC.FixClearAccessListHeight,
 	}
 
 	res, err := b.queryClient.TraceBlock(ctxWithHeight, traceBlockRequest)
