@@ -54,7 +54,7 @@ func (k Keeper) GetExtraEIPs(ctx sdk.Context) types.ExtraEIPs {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.ParamStoreKeyExtraEIPs)
 	if len(bz) == 0 {
-		return extraEIPs
+		return k.GetLegacyParams(ctx).ExtraEIPs
 	}
 	k.cdc.MustUnmarshal(bz, &extraEIPs)
 	return extraEIPs
@@ -66,7 +66,7 @@ func (k Keeper) GetChainConfig(ctx sdk.Context) types.ChainConfig {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.ParamStoreKeyChainConfig)
 	if len(bz) == 0 {
-		return chainCfg
+		return k.GetLegacyParams(ctx).ChainConfig
 	}
 	k.cdc.MustUnmarshal(bz, &chainCfg)
 	return chainCfg
@@ -77,27 +77,45 @@ func (k Keeper) GetEVMDenom(ctx sdk.Context) string {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.ParamStoreKeyEVMDenom)
 	if len(bz) == 0 {
-		return ""
+		return k.GetLegacyParams(ctx).EvmDenom
 	}
 	return string(bz)
+}
+
+func (k Keeper) GetLegacyParams(ctx sdk.Context) types.Params {
+	var params types.Params
+	k.ss.GetParamSetIfExists(ctx, &params)
+	return params
 }
 
 // GetEnableCall returns true if the EVM Call operation is enabled.
 func (k Keeper) GetEnableCall(ctx sdk.Context) bool {
 	store := ctx.KVStore(k.storeKey)
-	return store.Has(types.ParamStoreKeyEnableCall)
+	exist := store.Has(types.ParamStoreKeyEnableCall)
+	if !exist {
+		exist = k.GetLegacyParams(ctx).EnableCall
+	}
+	return exist
 }
 
 // GetEnableCreate returns true if the EVM Create contract operation is enabled.
 func (k Keeper) GetEnableCreate(ctx sdk.Context) bool {
 	store := ctx.KVStore(k.storeKey)
-	return store.Has(types.ParamStoreKeyEnableCreate)
+	exist := store.Has(types.ParamStoreKeyEnableCreate)
+	if !exist {
+		exist = k.GetLegacyParams(ctx).EnableCreate
+	}
+	return exist
 }
 
 // GetAllowUnprotectedTxs returns true if unprotected txs (i.e non-replay protected as per EIP-155) are supported by the chain.
 func (k Keeper) GetAllowUnprotectedTxs(ctx sdk.Context) bool {
 	store := ctx.KVStore(k.storeKey)
-	return store.Has(types.ParamStoreKeyAllowUnprotectedTxs)
+	exist := store.Has(types.ParamStoreKeyAllowUnprotectedTxs)
+	if !exist {
+		exist = k.GetLegacyParams(ctx).AllowUnprotectedTxs
+	}
+	return exist
 }
 
 // setChainConfig sets the ChainConfig in the store
