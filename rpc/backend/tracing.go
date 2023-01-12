@@ -113,7 +113,15 @@ func (b *Backend) TraceTransaction(hash common.Hash, config *evmtypes.TraceConfi
 		// 0 is a special value in `ContextWithHeight`
 		contextHeight = 1
 	}
-	traceResult, err := b.queryClient.TraceTx(rpctypes.ContextWithHeight(contextHeight), &traceTxRequest)
+	var traceResult *evmtypes.QueryTraceTxResponse
+	if blk.Block.Height < b.cfg.JSONRPC.FixClearAccessListHeight {
+		fmt.Println("mm-Tx-backup")
+		traceResult, err = b.backupQueryClient.TraceTx(rpctypes.ContextWithHeight(contextHeight), &traceTxRequest)
+	} else {
+		fmt.Println("mm-Tx-main")
+		traceResult, err = b.queryClient.TraceTx(rpctypes.ContextWithHeight(contextHeight), &traceTxRequest)
+	}
+	fmt.Printf("mm-Tx-traceResult: %+v\n", traceResult)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +191,16 @@ func (b *Backend) TraceBlock(height rpctypes.BlockNumber,
 		FixClearAccessListHeight: b.cfg.JSONRPC.FixClearAccessListHeight,
 	}
 
-	res, err := b.queryClient.TraceBlock(ctxWithHeight, traceBlockRequest)
+	var res *evmtypes.QueryTraceBlockResponse
+	var err error
+	if block.Block.Height < b.cfg.JSONRPC.FixClearAccessListHeight {
+		fmt.Println("mm-Block-backup")
+		res, err = b.backupQueryClient.TraceBlock(ctxWithHeight, traceBlockRequest)
+	} else {
+		fmt.Println("mm-Block-main")
+		res, err = b.queryClient.TraceBlock(ctxWithHeight, traceBlockRequest)
+	}
+	fmt.Printf("mm-Block-res: %+v\n", res)
 	if err != nil {
 		return nil, err
 	}

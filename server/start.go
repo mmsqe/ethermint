@@ -486,7 +486,7 @@ func startInProcess(ctx *server.Context, clientCtx client.Context, appCreator ty
 			ctx.Logger.Debug("gRPC client assigned to client context", "address", grpcAddress)
 
 			// Config backup GRPCClient
-			backupGrpcAddress, err := parseGrpcAddress("0.0.0.0:26754")
+			backupGrpcAddress, err := parseGrpcAddress("0.0.0.0:26663")
 			if err != nil {
 				return err
 			}
