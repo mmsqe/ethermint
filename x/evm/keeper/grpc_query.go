@@ -357,6 +357,37 @@ func (k Keeper) EstimateGas(c context.Context, req *types.EthCallRequest) (*type
 	return &types.EstimateGasResponse{Gas: hi}, nil
 }
 
+func (k Keeper) TraceTxFn(
+	ctx sdk.Context,
+	tx *types.MsgEthereumTx,
+	signer ethtypes.Signer,
+	cfg *types.EVMConfig,
+	txConfig statedb.TxConfig,
+	patch bool,
+	lastDB *statedb.StateDB,
+) (*statedb.StateDB, error) {
+	ethTx := tx.AsTransaction()
+	msg, err := ethTx.AsMessage(signer, cfg.BaseFee)
+	if err != nil {
+		return lastDB, err
+	}
+	txConfig.TxHash = ethTx.Hash()
+	var stateDB *statedb.StateDB
+	if patch {
+		stateDB = statedb.New(ctx, &k, txConfig)
+		if lastDB != nil {
+			stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
+		}
+		lastDB = stateDB
+	}
+	rsp, err := k.ApplyMessageWithStateDB(ctx, msg, types.NewNoOpTracer(), true, cfg, txConfig, stateDB)
+	if err != nil {
+		return lastDB, err
+	}
+	txConfig.LogIndex += uint(len(rsp.Logs))
+	return lastDB, nil
+}
+
 // TraceTx configures a new tracer according to the provided configuration, and
 // executes the given message in the provided environment. The return value will
 // be tracer dependent.
@@ -394,26 +425,8 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 	txConfig := statedb.NewEmptyTxConfig(common.BytesToHash(ctx.HeaderHash().Bytes()))
 	var lastDB *statedb.StateDB
 	for i, tx := range req.Predecessors {
-		ethTx := tx.AsTransaction()
-		msg, err := ethTx.AsMessage(signer, cfg.BaseFee)
-		if err != nil {
-			continue
-		}
-		txConfig.TxHash = ethTx.Hash()
 		txConfig.TxIndex = uint(i)
-		var stateDB *statedb.StateDB
-		if patch {
-			stateDB = statedb.New(ctx, &k, txConfig)
-			if lastDB != nil {
-				stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
-			}
-			lastDB = stateDB
-		}
-		rsp, err := k.ApplyMessageWithStateDB(ctx, msg, types.NewNoOpTracer(), true, cfg, txConfig, stateDB)
-		if err != nil {
-			continue
-		}
-		txConfig.LogIndex += uint(len(rsp.Logs))
+		lastDB, _ = k.TraceTxFn(ctx, tx, signer, cfg, txConfig, patch, lastDB)
 	}
 
 	tx := req.Msg.AsTransaction()
@@ -440,6 +453,37 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 	return &types.QueryTraceTxResponse{
 		Data: resultData,
 	}, nil
+}
+
+func (k Keeper) TraceBlockFn(
+	ctx sdk.Context,
+	tx *types.MsgEthereumTx,
+	signer ethtypes.Signer,
+	cfg *types.EVMConfig,
+	txConfig statedb.TxConfig,
+	traceConfig *types.TraceConfig,
+	patch bool,
+	lastDB *statedb.StateDB,
+) (*statedb.StateDB, *types.TxTraceResult) {
+	result := new(types.TxTraceResult)
+	ethTx := tx.AsTransaction()
+	txConfig.TxHash = ethTx.Hash()
+	var stateDB *statedb.StateDB
+	if patch {
+		stateDB = statedb.New(ctx, &k, txConfig)
+		if lastDB != nil {
+			stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
+		}
+		lastDB = stateDB
+	}
+	traceResult, logIndex, err := k.traceTx(ctx, cfg, txConfig, stateDB, signer, ethTx, traceConfig, true)
+	if err != nil {
+		result.Error = err.Error()
+	} else {
+		txConfig.LogIndex = logIndex
+		result.Result = traceResult
+	}
+	return lastDB, result
 }
 
 // TraceBlock configures a new tracer according to the provided configuration, and
@@ -482,26 +526,10 @@ func (k Keeper) TraceBlock(c context.Context, req *types.QueryTraceBlockRequest)
 	txConfig := statedb.NewEmptyTxConfig(common.BytesToHash(ctx.HeaderHash().Bytes()))
 	var lastDB *statedb.StateDB
 	for i, tx := range req.Txs {
-		result := types.TxTraceResult{}
-		ethTx := tx.AsTransaction()
-		txConfig.TxHash = ethTx.Hash()
 		txConfig.TxIndex = uint(i)
-		var stateDB *statedb.StateDB
-		if patch {
-			stateDB = statedb.New(ctx, &k, txConfig)
-			if lastDB != nil {
-				stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
-			}
-			lastDB = stateDB
-		}
-		traceResult, logIndex, err := k.traceTx(ctx, cfg, txConfig, stateDB, signer, ethTx, req.TraceConfig, true)
-		if err != nil {
-			result.Error = err.Error()
-		} else {
-			txConfig.LogIndex = logIndex
-			result.Result = traceResult
-		}
-		results = append(results, &result)
+		var result *types.TxTraceResult
+		lastDB, result = k.TraceBlockFn(ctx, tx, signer, cfg, txConfig, req.TraceConfig, patch, lastDB)
+		results = append(results, result)
 	}
 
 	resultData, err := json.Marshal(results)
