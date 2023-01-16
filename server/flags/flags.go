@@ -53,8 +53,9 @@ const (
 	// JSONRPCEnableMetrics enables EVM RPC metrics server.
 	// Set to `metrics` which is hardcoded flag from go-ethereum.
 	// https://github.com/ethereum/go-ethereum/blob/master/metrics/metrics.go#L35-L55
-	JSONRPCEnableMetrics   = "metrics"
-	JSONRPCReturnDataLimit = "json-rpc.return-data-limit"
+	JSONRPCEnableMetrics            = "metrics"
+	JSONRPCReturnDataLimit          = "json-rpc.return-data-limit"
+	JSONRPCFixRevertGasRefundHeight = "json-rpc.fix-revert-gas-refund-height"
 )
 
 // EVM flags
