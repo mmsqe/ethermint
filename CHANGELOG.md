@@ -87,6 +87,8 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (rpc) [#1405](https://github.com/evmos/ethermint/pull/1405) Pass chain-id to grpc query through request, otherwise it's not initialized if abci event don't happens.
 * (rpc) [#1431](https://github.com/evmos/ethermint/pull/1431) Align hex-strings proof fields in `eth_getProof` as Ethereum.
 * (rpc) [#1503](https://github.com/evmos/ethermint/pull/1503) Fix block hashes returned on JSON-RPC filter `eth_newBlockFilter`.
+running transaction in `ReCheckMode`
+* (rpc) [#1591](https://github.com/evmos/ethermint/pull/1591) Fix block number returned in opcode for debug trace related api.
 
 ## [v0.19.3] - 2022-10-14
 
