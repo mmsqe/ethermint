@@ -168,6 +168,7 @@ func (b *Backend) GetBlockTransactionCount(block *tmrpctypes.ResultBlock) *hexut
 // block number
 func (b *Backend) TendermintBlockByNumber(blockNum rpctypes.BlockNumber) (*tmrpctypes.ResultBlock, error) {
 	height := blockNum.Int64()
+	fmt.Println("mm-TendermintBlockByNumber-bf", blockNum, height)
 	if height <= 0 {
 		// fetch the latest block number from the app state, more accurate than the tendermint block store state.
 		n, err := b.BlockNumber()
@@ -176,6 +177,7 @@ func (b *Backend) TendermintBlockByNumber(blockNum rpctypes.BlockNumber) (*tmrpc
 		}
 		height = int64(n)
 	}
+	fmt.Println("mm-TendermintBlockByNumber-af", blockNum, height)
 	resBlock, err := b.clientCtx.Client.Block(b.ctx, &height)
 	if err != nil {
 		b.logger.Debug("tendermint client failed to get block", "height", height, "error", err.Error())

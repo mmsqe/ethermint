@@ -197,6 +197,7 @@ func (b *Backend) FeeHistory(
 
 	// fetch block
 	for blockID := blockStart; blockID <= blockEnd; blockID++ {
+		fmt.Println("mm-blockID", blockID, blockStart)
 		index := int32(blockID - blockStart)
 		// tendermint block
 		tendermintblock, err := b.TendermintBlockByNumber(rpctypes.BlockNumber(blockID))

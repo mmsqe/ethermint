@@ -127,6 +127,7 @@ func (b *Backend) processBlock(
 ) error {
 	blockHeight := tendermintBlock.Block.Height
 	blockBaseFee, err := b.BaseFee(tendermintBlockResult)
+	fmt.Printf("mm-blockBaseFee: %+v, %+v\n", blockHeight, blockBaseFee.String())
 	if err != nil {
 		return err
 	}
@@ -139,6 +140,7 @@ func (b *Backend) processBlock(
 	} else {
 		targetOneFeeHistory.NextBaseFee = new(big.Int)
 	}
+	fmt.Printf("mm-nextBaseFee: %+v\n", targetOneFeeHistory.NextBaseFee.String())
 	// set gas used ratio
 	gasLimitUint64, ok := (*ethBlock)["gasLimit"].(hexutil.Uint64)
 	if !ok {

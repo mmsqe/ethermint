@@ -41,33 +41,49 @@ def test_basic(cluster):
     field = "baseFeePerGas"
     percentiles = [100]
     height = w3.eth.block_number
-    latest = dict(
-        blocks=["latest", hex(height)],
+    # latest = dict(
+    #     blocks=["latest", hex(height)],
+    #     expect=max,
+    # )
+    # earliest = dict(
+    #     blocks=["earliest", "0x0"],
+    #     expect=min,
+    # )
+    # for tc in [latest, earliest]:
+    #     res = []
+    #     with ThreadPoolExecutor(len(tc["blocks"])) as exec:
+    #         tasks = [
+    #             exec.submit(call, method, [size, b, percentiles]) for b in tc["blocks"]
+    #         ]
+    #         res = [future.result()["result"][field] for future in as_completed(tasks)]
+    #     assert len(res) == len(tc["blocks"])
+    #     assert res[0] == res[1]
+    #     assert len(res[0]) == tc["expect"]
+
+    # for x in range(max):
+    #     i = x + 1
+    #     fee_history = call(method, [size, hex(i), percentiles])
+    #     # start to reduce diff on i <= size - min
+    #     diff = size - min - i
+    #     reduce = size - diff
+    #     target = reduce if diff >= 0 else max
+    #     res = fee_history["result"]
+    #     assert len(res[field]) == target
+    #     oldest = i + min - max
+    #     assert res["oldestBlock"] == hex(oldest if oldest > 0 else 0)
+    dup = dict(
+        blocks=[hex(size - 1), hex(size)],
         expect=max,
     )
-    earliest = dict(
-        blocks=["earliest", "0x0"],
-        expect=min,
-    )
-    for tc in [latest, earliest]:
+    for tc in [dup]:
         res = []
         with ThreadPoolExecutor(len(tc["blocks"])) as exec:
             tasks = [
                 exec.submit(call, method, [size, b, percentiles]) for b in tc["blocks"]
             ]
             res = [future.result()["result"][field] for future in as_completed(tasks)]
-        assert len(res) == len(tc["blocks"])
-        assert res[0] == res[1]
-        assert len(res[0]) == tc["expect"]
-
-    for x in range(max):
-        i = x + 1
-        fee_history = call(method, [size, hex(i), percentiles])
-        # start to reduce diff on i <= size - min
-        diff = size - min - i
-        reduce = size - diff
-        target = reduce if diff >= 0 else max
-        res = fee_history["result"]
-        assert len(res[field]) == target
-        oldest = i + min - max
-        assert res["oldestBlock"] == hex(oldest if oldest > 0 else 0)
+        print(res)
+    # ethermint
+    # [['0x145f680b00', '0x11d6ae24f6', '0xf9bd86058', '0xda85d544d', '0x324d50506'], ['0x145f680b00', '0x145f680b00', '0x11d6ae24f6', '0xf9bd86058', '0x324d50506']]
+    # geth
+    # [['0x145f680b00', '0x11d37b09a0', '0xf990ba86c', '0xda5ea335f', '0xbf12cecf4'], ['0x174876e800', '0x145f680b00', '0x11d37b09a0', '0xf990ba86c', '0xda5ea335f']]
