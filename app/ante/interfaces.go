@@ -30,7 +30,7 @@ type EVMKeeper interface {
 	GetBalance(ctx sdk.Context, addr common.Address) *big.Int
 	ResetTransientGasUsed(ctx sdk.Context)
 	GetTxIndexTransient(ctx sdk.Context) uint64
-	StateDB(ctx sdk.Context, txConfig statedb.TxConfig, extStates []statedb.ExtState) *statedb.StateDB
+	StateDB(ctx sdk.Context, txConfig statedb.TxConfig) *statedb.StateDB
 }
 
 type protoTxProvider interface {
