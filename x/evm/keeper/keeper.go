@@ -56,14 +56,11 @@ type Keeper struct {
 	// EVM Hooks for tx post-processing
 	hooks types.EvmHooks
 
-	// custom stateless precompiled smart contracts
-	customPrecompiles evm.PrecompiledContracts
+	// custom precompiled smart contracts
+	customPrecompiles map[common.Address]evm.PrecompiledContractCreator
 
 	// evm constructor function
 	evmConstructor evm.Constructor
-
-	// Stateful EVM precompiled contracts
-	precompiles map[common.Address]statedb.PrecompiledContractCreator
 }
 
 // NewKeeper generates new evm module keeper
@@ -75,10 +72,9 @@ func NewKeeper(
 	bankKeeper types.BankKeeper,
 	sk types.StakingKeeper,
 	fmk types.FeeMarketKeeper,
-	customPrecompiles evm.PrecompiledContracts,
+	customPrecompiles map[common.Address]evm.PrecompiledContractCreator,
 	evmConstructor evm.Constructor,
 	tracer string,
-	precompiles map[common.Address]statedb.PrecompiledContractCreator,
 ) *Keeper {
 	// ensure evm module account is set
 	if addr := ak.GetModuleAddress(types.ModuleName); addr == nil {
@@ -103,7 +99,6 @@ func NewKeeper(
 		customPrecompiles: customPrecompiles,
 		evmConstructor:    evmConstructor,
 		tracer:            tracer,
-		precompiles:       precompiles,
 	}
 }
 

@@ -3,6 +3,7 @@ package keeper
 import (
 	"math"
 	"math/big"
+	"sync"
 
 	sdkmath "cosmossdk.io/math"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	evm "github.com/evmos/ethermint/x/evm/vm"
 )
 
 // GasToRefund calculates the amount of gas the state machine should refund to the sender. It is
@@ -71,14 +73,46 @@ func (k *Keeper) TxConfig(ctx sdk.Context, txHash common.Hash) statedb.TxConfig 
 // (ChainConfig and module Params). It additionally sets the validator operator address as the
 // coinbase address to make it available for the COINBASE opcode, even though there is no
 // beneficiary of the coinbase transaction (since we're not mining).
+// NOTE: the RANDOM opcode is currently not supported since it requires
+// RANDAO implementation. See https://github.com/evmos/ethermint/pull/1520#pullrequestreview-1200504697
+// for more information.
+
+var contractLock sync.Mutex
+
+func appendNewContracts(
+	chainRules params.Rules,
+	contracts map[common.Address]evm.StatefulPrecompiledContract,
+) {
+	contractLock.Lock()
+	defer contractLock.Unlock()
+
+	var precompiles map[common.Address]vm.PrecompiledContract
+	switch {
+	case chainRules.IsBerlin:
+		precompiles = vm.PrecompiledContractsBerlin
+	case chainRules.IsIstanbul:
+		precompiles = vm.PrecompiledContractsIstanbul
+	case chainRules.IsByzantium:
+		precompiles = vm.PrecompiledContractsByzantium
+	default:
+		precompiles = vm.PrecompiledContractsHomestead
+	}
+	for addr, c := range contracts {
+		precompiles[addr] = c
+	}
+}
+
 func (k *Keeper) NewEVM(
 	ctx sdk.Context,
 	msg core.Message,
 	cfg *types.EVMConfig,
 	tracer vm.EVMLogger,
 	stateDB vm.StateDB,
-	contracts map[common.Address]statedb.StatefulPrecompiledContract,
+	contracts map[common.Address]evm.StatefulPrecompiledContract,
 ) *vm.EVM {
+	rules := cfg.ChainConfig.Rules(big.NewInt(ctx.BlockHeight()), cfg.ChainConfig.MergeNetsplitBlock != nil)
+	appendNewContracts(rules, contracts)
+
 	blockCtx := vm.BlockContext{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,
@@ -96,15 +130,7 @@ func (k *Keeper) NewEVM(
 		tracer = k.Tracer(ctx, msg, cfg.ChainConfig)
 	}
 	vmConfig := k.VMConfig(ctx, msg, cfg, tracer)
-	rules := cfg.ChainConfig.Rules(big.NewInt(ctx.BlockHeight()), cfg.ChainConfig.MergeNetsplitBlock != nil)
-	precompiles := make(map[common.Address]vm.PrecompiledContract)
-	for addr, c := range vm.ActivePrecompiledContracts(rules) {
-		precompiles[addr] = c
-	}
-	for addr, c := range contracts {
-		precompiles[addr] = c
-	}
-	return vm.NewEVMWithPrecompiles(blockCtx, txCtx, stateDB, cfg.ChainConfig, vmConfig, precompiles)
+	return vm.NewEVM(blockCtx, txCtx, stateDB, cfg.ChainConfig, vmConfig)
 }
 
 // VMConfig creates an EVM configuration from the debug setting and the extra EIPs enabled on the
@@ -372,8 +398,8 @@ func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
 	}
 
 	// construct precompiles
-	contracts := make(map[common.Address]statedb.StatefulPrecompiledContract, len(k.precompiles))
-	for addr, creator := range k.precompiles {
+	contracts := make(map[common.Address]evm.StatefulPrecompiledContract, len(k.customPrecompiles))
+	for addr, creator := range k.customPrecompiles {
 		c := creator(ctx)
 		contracts[addr] = c
 	}
