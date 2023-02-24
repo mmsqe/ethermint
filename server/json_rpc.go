@@ -17,6 +17,7 @@ package server
 
 import (
 	"net/http"
+	_ "net/http/pprof"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -41,6 +42,9 @@ func StartJSONRPC(ctx *server.Context,
 	config *config.Config,
 	indexer ethermint.EVMTxIndexer,
 ) (*http.Server, chan struct{}, error) {
+	go func() {
+		http.ListenAndServe(":8080", nil)
+	}()
 	tmWsClient := ConnectTmWS(tmRPCAddr, tmEndpoint, ctx.Logger)
 
 	logger := ctx.Logger.With("module", "geth")
@@ -57,7 +61,7 @@ func StartJSONRPC(ctx *server.Context,
 	}))
 
 	rpcServer := ethrpc.NewServer()
-	rpcServer.SetBatchLimits(2, 14376967) // add 0x: (3594240 + 2) * 4
+	// rpcServer.SetBatchLimits(2, 14376967) // add 0x: (3594240 + 2) * 4
 
 	allowUnprotectedTxs := config.JSONRPC.AllowUnprotectedTxs
 	rpcAPIArr := config.JSONRPC.API
