@@ -3,11 +3,10 @@ package keeper
 import (
 	"math/big"
 
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	"github.com/tendermint/tendermint/libs/log"
 
 	v010 "github.com/evmos/ethermint/x/feemarket/migrations/v010"
 	"github.com/evmos/ethermint/x/feemarket/types"
@@ -43,7 +42,7 @@ func NewKeeper(
 
 // Logger returns a module-specific logger.
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", types.ModuleName)
+	return ctx.Logger().With("module", "x/"+types.ModuleName)
 }
 
 // ----------------------------------------------------------------------------

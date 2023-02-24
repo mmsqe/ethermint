@@ -6,8 +6,13 @@ package types
 import (
 	fmt "fmt"
 	github_com_cosmos_cosmos_sdk_types "github.com/cosmos/cosmos-sdk/types"
+<<<<<<< HEAD:x/feemarket/migrations/v010/types/feemarket.pb.go
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
+=======
+	_ "github.com/cosmos/gogoproto/gogoproto"
+	proto "github.com/cosmos/gogoproto/proto"
+>>>>>>> e3cb8647 (integrate with sdk V47 & ibc-go V7):x/feemarket/migrations/v4/types/feemarket.pb.go
 	io "io"
 	math "math"
 	math_bits "math/bits"

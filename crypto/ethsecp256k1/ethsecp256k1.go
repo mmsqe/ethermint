@@ -6,12 +6,13 @@ import (
 	"crypto/subtle"
 	"fmt"
 
+	errorsmod "cosmossdk.io/errors"
+	tmcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/ethereum/go-ethereum/crypto"
-
-	tmcrypto "github.com/tendermint/tendermint/crypto"
+	"github.com/evmos/ethermint/ethereum/eip712"
 )
 
 const (
