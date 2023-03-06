@@ -195,7 +195,9 @@ def test_event_log_filter_by_address(cluster):
     assert contract.caller.greet() == "Hello"
 
     flt = w3.eth.filter({"address": contract.address})
+    print("add filter1: ", flt.filter_id)
     flt2 = w3.eth.filter({"address": ADDRS["validator"]})
+    print("add filter2: ", flt2.filter_id)
 
     # without tx
     assert flt.get_new_entries() == []  # GetFilterChanges
@@ -510,10 +512,12 @@ def test_register_filters_before_contract_deploy(cluster):
 
     filters = [
         {
+            "id": "0",
             "params": {"topics": [topic.hex()]},
             "exp_len": 1,
         },
         {
+            "id": "1",
             "params": {
                 "topics": [
                     topic.hex(),
@@ -523,6 +527,7 @@ def test_register_filters_before_contract_deploy(cluster):
             "exp_len": 0,
         },
         {
+            "id": "2",
             "params": {
                 "topics": [
                     [topic.hex(), another_topic.hex()]
@@ -531,6 +536,7 @@ def test_register_filters_before_contract_deploy(cluster):
             "exp_len": 1,
         },
         {
+            "id": "3",
             "params": {
                 "fromBlock": 1,
                 "toBlock": "latest",
@@ -563,6 +569,7 @@ def test_register_filters_before_contract_deploy(cluster):
 
     for i, flt in enumerate(fltrs):
         new_entries = flt.get_new_entries()  # GetFilterChanges
+        print("id", filters[i]["id"])
         assert len(new_entries) == filters[i]["exp_len"]
 
         if filters[i]["exp_len"] == 1:
