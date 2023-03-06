@@ -316,6 +316,7 @@ def test_event_log_filter_by_topic(cluster):
             receipt = send_transaction(w3, tx)
             assert receipt.status == 1
 
+        w3_wait_for_new_blocks(w3, 1)
         # check filters new entries
         for flt in filters:
             new_entries = flt.get_new_entries()  # GetFilterChanges
@@ -457,6 +458,7 @@ def test_multiple_filters(cluster):
             # remove the filters
             remove_filters(w3, fltrs, tc["rm_filters_post_tx"])
 
+        w3_wait_for_new_blocks(w3, 1)
         for i, flt in enumerate(fltrs):
             # if filters were removed, should get a 'filter not found' error
             try:
@@ -567,6 +569,7 @@ def test_register_filters_before_contract_deploy(cluster):
     receipt = send_transaction(w3, tx)
     assert receipt.status == 1
 
+    w3_wait_for_new_blocks(w3, 1)
     for i, flt in enumerate(fltrs):
         new_entries = flt.get_new_entries()  # GetFilterChanges
         print("id", filters[i]["id"])
