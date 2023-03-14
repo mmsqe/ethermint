@@ -396,4 +396,3 @@ def same_types(object_a, object_b):
             + " B is type "
             + type(object_b).__name__,
         )
-
