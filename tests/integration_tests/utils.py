@@ -30,7 +30,6 @@ TEST_CONTRACTS = {
     "Greeter": "Greeter.sol",
     "TestChainID": "ChainID.sol",
     "TestExploitContract": "TestExploitContract.sol",
-    "Mars": "Mars.sol",
     "StateContract": "StateContract.sol",
 }
 
