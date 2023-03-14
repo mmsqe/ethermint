@@ -25,6 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
+	abci "github.com/tendermint/tendermint/abci/types"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -425,6 +426,14 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 
 	txConfig := statedb.NewEmptyTxConfig(common.BytesToHash(ctx.HeaderHash().Bytes()))
 	for i, tx := range req.Predecessors {
+		bytes, err := tx.Marshal()
+		if err != nil {
+			continue
+		}
+		res := k.deliverTx(abci.RequestDeliverTx{Tx: bytes})
+		if !res.IsOK() {
+			return nil, fmt.Errorf("failed to execute DelverTx for '%s': %s", tx, res.Log)
+		}
 		ethTx := tx.AsTransaction()
 		msg, err := ethTx.AsMessage(signer, cfg.BaseFee)
 		if err != nil {

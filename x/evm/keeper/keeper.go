@@ -35,7 +35,11 @@ import (
 	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 	evm "github.com/evmos/ethermint/x/evm/vm"
+
+	abci "github.com/tendermint/tendermint/abci/types"
 )
+
+type deliverTxfn func(abci.RequestDeliverTx) abci.ResponseDeliverTx
 
 // Keeper grants access to the EVM module state and implements the go-ethereum StateDB interface.
 type Keeper struct {
@@ -78,6 +82,8 @@ type Keeper struct {
 	evmConstructor evm.Constructor
 	// Legacy subspace
 	ss paramstypes.Subspace
+
+	deliverTx deliverTxfn
 }
 
 // NewKeeper generates new evm module keeper
@@ -93,6 +99,7 @@ func NewKeeper(
 	evmConstructor evm.Constructor,
 	tracer string,
 	ss paramstypes.Subspace,
+	deliverTx deliverTxfn,
 ) *Keeper {
 	// ensure evm module account is set
 	if addr := ak.GetModuleAddress(types.ModuleName); addr == nil {
@@ -118,6 +125,7 @@ func NewKeeper(
 		evmConstructor:    evmConstructor,
 		tracer:            tracer,
 		ss:                ss,
+		deliverTx:         deliverTx,
 	}
 }
 
