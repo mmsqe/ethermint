@@ -123,7 +123,7 @@ def wait_for_block_time(cli, t):
         time.sleep(0.5)
 
 
-def deploy_contract(w3, jsonfile, args=(), key=KEYS["validator"]):
+def deploy_contract_with_receipt(w3, jsonfile, args=(), key=KEYS["validator"]):
     """
     deploy contract and return the deployed contract instance
     """
@@ -134,7 +134,15 @@ def deploy_contract(w3, jsonfile, args=(), key=KEYS["validator"]):
     txreceipt = send_transaction(w3, tx, key)
     assert txreceipt.status == 1
     address = txreceipt.contractAddress
-    return w3.eth.contract(address=address, abi=info["abi"])
+    return w3.eth.contract(address=address, abi=info["abi"]), txreceipt
+
+
+def deploy_contract(w3, jsonfile, args=(), key=KEYS["validator"]):
+    """
+    deploy contract and return the deployed contract instance
+    """
+    contract, _ = deploy_contract_with_receipt(w3, jsonfile, args, key)
+    return contract
 
 
 def fill_defaults(w3, tx):

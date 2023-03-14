@@ -1,7 +1,7 @@
 import pytest
 
 from .network import setup_ethermint
-from .utils import CONTRACTS, deploy_contract
+from .utils import CONTRACTS, deploy_contract_with_receipt
 
 
 @pytest.fixture(scope="module")
@@ -25,7 +25,7 @@ def cluster(request, custom_ethermint, geth):
 
 
 def test_basic(cluster):
-    _, res = deploy_contract(
+    _, res = deploy_contract_with_receipt(
         cluster.w3,
         CONTRACTS["StateContract"],
     )
