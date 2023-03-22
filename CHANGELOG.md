@@ -38,6 +38,10 @@ Ref: https://keepachangelog.com/en/1.0.0/
 
 ## Unreleased
 
+### Bug Fixes
+
+* (rpc) [#1720](https://github.com/evmos/ethermint/pull/1720) Add missing next fee in fee history, fix wrong oldestBlock and align earliest input as ethereum.
+
 ### Features
 
 * (rpc) [#1682](https://github.com/evmos/ethermint/pull/1682) Add config for maximum number of bytes returned from eth_call.
