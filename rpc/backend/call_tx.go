@@ -289,6 +289,20 @@ func (b *Backend) SetTxDefaults(args evmtypes.TransactionArgs) (evmtypes.Transac
 	return args, nil
 }
 
+// handleRevertError returns revert related error.
+func (b *Backend) handleRevertError(vmError string, ret []byte) error {
+	if len(vmError) > 0 {
+		if vmError != vm.ErrExecutionReverted.Error() {
+			return status.Error(codes.Internal, vmError)
+		}
+		if len(ret) == 0 {
+			return errors.New(vmError)
+		}
+		return evmtypes.NewExecErrorWithReason(ret)
+	}
+	return nil
+}
+
 // EstimateGas returns an estimate of gas usage for the given smart contract call.
 func (b *Backend) EstimateGas(args evmtypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error) {
 	blockNr := rpctypes.EthPendingBlockNumber
@@ -321,14 +335,8 @@ func (b *Backend) EstimateGas(args evmtypes.TransactionArgs, blockNrOptional *rp
 	if err != nil {
 		return 0, err
 	}
-	if len(res.VmError) > 0 {
-		if res.VmError != vm.ErrExecutionReverted.Error() {
-			return 0, status.Error(codes.Internal, res.VmError)
-		}
-		if len(res.Ret) == 0 {
-			return 0, errors.New(res.VmError)
-		}
-		return 0, evmtypes.NewExecErrorWithReason(res.Ret)
+	if err = b.handleRevertError(res.VmError, res.Ret); err != nil {
+		return 0, err
 	}
 	return hexutil.Uint64(res.Gas), nil
 }
@@ -383,13 +391,9 @@ func (b *Backend) DoCall(
 		return nil, fmt.Errorf("call retuned result on length %d exceeding limit %d", length, b.cfg.JSONRPC.ReturnDataLimit)
 	}
 
-	if res.Failed() {
-		if res.VmError != vm.ErrExecutionReverted.Error() {
-			return nil, status.Error(codes.Internal, res.VmError)
-		}
-		return nil, evmtypes.NewExecErrorWithReason(res.Ret)
+	if err = b.handleRevertError(res.VmError, res.Ret); err != nil {
+		return nil, err
 	}
-
 	return res, nil
 }
 
