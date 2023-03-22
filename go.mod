@@ -13,7 +13,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/ethereum/go-ethereum v1.10.19
 	github.com/gogo/protobuf v1.3.3
-	github.com/golang/protobuf v1.5.2
+	github.com/golang/protobuf v1.5.3
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
@@ -36,9 +36,9 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/net v0.8.0
 	golang.org/x/text v0.8.0
-	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
+	google.golang.org/genproto v0.0.0-20230322174352-cde4c949918d
 	google.golang.org/grpc v1.53.0
-	google.golang.org/protobuf v1.28.2-0.20220831092852-f930b1dc76e8
+	google.golang.org/protobuf v1.30.0
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -180,6 +180,7 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect
+	golang.org/x/tools v0.7.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.110.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
