@@ -174,8 +174,9 @@ schema = 3
     version = "v1.0.0"
     hash = "sha256-k1DYvCqO3BKNcGEve/nMW0RxzMkK2tGfXbUbycqcVSo="
   [mod."github.com/ethereum/go-ethereum"]
-    version = "v1.10.19"
-    hash = "sha256-7FPnTGcCb8Xd1QVR+6PmGTaHdTY1mm/8osFTW1JLuG8="
+    version = "v1.10.26-evmos-rc1"
+    hash = "sha256-QgnR4Ky9U7C5t1BnJ+fpt9rxf65bjxjKQvLiETn0jQI="
+    replaced = "github.com/evmos/go-ethereum"
   [mod."github.com/felixge/httpsnoop"]
     version = "v1.0.1"
     hash = "sha256-TNXnnC/ZGNY9lInAcES1cBGqIdEljKuh5LH/khVFjVk="
@@ -478,6 +479,7 @@ schema = 3
   [mod."github.com/syndtr/goleveldb"]
     version = "v1.0.1-0.20210819022825-2ae1ddf74ef7"
     hash = "sha256-36a4hgVQfwtS2zhylKpQuFhrjdc/Y8pF0dxc26jcZIU="
+    replaced = "github.com/syndtr/goleveldb"
   [mod."github.com/tendermint/go-amino"]
     version = "v0.16.0"
     hash = "sha256-JW4zO/0vMzf1dXLePOqaMtiLUZgNbuIseh9GV+jQlf0="

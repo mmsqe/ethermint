@@ -496,7 +496,7 @@ func (k Keeper) TraceBlock(c context.Context, req *types.QueryTraceBlockRequest)
 // traceTx do trace on one transaction, it returns a tuple: (traceResult, nextLogIndex, error).
 func (k *Keeper) traceTx(
 	ctx sdk.Context,
-	cfg *types.EVMConfig,
+	cfg *statedb.EVMConfig,
 	txConfig statedb.TxConfig,
 	signer ethtypes.Signer,
 	tx *ethtypes.Transaction,
@@ -542,7 +542,7 @@ func (k *Keeper) traceTx(
 	}
 
 	if traceConfig.Tracer != "" {
-		if tracer, err = tracers.New(traceConfig.Tracer, tCtx); err != nil {
+		if tracer, err = tracers.New(traceConfig.Tracer, tCtx, nil); err != nil {
 			return nil, 0, status.Error(codes.Internal, err.Error())
 		}
 	}

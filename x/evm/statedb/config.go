@@ -1,6 +1,12 @@
 package statedb
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/evmos/ethermint/x/evm/types"
+)
 
 // TxConfig encapulates the readonly information of current tx for `StateDB`.
 type TxConfig struct {
@@ -29,4 +35,13 @@ func NewEmptyTxConfig(bhash common.Hash) TxConfig {
 		TxIndex:   0,
 		LogIndex:  0,
 	}
+}
+
+// EVMConfig encapsulates common parameters needed to create an EVM to execute a message
+// It's mainly to reduce the number of method parameters
+type EVMConfig struct {
+	Params      types.Params
+	ChainConfig *params.ChainConfig
+	CoinBase    common.Address
+	BaseFee     *big.Int
 }
