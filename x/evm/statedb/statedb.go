@@ -29,8 +29,10 @@ var _ vm.StateDB = &StateDB{}
 // * Contracts
 // * Accounts
 type StateDB struct {
-	keeper Keeper
-	ctx    sdk.Context
+	keeper     Keeper
+	ctx        sdk.Context
+	cacheCtx   sdk.Context
+	writeCache func()
 
 	// Journal of state modifications. This is the backbone of
 	// Snapshot and RevertToSnapshot.
@@ -54,7 +56,7 @@ type StateDB struct {
 
 // New creates a new state from a given trie.
 func New(ctx sdk.Context, keeper Keeper, txConfig TxConfig) *StateDB {
-	return &StateDB{
+	db := &StateDB{
 		keeper:       keeper,
 		ctx:          ctx,
 		stateObjects: make(map[common.Address]*stateObject),
@@ -63,6 +65,10 @@ func New(ctx sdk.Context, keeper Keeper, txConfig TxConfig) *StateDB {
 
 		txConfig: txConfig,
 	}
+	if ctx.MultiStore() != nil {
+		db.cacheCtx, db.writeCache = ctx.CacheContext()
+	}
+	return db
 }
 
 // Keeper returns the underlying `Keeper`
@@ -283,6 +289,29 @@ func (s *StateDB) setStateObject(object *stateObject) {
 	s.stateObjects[object.Address()] = object
 }
 
+func (s *StateDB) restoreNativeState(cms sdk.CacheMultiStore) {
+	manager := sdk.NewEventManager()
+	s.cacheCtx = s.cacheCtx.WithMultiStore(cms).WithEventManager(manager)
+	s.writeCache = func() {
+		manager.EmitEvents(manager.Events())
+		cms.Write()
+	}
+}
+
+// ExecuteNativeAction executes native action in isolate,
+// the writes will be revert when either the native action itself fail
+// or the wrapping message call reverted.
+func (s *StateDB) ExecuteNativeAction(action func(ctx sdk.Context) error) error {
+	snapshot := s.ctx.MultiStore().CacheMultiStore()
+	err := action(s.cacheCtx)
+	if err != nil {
+		s.restoreNativeState(snapshot)
+		return err
+	}
+	s.journal.append(nativeChange{snapshot: snapshot})
+	return nil
+}
+
 /*
  * SETTERS
  */
@@ -436,6 +465,9 @@ func (s *StateDB) RevertToSnapshot(revid int) {
 // Commit writes the dirty states to keeper
 // the StateDB object should be discarded after committed.
 func (s *StateDB) Commit() error {
+	if s.writeCache != nil {
+		s.writeCache()
+	}
 	for _, addr := range s.journal.sortedDirties() {
 		obj := s.stateObjects[addr]
 		if obj.suicided {
