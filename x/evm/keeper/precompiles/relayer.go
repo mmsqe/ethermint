@@ -11,6 +11,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v5/modules/core/02-client/types"
+	conntypes "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
 	ibckeeper "github.com/cosmos/ibc-go/v5/modules/core/keeper"
 	tmtypes "github.com/cosmos/ibc-go/v5/modules/light-clients/07-tendermint/types"
 )
@@ -47,6 +48,11 @@ const (
 	prefixUpdateClient
 	prefixUpgradeClient
 	prefixSubmitMisbehaviour
+	// Connection
+	prefixConnectionOpenInit
+	prefixConnectionOpenTry
+	prefixConnectionOpenAck
+	prefixConnectionOpenConfirm
 )
 
 func (bc *RelayerContract) Run(evm *vm.EVM, contract *vm.Contract, readonly bool) ([]byte, error) {
@@ -143,6 +149,58 @@ func (bc *RelayerContract) Run(evm *vm.EVM, contract *vm.Contract, readonly bool
 		}
 		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
 			_, err := bc.ibcKeeper.SubmitMisbehaviour(ctx, &msg)
+			return err
+		})
+	case prefixConnectionOpenInit:
+		var msg conntypes.MsgConnectionOpenInit
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgConnectionOpenInit")
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.ConnectionOpenInit(ctx, &msg)
+			return err
+		})
+	case prefixConnectionOpenTry:
+		var msg conntypes.MsgConnectionOpenTry
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgConnectionOpenTry")
+		}
+		var clientState tmtypes.ClientState
+		if err := proto.Unmarshal(msg.ClientState.Value, &clientState); err != nil {
+			return nil, errors.New("fail to Unmarshal ClientState")
+		}
+		msg.ClientState, err = codectypes.NewAnyWithValue(&clientState)
+		if err != nil {
+			return nil, err
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.ConnectionOpenTry(ctx, &msg)
+			return err
+		})
+	case prefixConnectionOpenAck:
+		var msg conntypes.MsgConnectionOpenAck
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgConnectionOpenAck")
+		}
+		var clientState tmtypes.ClientState
+		if err := proto.Unmarshal(msg.ClientState.Value, &clientState); err != nil {
+			return nil, errors.New("fail to Unmarshal ClientState")
+		}
+		msg.ClientState, err = codectypes.NewAnyWithValue(&clientState)
+		if err != nil {
+			return nil, err
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.ConnectionOpenAck(ctx, &msg)
+			return err
+		})
+	case prefixConnectionOpenConfirm:
+		var msg conntypes.MsgConnectionOpenConfirm
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgConnectionOpenConfirm")
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.ConnectionOpenConfirm(ctx, &msg)
 			return err
 		})
 	default:
