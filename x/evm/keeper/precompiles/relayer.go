@@ -12,6 +12,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v5/modules/core/02-client/types"
 	conntypes "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
+	chantypes "github.com/cosmos/ibc-go/v5/modules/core/04-channel/types"
 	ibckeeper "github.com/cosmos/ibc-go/v5/modules/core/keeper"
 	tmtypes "github.com/cosmos/ibc-go/v5/modules/light-clients/07-tendermint/types"
 )
@@ -53,6 +54,17 @@ const (
 	prefixConnectionOpenTry
 	prefixConnectionOpenAck
 	prefixConnectionOpenConfirm
+	// Channel
+	prefixChannelOpenInit
+	prefixChannelOpenTry
+	prefixChannelOpenAck
+	prefixChannelOpenConfirm
+	prefixChannelCloseInit
+	prefixChannelCloseConfirm
+	prefixRecvPacket
+	prefixAcknowledgement
+	prefixTimeout
+	prefixTimeoutOnClose
 )
 
 func (bc *RelayerContract) Run(evm *vm.EVM, contract *vm.Contract, readonly bool) ([]byte, error) {
@@ -201,6 +213,78 @@ func (bc *RelayerContract) Run(evm *vm.EVM, contract *vm.Contract, readonly bool
 		}
 		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
 			_, err := bc.ibcKeeper.ConnectionOpenConfirm(ctx, &msg)
+			return err
+		})
+	case prefixChannelOpenInit:
+		var msg chantypes.MsgChannelOpenInit
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgChannelOpenInit")
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.ChannelOpenInit(ctx, &msg)
+			return err
+		})
+	case prefixChannelOpenTry:
+		var msg chantypes.MsgChannelOpenTry
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgChannelOpenTry")
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.ChannelOpenTry(ctx, &msg)
+			return err
+		})
+	case prefixChannelOpenAck:
+		var msg chantypes.MsgChannelOpenAck
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgChannelOpenAck")
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.ChannelOpenAck(ctx, &msg)
+			return err
+		})
+	case prefixChannelOpenConfirm:
+		var msg chantypes.MsgChannelOpenConfirm
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgChannelOpenConfirm")
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.ChannelOpenConfirm(ctx, &msg)
+			return err
+		})
+	case prefixRecvPacket:
+		var msg chantypes.MsgRecvPacket
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgRecvPacket")
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.RecvPacket(ctx, &msg)
+			return err
+		})
+	case prefixAcknowledgement:
+		var msg chantypes.MsgAcknowledgement
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgAcknowledgement")
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.Acknowledgement(ctx, &msg)
+			return err
+		})
+	case prefixTimeout:
+		var msg chantypes.MsgTimeout
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgTimeout")
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.Timeout(ctx, &msg)
+			return err
+		})
+	case prefixTimeoutOnClose:
+		var msg chantypes.MsgTimeoutOnClose
+		if err := proto.Unmarshal(input, &msg); err != nil {
+			return nil, errors.New("fail to Unmarshal MsgTimeoutOnClose")
+		}
+		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+			_, err := bc.ibcKeeper.TimeoutOnClose(ctx, &msg)
 			return err
 		})
 	default:
