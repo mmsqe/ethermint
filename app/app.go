@@ -395,7 +395,7 @@ func NewEthermintApp(
 	app.EvmKeeper = evmkeeper.NewKeeper(
 		appCodec, keys[evmtypes.StoreKey], tkeys[evmtypes.TransientKey], app.GetSubspace(evmtypes.ModuleName),
 		app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.FeeMarketKeeper,
-		tracer,
+		*app.IBCKeeper, tracer,
 	)
 
 	// Create IBC Keeper

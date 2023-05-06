@@ -106,6 +106,7 @@ func (k *Keeper) NewEVM(
 	}
 	customContracts := []precompiles.StatefulPrecompiledContract{
 		precompiles.NewBankContract(ctx, k.bankKeeper, stateDB.(precompiles.ExtStateDB)),
+		precompiles.NewRelayerContract(ctx, k.ibcKeeper, stateDB.(precompiles.ExtStateDB)),
 	}
 	for _, c := range customContracts {
 		addr := c.Address()
