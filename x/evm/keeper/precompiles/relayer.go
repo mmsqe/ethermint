@@ -19,11 +19,11 @@ import (
 
 type RelayerContract struct {
 	ctx       sdk.Context
-	ibcKeeper ibckeeper.Keeper
+	ibcKeeper *ibckeeper.Keeper
 	stateDB   ExtStateDB
 }
 
-func NewRelayerContract(ctx sdk.Context, ibcKeeper ibckeeper.Keeper, stateDB ExtStateDB) StatefulPrecompiledContract {
+func NewRelayerContract(ctx sdk.Context, ibcKeeper *ibckeeper.Keeper, stateDB ExtStateDB) StatefulPrecompiledContract {
 	return &RelayerContract{ctx, ibcKeeper, stateDB}
 }
 
