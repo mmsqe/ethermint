@@ -46,7 +46,7 @@ type Keeper struct {
 	// fetch EIP1559 base fee and parameters
 	feeMarketKeeper types.FeeMarketKeeper
 
-	ibcKeeper ibckeeper.Keeper
+	ibcKeeper *ibckeeper.Keeper
 
 	// chain ID number obtained from the context's chain id
 	eip155ChainID *big.Int
@@ -67,7 +67,7 @@ func NewKeeper(
 	bankKeeper types.BankKeeper,
 	sk types.StakingKeeper,
 	fmk types.FeeMarketKeeper,
-	ik ibckeeper.Keeper,
+	ik *ibckeeper.Keeper,
 	tracer string,
 ) *Keeper {
 	// ensure evm module account is set
