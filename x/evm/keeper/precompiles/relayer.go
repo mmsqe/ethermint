@@ -1,8 +1,10 @@
 package precompiles
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -67,6 +69,75 @@ const (
 	prefixTimeoutOnClose
 )
 
+type MsgType interface {
+	proto.Message
+	*clienttypes.MsgCreateClient | *clienttypes.MsgUpdateClient | *clienttypes.MsgUpgradeClient | *clienttypes.MsgSubmitMisbehaviour |
+		*conntypes.MsgConnectionOpenInit | *conntypes.MsgConnectionOpenTry | *conntypes.MsgConnectionOpenAck | *conntypes.MsgConnectionOpenConfirm |
+		*chantypes.MsgChannelOpenInit | *chantypes.MsgChannelOpenTry | *chantypes.MsgChannelOpenAck | *chantypes.MsgChannelOpenConfirm | *chantypes.MsgRecvPacket | *chantypes.MsgAcknowledgement | *chantypes.MsgTimeout | *chantypes.MsgTimeoutOnClose
+}
+
+func unmarshalAndExec[T MsgType, U any](
+	bc *RelayerContract,
+	input []byte,
+	msg T,
+	callback func(context.Context, T) (U, error),
+) error {
+	if err := proto.Unmarshal(input, msg); err != nil {
+		return fmt.Errorf("fail to Unmarshal %T", msg)
+	}
+
+	var anyMsg any = msg
+	if clientMsg, ok := anyMsg.(clienttypes.ClientStateMsg); ok {
+		clientState := new(tmtypes.ClientState)
+		if err := proto.Unmarshal(clientMsg.GetClientState(), clientState); err != nil {
+			return errors.New("fail to Unmarshal ClientState")
+		}
+		value, err := codectypes.NewAnyWithValue(clientState)
+		if err != nil {
+			return err
+		}
+		clientMsg.SetClientState(value)
+	}
+	if consensusMsg, ok := anyMsg.(clienttypes.ConsensusStateMsg); ok {
+		consensusState := new(tmtypes.ConsensusState)
+		if err := proto.Unmarshal(consensusMsg.GetConsensusState(), consensusState); err != nil {
+			return errors.New("fail to Unmarshal ConsensusState")
+		}
+		value, err := codectypes.NewAnyWithValue(consensusState)
+		if err != nil {
+			return err
+		}
+		consensusMsg.SetConsensusState(value)
+	}
+	if headerMsg, ok := anyMsg.(clienttypes.HeaderMsg); ok {
+		header := new(tmtypes.Header)
+		if err := proto.Unmarshal(headerMsg.GetHeader(), header); err != nil {
+			return errors.New("fail to Unmarshal Header")
+		}
+		value, err := codectypes.NewAnyWithValue(header)
+		if err != nil {
+			return err
+		}
+		headerMsg.SetHeader(value)
+	}
+	if misbehaviourMsg, ok := anyMsg.(clienttypes.MisbehaviourMsg); ok {
+		misbehaviour := new(tmtypes.Misbehaviour)
+		if err := proto.Unmarshal(misbehaviourMsg.GetMisbehaviour(), misbehaviour); err != nil {
+			return errors.New("fail to Unmarshal Misbehaviour")
+		}
+		value, err := codectypes.NewAnyWithValue(misbehaviour)
+		if err != nil {
+			return err
+		}
+		misbehaviourMsg.SetMisbehaviour(value)
+	}
+
+	return bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+		_, err := callback(ctx, msg)
+		return err
+	})
+}
+
 func (bc *RelayerContract) Run(evm *vm.EVM, contract *vm.Contract, readonly bool) ([]byte, error) {
 	if readonly {
 		return nil, errors.New("the method is not readonly")
@@ -80,213 +151,37 @@ func (bc *RelayerContract) Run(evm *vm.EVM, contract *vm.Contract, readonly bool
 	var err error
 	switch prefix {
 	case prefixCreateClient:
-		var msg clienttypes.MsgCreateClient
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgCreateClient")
-		}
-		var clientState tmtypes.ClientState
-		if err := proto.Unmarshal(msg.ClientState.Value, &clientState); err != nil {
-			return nil, errors.New("fail to Unmarshal ClientState")
-		}
-		msg.ClientState, err = codectypes.NewAnyWithValue(&clientState)
-		if err != nil {
-			return nil, err
-		}
-		var consensusState tmtypes.ConsensusState
-		if err := proto.Unmarshal(msg.ConsensusState.Value, &consensusState); err != nil {
-			return nil, errors.New("fail to Unmarshal ConsensusState")
-		}
-		msg.ConsensusState, err = codectypes.NewAnyWithValue(&consensusState)
-		if err != nil {
-			return nil, err
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.CreateClient(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(clienttypes.MsgCreateClient), bc.ibcKeeper.CreateClient)
 	case prefixUpdateClient:
-		var msg clienttypes.MsgUpdateClient
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgUpdateClient")
-		}
-		var header tmtypes.Header
-		if err := proto.Unmarshal(msg.Header.Value, &header); err != nil {
-			return nil, errors.New("fail to Unmarshal Header")
-		}
-		msg.Header, err = codectypes.NewAnyWithValue(&header)
-		if err != nil {
-			return nil, err
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.UpdateClient(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(clienttypes.MsgUpdateClient), bc.ibcKeeper.UpdateClient)
 	case prefixUpgradeClient:
-		var msg clienttypes.MsgUpgradeClient
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgUpgradeClient")
-		}
-		var clientState tmtypes.ClientState
-		if err := proto.Unmarshal(msg.ClientState.Value, &clientState); err != nil {
-			return nil, errors.New("fail to Unmarshal ClientState")
-		}
-		msg.ClientState, err = codectypes.NewAnyWithValue(&clientState)
-		if err != nil {
-			return nil, err
-		}
-		var consensusState tmtypes.ConsensusState
-		if err := proto.Unmarshal(msg.ConsensusState.Value, &consensusState); err != nil {
-			return nil, errors.New("fail to Unmarshal ConsensusState")
-		}
-		msg.ConsensusState, err = codectypes.NewAnyWithValue(&consensusState)
-		if err != nil {
-			return nil, err
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.UpgradeClient(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(clienttypes.MsgUpgradeClient), bc.ibcKeeper.UpgradeClient)
 	case prefixSubmitMisbehaviour:
-		var msg clienttypes.MsgSubmitMisbehaviour
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgSubmitMisbehaviour")
-		}
-		var misbehaviour tmtypes.Misbehaviour
-		if err := proto.Unmarshal(msg.Misbehaviour.Value, &misbehaviour); err != nil {
-			return nil, errors.New("fail to Unmarshal Misbehaviour")
-		}
-		msg.Misbehaviour, err = codectypes.NewAnyWithValue(&misbehaviour)
-		if err != nil {
-			return nil, err
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.SubmitMisbehaviour(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(clienttypes.MsgSubmitMisbehaviour), bc.ibcKeeper.SubmitMisbehaviour)
 	case prefixConnectionOpenInit:
-		var msg conntypes.MsgConnectionOpenInit
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgConnectionOpenInit")
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.ConnectionOpenInit(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(conntypes.MsgConnectionOpenInit), bc.ibcKeeper.ConnectionOpenInit)
 	case prefixConnectionOpenTry:
-		var msg conntypes.MsgConnectionOpenTry
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgConnectionOpenTry")
-		}
-		var clientState tmtypes.ClientState
-		if err := proto.Unmarshal(msg.ClientState.Value, &clientState); err != nil {
-			return nil, errors.New("fail to Unmarshal ClientState")
-		}
-		msg.ClientState, err = codectypes.NewAnyWithValue(&clientState)
-		if err != nil {
-			return nil, err
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.ConnectionOpenTry(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(conntypes.MsgConnectionOpenTry), bc.ibcKeeper.ConnectionOpenTry)
 	case prefixConnectionOpenAck:
-		var msg conntypes.MsgConnectionOpenAck
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgConnectionOpenAck")
-		}
-		var clientState tmtypes.ClientState
-		if err := proto.Unmarshal(msg.ClientState.Value, &clientState); err != nil {
-			return nil, errors.New("fail to Unmarshal ClientState")
-		}
-		msg.ClientState, err = codectypes.NewAnyWithValue(&clientState)
-		if err != nil {
-			return nil, err
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.ConnectionOpenAck(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(conntypes.MsgConnectionOpenAck), bc.ibcKeeper.ConnectionOpenAck)
 	case prefixConnectionOpenConfirm:
-		var msg conntypes.MsgConnectionOpenConfirm
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgConnectionOpenConfirm")
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.ConnectionOpenConfirm(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(conntypes.MsgConnectionOpenConfirm), bc.ibcKeeper.ConnectionOpenConfirm)
 	case prefixChannelOpenInit:
-		var msg chantypes.MsgChannelOpenInit
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgChannelOpenInit")
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.ChannelOpenInit(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(chantypes.MsgChannelOpenInit), bc.ibcKeeper.ChannelOpenInit)
 	case prefixChannelOpenTry:
-		var msg chantypes.MsgChannelOpenTry
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgChannelOpenTry")
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.ChannelOpenTry(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(chantypes.MsgChannelOpenTry), bc.ibcKeeper.ChannelOpenTry)
 	case prefixChannelOpenAck:
-		var msg chantypes.MsgChannelOpenAck
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgChannelOpenAck")
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.ChannelOpenAck(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(chantypes.MsgChannelOpenAck), bc.ibcKeeper.ChannelOpenAck)
 	case prefixChannelOpenConfirm:
-		var msg chantypes.MsgChannelOpenConfirm
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgChannelOpenConfirm")
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.ChannelOpenConfirm(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(chantypes.MsgChannelOpenConfirm), bc.ibcKeeper.ChannelOpenConfirm)
 	case prefixRecvPacket:
-		var msg chantypes.MsgRecvPacket
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgRecvPacket")
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.RecvPacket(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(chantypes.MsgRecvPacket), bc.ibcKeeper.RecvPacket)
 	case prefixAcknowledgement:
-		var msg chantypes.MsgAcknowledgement
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgAcknowledgement")
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.Acknowledgement(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(chantypes.MsgAcknowledgement), bc.ibcKeeper.Acknowledgement)
 	case prefixTimeout:
-		var msg chantypes.MsgTimeout
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgTimeout")
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.Timeout(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(chantypes.MsgTimeout), bc.ibcKeeper.Timeout)
 	case prefixTimeoutOnClose:
-		var msg chantypes.MsgTimeoutOnClose
-		if err := proto.Unmarshal(input, &msg); err != nil {
-			return nil, errors.New("fail to Unmarshal MsgTimeoutOnClose")
-		}
-		err = bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
-			_, err := bc.ibcKeeper.TimeoutOnClose(ctx, &msg)
-			return err
-		})
+		err = unmarshalAndExec(bc, input, new(chantypes.MsgTimeoutOnClose), bc.ibcKeeper.TimeoutOnClose)
 	default:
 		return nil, errors.New("unknown method")
 	}
