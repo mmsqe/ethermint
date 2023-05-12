@@ -216,7 +216,7 @@ schema = 3
     hash = "sha256-OHcA3fEGZt4uYn6V5BAaDc47DkH7z0Al+v7MpkfeR8o="
   [mod."github.com/gogo/protobuf"]
     version = "v1.3.3-alpha.regen.1"
-    hash = "sha256-9ECGN5QXw2bFJH/Mtz6/dZvmJ6WNj1RRb8jfbDblZ8I="
+    hash = "sha256-TKa//aFXpWH+yK/cN1oaaqhipZpPUovekP6oA9vLIHY="
     replaced = "github.com/regen-network/protobuf"
   [mod."github.com/golang/glog"]
     version = "v1.0.0"
@@ -485,7 +485,7 @@ schema = 3
     hash = "sha256-JW4zO/0vMzf1dXLePOqaMtiLUZgNbuIseh9GV+jQlf0="
   [mod."github.com/tendermint/tendermint"]
     version = "v0.34.27"
-    hash = "sha256-TyQTPufqzMs4FejnUlBR6wx37C+RH6nDlNSVHekpcSA="
+    hash = "sha256-BbpfLcLRf6PwB1xmgkhTm9ckZekelrDUlXDX0/FSMU8="
     replaced = "github.com/cometbft/cometbft"
   [mod."github.com/tendermint/tm-db"]
     version = "v0.6.8-0.20230424032152-87c7e7f4fb61"
