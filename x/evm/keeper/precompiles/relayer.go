@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/evmos/ethermint/rpc/backend"
 	"github.com/gogo/protobuf/proto"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -133,7 +134,21 @@ func unmarshalAndExec[T MsgType, U any](
 	}
 
 	return bc.stateDB.ExecuteNativeAction(func(ctx sdk.Context) error {
+		startEventIdx := len(ctx.EventManager().Events())
 		_, err := callback(ctx, msg)
+		events := ctx.EventManager().Events()
+		if len(events) > startEventIdx {
+			txLogs, err := backend.AllLogsFromEvents(events[startEventIdx:].ToABCIEvents())
+			if err != nil {
+				return err
+			}
+
+			for _, logs := range txLogs {
+				for _, log := range logs {
+					bc.stateDB.AddLog(log)
+				}
+			}
+		}
 		return err
 	})
 }
