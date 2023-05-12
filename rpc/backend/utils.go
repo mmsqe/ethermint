@@ -2,6 +2,7 @@ package backend
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -271,7 +272,21 @@ func AllTxLogsFromEvents(events []abci.Event) ([][]*ethtypes.Log, error) {
 			continue
 		}
 
-		logs, err := ParseTxLogsFromEvent(event)
+		logs, err := ParseTxLogsFromEvent(event, true)
+		if err != nil {
+			return nil, err
+		}
+
+		allLogs = append(allLogs, logs)
+	}
+	return allLogs, nil
+}
+
+// AllLogsFromEvents parses all ethereum logs from cosmos events
+func AllLogsFromEvents(events []abci.Event) ([][]*ethtypes.Log, error) {
+	allLogs := make([][]*ethtypes.Log, 0, 4)
+	for _, event := range events {
+		logs, err := ParseTxLogsFromEvent(event, false)
 		if err != nil {
 			return nil, err
 		}
@@ -294,27 +309,28 @@ func TxLogsFromEvents(events []abci.Event, msgIndex int) ([]*ethtypes.Log, error
 			continue
 		}
 
-		return ParseTxLogsFromEvent(event)
+		return ParseTxLogsFromEvent(event, true)
 	}
 	return nil, fmt.Errorf("eth tx logs not found for message index %d", msgIndex)
 }
 
 // ParseTxLogsFromEvent parse tx logs from one event
-func ParseTxLogsFromEvent(event abci.Event) ([]*ethtypes.Log, error) {
-	logs := make([]*evmtypes.Log, 0, len(event.Attributes))
+func ParseTxLogsFromEvent(event abci.Event, txLogOnly bool) ([]*ethtypes.Log, error) {
+	var ethLogs []*ethtypes.Log
 	for _, attr := range event.Attributes {
-		if !bytes.Equal(attr.Key, []byte(evmtypes.AttributeKeyTxLog)) {
+		var log evmtypes.Log
+		if bytes.Equal(attr.Key, []byte(evmtypes.AttributeKeyTxLog)) {
+			if err := json.Unmarshal(attr.Value, &log); err != nil {
+				return nil, err
+			}
+		} else if !txLogOnly && len(attr.Value) > 0 {
+			log.Topics = append(log.Topics, hex.EncodeToString(attr.Value))
+		} else {
 			continue
 		}
-
-		var log evmtypes.Log
-		if err := json.Unmarshal(attr.Value, &log); err != nil {
-			return nil, err
-		}
-
-		logs = append(logs, &log)
+		ethLogs = append(ethLogs, log.ToEthereum())
 	}
-	return evmtypes.LogsToEthereum(logs), nil
+	return ethLogs, nil
 }
 
 // ShouldIgnoreGasUsed returns true if the gasUsed in result should be ignored

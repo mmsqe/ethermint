@@ -11,5 +11,6 @@ type StatefulPrecompiledContract interface {
 
 // ExtStateDB defines extra methods of statedb to support stateful precompiled contracts
 type ExtStateDB interface {
+	vm.StateDB
 	ExecuteNativeAction(action func(ctx sdk.Context) error) error
 }
