@@ -1,7 +1,7 @@
 package cli
 
 import (
-	rpctypes "github.com/evmos/ethermint/rpc/types"
+	rpctypes "github.com/evmos/ethermint/v2/rpc/types"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"

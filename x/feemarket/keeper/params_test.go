@@ -1,7 +1,7 @@
 package keeper_test
 
 import (
-	"github.com/evmos/ethermint/x/feemarket/types"
+	"github.com/evmos/ethermint/v2/x/feemarket/types"
 )
 
 func (suite *KeeperTestSuite) TestSetGetParams() {

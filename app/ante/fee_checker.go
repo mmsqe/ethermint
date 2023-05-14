@@ -9,7 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
-	ethermint "github.com/evmos/ethermint/types"
+	ethermint "github.com/evmos/ethermint/v2/types"
 	"github.com/evmos/ethermint/x/evm/types"
 )
 

@@ -17,7 +17,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	ibckeeper "github.com/cosmos/ibc-go/v5/modules/core/keeper"
-	ethermint "github.com/evmos/ethermint/types"
+	ethermint "github.com/evmos/ethermint/v2/types"
 	"github.com/evmos/ethermint/x/evm/keeper/precompiles"
 	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"

@@ -7,8 +7,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/evmos/ethermint/app/ante"
-	"github.com/evmos/ethermint/tests"
+	"github.com/evmos/ethermint/v2/app/ante"
+	"github.com/evmos/ethermint/v2/tests"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 

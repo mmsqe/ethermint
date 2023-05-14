@@ -6,10 +6,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/evmos/ethermint/rpc/backend"
+	"github.com/evmos/ethermint/v2/rpc/backend"
 
-	"github.com/evmos/ethermint/crypto/hd"
-	ethermint "github.com/evmos/ethermint/types"
+	"github.com/evmos/ethermint/v2/crypto/hd"
+	ethermint "github.com/evmos/ethermint/v2/types"
 
 	"github.com/tendermint/tendermint/libs/log"
 

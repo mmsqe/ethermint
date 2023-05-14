@@ -11,9 +11,9 @@ import (
 	tmrpcclient "github.com/tendermint/tendermint/rpc/client"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/evmos/ethermint/rpc/backend/mocks"
-	rpctypes "github.com/evmos/ethermint/rpc/types"
-	"github.com/evmos/ethermint/tests"
+	"github.com/evmos/ethermint/v2/rpc/backend/mocks"
+	rpctypes "github.com/evmos/ethermint/v2/rpc/types"
+	"github.com/evmos/ethermint/v2/tests"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 

@@ -10,9 +10,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
-	"github.com/evmos/ethermint/encoding"
+	"github.com/evmos/ethermint/v2/encoding"
 
-	"github.com/evmos/ethermint/app"
+	"github.com/evmos/ethermint/v2/app"
 	v2 "github.com/evmos/ethermint/x/evm/migrations/v2"
 	v2types "github.com/evmos/ethermint/x/evm/migrations/v2/types"
 	"github.com/evmos/ethermint/x/evm/types"

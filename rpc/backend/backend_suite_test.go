@@ -18,13 +18,13 @@ import (
 	"github.com/stretchr/testify/suite"
 	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
 
-	"github.com/evmos/ethermint/app"
-	"github.com/evmos/ethermint/crypto/hd"
-	"github.com/evmos/ethermint/encoding"
-	"github.com/evmos/ethermint/indexer"
-	"github.com/evmos/ethermint/rpc/backend/mocks"
-	rpctypes "github.com/evmos/ethermint/rpc/types"
-	"github.com/evmos/ethermint/tests"
+	"github.com/evmos/ethermint/v2/app"
+	"github.com/evmos/ethermint/v2/crypto/hd"
+	"github.com/evmos/ethermint/v2/encoding"
+	"github.com/evmos/ethermint/v2/indexer"
+	"github.com/evmos/ethermint/v2/rpc/backend/mocks"
+	rpctypes "github.com/evmos/ethermint/v2/rpc/types"
+	"github.com/evmos/ethermint/v2/tests"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 

@@ -18,8 +18,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
-	"github.com/evmos/ethermint/crypto/hd"
-	ethermint "github.com/evmos/ethermint/types"
+	"github.com/evmos/ethermint/v2/crypto/hd"
+	ethermint "github.com/evmos/ethermint/v2/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 

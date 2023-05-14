@@ -29,7 +29,7 @@ import (
 	mintypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/evmos/ethermint/server"
+	"github.com/evmos/ethermint/v2/server"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 

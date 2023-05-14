@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	ethermint "github.com/evmos/ethermint/types"
+	ethermint "github.com/evmos/ethermint/v2/types"
 )
 
 func (suite *BackendTestSuite) TestGetGasUsed() {

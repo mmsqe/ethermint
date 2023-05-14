@@ -13,10 +13,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/evmos/ethermint/rpc/backend"
+	"github.com/evmos/ethermint/v2/rpc/backend"
 
-	rpctypes "github.com/evmos/ethermint/rpc/types"
-	ethermint "github.com/evmos/ethermint/types"
+	rpctypes "github.com/evmos/ethermint/v2/rpc/types"
+	ethermint "github.com/evmos/ethermint/v2/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 

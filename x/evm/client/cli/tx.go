@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	rpctypes "github.com/evmos/ethermint/rpc/types"
+	rpctypes "github.com/evmos/ethermint/v2/rpc/types"
 	"github.com/evmos/ethermint/x/evm/types"
 )
 
