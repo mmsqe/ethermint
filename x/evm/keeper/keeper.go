@@ -18,6 +18,7 @@ import (
 
 	ibckeeper "github.com/cosmos/ibc-go/v5/modules/core/keeper"
 	ethermint "github.com/evmos/ethermint/types"
+	"github.com/evmos/ethermint/x/evm/keeper/precompiles"
 	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 )
@@ -56,6 +57,8 @@ type Keeper struct {
 
 	// EVM Hooks for tx post-processing
 	hooks types.EvmHooks
+
+	customContractsFn func(ctx sdk.Context, stateDB vm.StateDB) []precompiles.StatefulPrecompiledContract
 }
 
 // NewKeeper generates new evm module keeper
@@ -69,6 +72,7 @@ func NewKeeper(
 	fmk types.FeeMarketKeeper,
 	ik *ibckeeper.Keeper,
 	tracer string,
+	customContractsFn func(ctx sdk.Context, stateDB vm.StateDB) []precompiles.StatefulPrecompiledContract,
 ) *Keeper {
 	// ensure evm module account is set
 	if addr := ak.GetModuleAddress(types.ModuleName); addr == nil {
@@ -82,16 +86,17 @@ func NewKeeper(
 
 	// NOTE: we pass in the parameter space to the CommitStateDB in order to use custom denominations for the EVM operations
 	return &Keeper{
-		cdc:             cdc,
-		paramSpace:      paramSpace,
-		accountKeeper:   ak,
-		bankKeeper:      bankKeeper,
-		stakingKeeper:   sk,
-		feeMarketKeeper: fmk,
-		ibcKeeper:       ik,
-		storeKey:        storeKey,
-		transientKey:    transientKey,
-		tracer:          tracer,
+		cdc:               cdc,
+		paramSpace:        paramSpace,
+		accountKeeper:     ak,
+		bankKeeper:        bankKeeper,
+		stakingKeeper:     sk,
+		feeMarketKeeper:   fmk,
+		ibcKeeper:         ik,
+		storeKey:          storeKey,
+		transientKey:      transientKey,
+		tracer:            tracer,
+		customContractsFn: customContractsFn,
 	}
 }
 
