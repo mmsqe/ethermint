@@ -80,6 +80,7 @@ func (k *Keeper) NewEVM(
 	cfg *statedb.EVMConfig,
 	tracer vm.EVMLogger,
 	stateDB vm.StateDB,
+	customContracts []precompiles.StatefulPrecompiledContract,
 ) *vm.EVM {
 	blockCtx := vm.BlockContext{
 		CanTransfer: core.CanTransfer,
@@ -103,10 +104,6 @@ func (k *Keeper) NewEVM(
 	for addr, c := range vm.DefaultPrecompiles(rules) {
 		contracts[addr] = c
 		active = append(active, addr)
-	}
-	customContracts := []precompiles.StatefulPrecompiledContract{
-		precompiles.NewBankContract(ctx, k.bankKeeper, stateDB.(precompiles.ExtStateDB)),
-		precompiles.NewRelayerContract(ctx, k.ibcKeeper, stateDB.(precompiles.ExtStateDB)),
 	}
 	for _, c := range customContracts {
 		addr := c.Address()
@@ -387,7 +384,11 @@ func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
 	}
 
 	stateDB := statedb.New(ctx, k, txConfig)
-	evm := k.NewEVM(ctx, msg, cfg, tracer, stateDB)
+	var customContracts []precompiles.StatefulPrecompiledContract
+	if k.customContractsFn != nil {
+		customContracts = k.customContractsFn(ctx, stateDB)
+	}
+	evm := k.NewEVM(ctx, msg, cfg, tracer, stateDB, customContracts)
 	leftoverGas := msg.Gas()
 	// Allow the tracer captures the tx level events, mainly the gas consumption.
 	vmCfg := evm.Config
