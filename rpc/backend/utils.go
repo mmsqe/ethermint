@@ -2,7 +2,6 @@ package backend
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -272,21 +271,7 @@ func AllTxLogsFromEvents(events []abci.Event) ([][]*ethtypes.Log, error) {
 			continue
 		}
 
-		logs, err := ParseTxLogsFromEvent(event, true)
-		if err != nil {
-			return nil, err
-		}
-
-		allLogs = append(allLogs, logs)
-	}
-	return allLogs, nil
-}
-
-// AllLogsFromEvents parses all ethereum logs from cosmos events
-func AllLogsFromEvents(events []abci.Event) ([][]*ethtypes.Log, error) {
-	allLogs := make([][]*ethtypes.Log, 0, 4)
-	for _, event := range events {
-		logs, err := ParseTxLogsFromEvent(event, false)
+		logs, err := ParseTxLogsFromEvent(event)
 		if err != nil {
 			return nil, err
 		}
@@ -309,13 +294,13 @@ func TxLogsFromEvents(events []abci.Event, msgIndex int) ([]*ethtypes.Log, error
 			continue
 		}
 
-		return ParseTxLogsFromEvent(event, true)
+		return ParseTxLogsFromEvent(event)
 	}
 	return nil, fmt.Errorf("eth tx logs not found for message index %d", msgIndex)
 }
 
 // ParseTxLogsFromEvent parse tx logs from one event
-func ParseTxLogsFromEvent(event abci.Event, txLogOnly bool) ([]*ethtypes.Log, error) {
+func ParseTxLogsFromEvent(event abci.Event) ([]*ethtypes.Log, error) {
 	var ethLogs []*ethtypes.Log
 	for _, attr := range event.Attributes {
 		var log evmtypes.Log
@@ -323,12 +308,8 @@ func ParseTxLogsFromEvent(event abci.Event, txLogOnly bool) ([]*ethtypes.Log, er
 			if err := json.Unmarshal(attr.Value, &log); err != nil {
 				return nil, err
 			}
-		} else if !txLogOnly && len(attr.Value) > 0 {
-			log.Topics = append(log.Topics, hex.EncodeToString(attr.Value))
-		} else {
-			continue
+			ethLogs = append(ethLogs, log.ToEthereum())
 		}
-		ethLogs = append(ethLogs, log.ToEthereum())
 	}
 	return ethLogs, nil
 }
