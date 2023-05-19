@@ -2,20 +2,19 @@ package server
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/server/types"
 	ethlog "github.com/ethereum/go-ethereum/log"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/evmos/ethermint/rpc"
 
 	"github.com/evmos/ethermint/server/config"
 	ethermint "github.com/evmos/ethermint/types"
+	"golang.org/x/sync/errgroup"
 )
 
 // StartJSONRPC starts the JSON-RPC server
@@ -25,6 +24,7 @@ func StartJSONRPC(ctx *server.Context,
 	tmEndpoint string,
 	config *config.Config,
 	indexer ethermint.EVMTxIndexer,
+	errGroup *errgroup.Group,
 ) (*http.Server, chan struct{}, error) {
 	tmWsClient := ConnectTmWS(tmRPCAddr, tmEndpoint, ctx.Logger)
 
@@ -82,26 +82,18 @@ func StartJSONRPC(ctx *server.Context,
 		return nil, nil, err
 	}
 
-	errCh := make(chan error)
-	go func() {
+	errGroup.Go(func() error {
 		ctx.Logger.Info("Starting JSON-RPC server", "address", config.JSONRPC.Address)
 		if err := httpSrv.Serve(ln); err != nil {
 			if err == http.ErrServerClosed {
 				close(httpSrvDone)
-				return
+				return nil
 			}
 
 			ctx.Logger.Error("failed to start JSON-RPC server", "error", err.Error())
-			errCh <- err
 		}
-	}()
-
-	select {
-	case err := <-errCh:
-		ctx.Logger.Error("failed to boot JSON-RPC server", "error", err.Error())
-		return nil, nil, err
-	case <-time.After(types.ServerStartTime): // assume JSON RPC server started successfully
-	}
+		return err
+	})
 
 	ctx.Logger.Info("Starting JSON WebSocket server", "address", config.JSONRPC.WsAddress)
 

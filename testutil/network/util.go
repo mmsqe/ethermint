@@ -1,10 +1,11 @@
 package network
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"path/filepath"
-	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	tmos "github.com/tendermint/tendermint/libs/os"
@@ -15,10 +16,11 @@ import (
 	"github.com/tendermint/tendermint/rpc/client/local"
 	"github.com/tendermint/tendermint/types"
 	tmtime "github.com/tendermint/tendermint/types/time"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 
 	"github.com/cosmos/cosmos-sdk/server/api"
 	servergrpc "github.com/cosmos/cosmos-sdk/server/grpc"
-	srvtypes "github.com/cosmos/cosmos-sdk/server/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
@@ -74,6 +76,9 @@ func startInProcess(cfg Config, val *Validator) error {
 		val.RPCClient = local.New(tmNode)
 	}
 
+	srvCtx, _ := context.WithCancel(context.Background())
+	errGroup, srvCtx := errgroup.WithContext(srvCtx)
+
 	// We'll need a RPC client if the validator exposes a gRPC or REST endpoint.
 	if val.APIAddress != "" || val.AppConfig.GRPC.Enable {
 		val.ClientCtx = val.ClientCtx.
@@ -90,25 +95,22 @@ func startInProcess(cfg Config, val *Validator) error {
 		apiSrv := api.New(val.ClientCtx, logger.With("module", "api-server"))
 		app.RegisterAPIRoutes(apiSrv, val.AppConfig.API)
 
-		errCh := make(chan error)
-
-		go func() {
-			if err := apiSrv.Start(val.AppConfig.Config); err != nil {
-				errCh <- err
-			}
-		}()
-
-		select {
-		case err := <-errCh:
-			return err
-		case <-time.After(srvtypes.ServerStartTime): // assume server started successfully
-		}
+		errGroup.Go(func() error {
+			return apiSrv.Start(srvCtx, val.AppConfig.Config)
+		})
 
 		val.api = apiSrv
 	}
-
+	var (
+		grpcSrv    *grpc.Server
+		grpcWebSrv *http.Server
+	)
 	if val.AppConfig.GRPC.Enable {
-		grpcSrv, err := servergrpc.StartGRPCServer(val.ClientCtx, app, val.AppConfig.GRPC)
+		grpcSrv, err = servergrpc.NewGRPCServer(val.ClientCtx, app, val.AppConfig.GRPC)
+		if err != nil {
+			return err
+		}
+		err = servergrpc.StartGRPCServer(srvCtx, logger, val.AppConfig.GRPC, grpcSrv)
 		if err != nil {
 			return err
 		}
@@ -116,10 +118,15 @@ func startInProcess(cfg Config, val *Validator) error {
 		val.grpc = grpcSrv
 
 		if val.AppConfig.GRPCWeb.Enable {
-			val.grpcWeb, err = servergrpc.StartGRPCWeb(grpcSrv, val.AppConfig.Config)
+			err = servergrpc.StartGRPCWeb(srvCtx, logger, grpcSrv, val.AppConfig.Config)
 			if err != nil {
 				return err
 			}
+			defer func() {
+				if err := grpcWebSrv.Close(); err != nil {
+					logger.Error("failed to close the grpcWebSrc", "error", err.Error())
+				}
+			}()
 		}
 	}
 
@@ -131,7 +138,7 @@ func startInProcess(cfg Config, val *Validator) error {
 		tmEndpoint := "/websocket"
 		tmRPCAddr := val.RPCAddress
 
-		val.jsonrpc, val.jsonrpcDone, err = server.StartJSONRPC(val.Ctx, val.ClientCtx, tmRPCAddr, tmEndpoint, val.AppConfig, nil)
+		val.jsonrpc, val.jsonrpcDone, err = server.StartJSONRPC(val.Ctx, val.ClientCtx, tmRPCAddr, tmEndpoint, val.AppConfig, nil, errGroup)
 		if err != nil {
 			return err
 		}
