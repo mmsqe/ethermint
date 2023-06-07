@@ -579,7 +579,9 @@ func (api *pubSubAPI) subscribeLogs(wsConn *wsConn, subID rpc.ID, extra interfac
 					api.logger.Error("failed to decode tx response", "error", err.Error())
 					return
 				}
+				fmt.Println("mm-txLogs", len(txLogs))
 				logs := rpcfilters.FilterLogs(txLogs, crit.FromBlock, crit.ToBlock, crit.Addresses, crit.Topics)
+				fmt.Println("mm-logs", len(logs))
 				if len(logs) == 0 {
 					continue
 				}
