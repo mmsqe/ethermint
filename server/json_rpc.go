@@ -42,7 +42,7 @@ func StartJSONRPC(ctx *server.Context,
 	}))
 
 	rpcServer := ethrpc.NewServer()
-	rpcServer.SetBatchLimits(2, 1) // add 0x: (3594240 + 2) * 4
+	rpcServer.SetBatchLimits(int(config.JSONRPC.BatchRequestLimit), int(config.JSONRPC.BatchResponseMaxSize)) // add 0x: (3594240 + 2) * 4
 	allowUnprotectedTxs := config.JSONRPC.AllowUnprotectedTxs
 	rpcAPIArr := config.JSONRPC.API
 
