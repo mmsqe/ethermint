@@ -153,50 +153,33 @@ func RandomAccounts(r *rand.Rand, n int) []simtypes.Account {
 // StateFn returns the initial application state using a genesis or the simulation parameters.
 // It is a wrapper of simapp.AppStateFn to replace evm param EvmDenom with staking param BondDenom.
 func StateFn(cdc codec.JSONCodec, simManager *module.SimulationManager) simtypes.AppStateFn {
-	return func(r *rand.Rand, accs []simtypes.Account, config simtypes.Config,
-	) (appState json.RawMessage, simAccs []simtypes.Account, chainID string, genesisTimestamp time.Time) {
-		appStateFn := simapp.AppStateFn(cdc, simManager)
-		appState, simAccs, chainID, genesisTimestamp = appStateFn(r, accs, config)
+	var bondDenom string
+	return simapp.AppStateFnWithExtendedCbs(
+		cdc,
+		simManager,
+		NewDefaultGenesisState(),
+		func(moduleName string, genesisState interface{}) {
+			if moduleName == stakingtypes.ModuleName {
+				stakingState := genesisState.(*stakingtypes.GenesisState)
+				bondDenom = stakingState.Params.BondDenom
+			}
+		},
+		func(rawState map[string]json.RawMessage) {
+			evmStateBz, ok := rawState[evmtypes.ModuleName]
+			if !ok {
+				panic("evm genesis state is missing")
+			}
 
-		rawState := make(map[string]json.RawMessage)
-		err := json.Unmarshal(appState, &rawState)
-		if err != nil {
-			panic(err)
-		}
+			evmState := new(evmtypes.GenesisState)
+			cdc.MustUnmarshalJSON(evmStateBz, evmState)
 
-		stakingStateBz, ok := rawState[stakingtypes.ModuleName]
-		if !ok {
-			panic("staking genesis state is missing")
-		}
+			// we should replace the EvmDenom with BondDenom
+			evmState.Params.EvmDenom = bondDenom
 
-		stakingState := new(stakingtypes.GenesisState)
-		cdc.MustUnmarshalJSON(stakingStateBz, stakingState)
-
-		// we should get the BondDenom and make it the evmdenom.
-		// thus simulation accounts could have positive amount of gas token.
-		bondDenom := stakingState.Params.BondDenom
-
-		evmStateBz, ok := rawState[evmtypes.ModuleName]
-		if !ok {
-			panic("evm genesis state is missing")
-		}
-
-		evmState := new(evmtypes.GenesisState)
-		cdc.MustUnmarshalJSON(evmStateBz, evmState)
-
-		// we should replace the EvmDenom with BondDenom
-		evmState.Params.EvmDenom = bondDenom
-
-		// change appState back
-		rawState[evmtypes.ModuleName] = cdc.MustMarshalJSON(evmState)
-
-		// replace appstate
-		appState, err = json.Marshal(rawState)
-		if err != nil {
-			panic(err)
-		}
-		return appState, simAccs, chainID, genesisTimestamp
-	}
+			// change appState back
+			rawState[evmtypes.ModuleName] = cdc.MustMarshalJSON(evmState)
+		},
+	)
 }
 
 // NewTestGenesisState generate genesis state with single validator
