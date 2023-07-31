@@ -427,7 +427,9 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 	signer := ethtypes.MakeSigner(cfg.ChainConfig, big.NewInt(ctx.BlockHeight()))
 
 	txConfig := statedb.NewEmptyTxConfig(common.BytesToHash(ctx.HeaderHash().Bytes()))
+	initialGas := ctx.GasMeter().GasConsumed() // store initial gas and reset per transaction
 	for i, tx := range req.Predecessors {
+		k.ResetGasMeterAndConsumeGas(ctx, initialGas) // reset gas meter for each transaction
 		ethTx := tx.AsTransaction()
 		msg, err := ethTx.AsMessage(signer, cfg.BaseFee)
 		if err != nil {
@@ -442,6 +444,7 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 		txConfig.LogIndex += uint(len(rsp.Logs))
 	}
 
+	k.ResetGasMeterAndConsumeGas(ctx, initialGas) // reset gas meter for each transaction
 	tx := req.Msg.AsTransaction()
 	txConfig.TxHash = tx.Hash()
 	if len(req.Predecessors) > 0 {
@@ -507,7 +510,9 @@ func (k Keeper) TraceBlock(c context.Context, req *types.QueryTraceBlockRequest)
 	results := make([]*types.TxTraceResult, 0, txsLength)
 
 	txConfig := statedb.NewEmptyTxConfig(common.BytesToHash(ctx.HeaderHash().Bytes()))
+	initialGas := ctx.GasMeter().GasConsumed() // store initial gas and reset per transaction
 	for i, tx := range req.Txs {
+		k.ResetGasMeterAndConsumeGas(ctx, initialGas) // reset gas meter for each transaction
 		result := types.TxTraceResult{}
 		ethTx := tx.AsTransaction()
 		txConfig.TxHash = ethTx.Hash()
