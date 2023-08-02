@@ -320,7 +320,10 @@ func ParseTxLogsFromEvent(event abci.Event) ([]*ethtypes.Log, error) {
 // ShouldIgnoreGasUsed returns true if the gasUsed in result should be ignored
 // workaround for issue: https://github.com/cosmos/cosmos-sdk/issues/10832
 func ShouldIgnoreGasUsed(res *abci.ResponseDeliverTx) bool {
-	return res.GetCode() == 11 && strings.Contains(res.GetLog(), "no block gas left to run tx: out of gas")
+	log := res.GetLog()
+	msg1 := "no block gas left to run tx: out of gas"
+	msg2 := "out of gas in location: block gas meter"
+	return res.GetCode() == 11 && (strings.Contains(log, msg1) || strings.Contains(log, msg2))
 }
 
 // GetLogsFromBlockResults returns the list of event logs from the tendermint block result response
