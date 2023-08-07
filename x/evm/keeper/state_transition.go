@@ -16,7 +16,6 @@ import (
 	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
-	evmtypes "github.com/evmos/ethermint/x/evm/types"
 	evm "github.com/evmos/ethermint/x/evm/vm"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -353,17 +352,6 @@ func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
 	cfg *types.EVMConfig,
 	txConfig statedb.TxConfig,
 ) (*types.MsgEthereumTxResponse, error) {
-	return k.ApplyMessageWithStateDB(ctx, msg, tracer, commit, cfg, txConfig, nil)
-}
-
-func (k *Keeper) ApplyMessageWithStateDB(ctx sdk.Context,
-	msg core.Message,
-	tracer vm.EVMLogger,
-	commit bool,
-	cfg *evmtypes.EVMConfig,
-	txConfig statedb.TxConfig,
-	stateDB *statedb.StateDB,
-) (*types.MsgEthereumTxResponse, error) {
 	var (
 		ret   []byte // return bytes from evm execution
 		vmErr error  // vm errors do not effect consensus and are therefore not assigned to err
@@ -376,9 +364,7 @@ func (k *Keeper) ApplyMessageWithStateDB(ctx sdk.Context,
 		return nil, sdkerrors.Wrap(types.ErrCallDisabled, "failed to call contract")
 	}
 
-	if stateDB == nil {
-		stateDB = statedb.New(ctx, k, txConfig)
-	}
+	stateDB := statedb.New(ctx, k, txConfig)
 	evm := k.NewEVM(ctx, msg, cfg, tracer, stateDB)
 
 	leftoverGas := msg.Gas()
