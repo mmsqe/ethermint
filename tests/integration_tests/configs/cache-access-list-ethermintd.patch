@@ -1,8 +1,16 @@
 diff --git a/x/evm/keeper/grpc_query.go b/x/evm/keeper/grpc_query.go
-index 59a367871..55d49a098 100644
+index 40f96ea1d..977eb949c 100644
 --- a/x/evm/keeper/grpc_query.go
 +++ b/x/evm/keeper/grpc_query.go
-@@ -390,6 +390,34 @@ func (k Keeper) EstimateGas(c context.Context, req *types.EthCallRequest) (*type
+@@ -27,6 +27,7 @@ import (
+ 	ethermint "github.com/evmos/ethermint/types"
+ 	"github.com/evmos/ethermint/x/evm/statedb"
+ 	"github.com/evmos/ethermint/x/evm/types"
++	evmtypes "github.com/evmos/ethermint/x/evm/types"
+ )
+ 
+ var _ types.QueryServer = Keeper{}
+@@ -360,6 +361,34 @@ func (k Keeper) EstimateGas(c context.Context, req *types.EthCallRequest) (*type
  	return &types.EstimateGasResponse{Gas: hi}, nil
  }
  
@@ -11,7 +19,7 @@ index 59a367871..55d49a098 100644
 +	ctx sdk.Context,
 +	tx *types.MsgEthereumTx,
 +	signer ethtypes.Signer,
-+	cfg *statedb.EVMConfig,
++	cfg *evmtypes.EVMConfig,
 +	txConfig statedb.TxConfig,
 +	lastDB *statedb.StateDB,
 +) (*statedb.StateDB, error) {
@@ -37,7 +45,7 @@ index 59a367871..55d49a098 100644
  // TraceTx configures a new tracer according to the provided configuration, and
  // executes the given message in the provided environment. The return value will
  // be tracer dependent.
-@@ -421,22 +449,13 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
+@@ -391,22 +420,13 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
  	if err != nil {
  		return nil, status.Errorf(codes.Internal, "failed to load evm config: %s", err.Error())
  	}
@@ -64,21 +72,20 @@ index 59a367871..55d49a098 100644
  	}
  
  	tx := req.Msg.AsTransaction()
-@@ -450,8 +469,11 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
- 		// ignore error. default to no traceConfig
- 		_ = json.Unmarshal([]byte(req.TraceConfig.TracerJsonConfig), &tracerConfig)
+@@ -415,7 +435,11 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
+ 		txConfig.TxIndex++
  	}
--
--	result, _, err := k.traceTx(ctx, cfg, txConfig, signer, tx, req.TraceConfig, false, tracerConfig)
+ 
+-	result, _, err := k.traceTx(ctx, cfg, txConfig, signer, tx, req.TraceConfig, false)
 +	stateDB := statedb.New(ctx, &k, txConfig)
 +	if lastDB != nil {
 +		stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
 +	}
-+	result, _, err := k.traceTx(ctx, cfg, txConfig, stateDB, signer, tx, req.TraceConfig, false, tracerConfig)
++	result, _, err := k.traceTx(ctx, cfg, txConfig, stateDB, signer, tx, req.TraceConfig, false)
  	if err != nil {
  		// error will be returned with detail status from traceTx
  		return nil, err
-@@ -467,6 +489,35 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
+@@ -431,6 +455,35 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
  	}, nil
  }
  
@@ -88,7 +95,7 @@ index 59a367871..55d49a098 100644
 +	ctx sdk.Context,
 +	tx *types.MsgEthereumTx,
 +	signer ethtypes.Signer,
-+	cfg *statedb.EVMConfig,
++	cfg *evmtypes.EVMConfig,
 +	txConfig statedb.TxConfig,
 +	traceConfig *types.TraceConfig,
 +	lastDB *statedb.StateDB,
@@ -101,7 +108,7 @@ index 59a367871..55d49a098 100644
 +		stateDB.SetAddressToAccessList(lastDB.GetAddressToAccessList())
 +	}
 +	lastDB = stateDB
-+	traceResult, logIndex, err := k.traceTx(ctx, cfg, txConfig, stateDB, signer, ethTx, traceConfig, true, nil)
++	traceResult, logIndex, err := k.traceTx(ctx, cfg, txConfig, stateDB, signer, ethTx, traceConfig, true)
 +	if err != nil {
 +		result.Error = err.Error()
 +	} else {
@@ -114,7 +121,7 @@ index 59a367871..55d49a098 100644
  // TraceBlock configures a new tracer according to the provided configuration, and
  // executes the given message in the provided environment for all the transactions in the queried block.
  // The return value will be tracer dependent.
-@@ -499,24 +550,18 @@ func (k Keeper) TraceBlock(c context.Context, req *types.QueryTraceBlockRequest)
+@@ -463,24 +516,18 @@ func (k Keeper) TraceBlock(c context.Context, req *types.QueryTraceBlockRequest)
  	if err != nil {
  		return nil, status.Error(codes.Internal, "failed to load evm config")
  	}
@@ -131,7 +138,7 @@ index 59a367871..55d49a098 100644
 -		ethTx := tx.AsTransaction()
 -		txConfig.TxHash = ethTx.Hash()
  		txConfig.TxIndex = uint(i)
--		traceResult, logIndex, err := k.traceTx(ctx, cfg, txConfig, signer, ethTx, req.TraceConfig, true, nil)
+-		traceResult, logIndex, err := k.traceTx(ctx, cfg, txConfig, signer, ethTx, req.TraceConfig, true)
 -		if err != nil {
 -			result.Error = err.Error()
 -		} else {
@@ -145,15 +152,15 @@ index 59a367871..55d49a098 100644
  	}
  
  	resultData, err := json.Marshal(results)
-@@ -534,6 +579,7 @@ func (k *Keeper) traceTx(
+@@ -498,6 +545,7 @@ func (k *Keeper) traceTx(
  	ctx sdk.Context,
- 	cfg *statedb.EVMConfig,
+ 	cfg *types.EVMConfig,
  	txConfig statedb.TxConfig,
 +	stateDB *statedb.StateDB,
  	signer ethtypes.Signer,
  	tx *ethtypes.Transaction,
  	traceConfig *types.TraceConfig,
-@@ -602,7 +648,7 @@ func (k *Keeper) traceTx(
+@@ -565,7 +613,7 @@ func (k *Keeper) traceTx(
  		}
  	}()
  
@@ -163,12 +170,20 @@ index 59a367871..55d49a098 100644
  		return nil, 0, status.Error(codes.Internal, err.Error())
  	}
 diff --git a/x/evm/keeper/state_transition.go b/x/evm/keeper/state_transition.go
-index ad90dba5f..894498b86 100644
+index a1c69b55b..e6bba997d 100644
 --- a/x/evm/keeper/state_transition.go
 +++ b/x/evm/keeper/state_transition.go
-@@ -316,6 +316,17 @@ func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
+@@ -16,6 +16,7 @@ import (
+ 	ethermint "github.com/evmos/ethermint/types"
+ 	"github.com/evmos/ethermint/x/evm/statedb"
+ 	"github.com/evmos/ethermint/x/evm/types"
++	evmtypes "github.com/evmos/ethermint/x/evm/types"
+ 	evm "github.com/evmos/ethermint/x/evm/vm"
+ 
+ 	"github.com/ethereum/go-ethereum/common"
+@@ -351,6 +352,17 @@ func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
  	commit bool,
- 	cfg *statedb.EVMConfig,
+ 	cfg *types.EVMConfig,
  	txConfig statedb.TxConfig,
 +) (*types.MsgEthereumTxResponse, error) {
 +	return k.ApplyMessageWithStateDB(ctx, msg, tracer, commit, cfg, txConfig, nil)
@@ -178,14 +193,14 @@ index ad90dba5f..894498b86 100644
 +	msg core.Message,
 +	tracer vm.EVMLogger,
 +	commit bool,
-+	cfg *statedb.EVMConfig,
++	cfg *evmtypes.EVMConfig,
 +	txConfig statedb.TxConfig,
 +	stateDB *statedb.StateDB,
  ) (*types.MsgEthereumTxResponse, error) {
  	var (
  		ret   []byte // return bytes from evm execution
-@@ -329,7 +340,9 @@ func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
- 		return nil, errorsmod.Wrap(types.ErrCallDisabled, "failed to call contract")
+@@ -364,7 +376,9 @@ func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
+ 		return nil, sdkerrors.Wrap(types.ErrCallDisabled, "failed to call contract")
  	}
  
 -	stateDB := statedb.New(ctx, k, txConfig)
@@ -196,10 +211,10 @@ index ad90dba5f..894498b86 100644
  
  	leftoverGas := msg.Gas()
 diff --git a/x/evm/statedb/statedb.go b/x/evm/statedb/statedb.go
-index 753ec7616..911a44e1f 100644
+index ee8cd0581..a6af022ac 100644
 --- a/x/evm/statedb/statedb.go
 +++ b/x/evm/statedb/statedb.go
-@@ -396,6 +396,16 @@ func (s *StateDB) AddAddressToAccessList(addr common.Address) {
+@@ -381,6 +381,16 @@ func (s *StateDB) AddAddressToAccessList(addr common.Address) {
  	}
  }
  
