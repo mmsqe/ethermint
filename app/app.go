@@ -461,6 +461,7 @@ func NewEthermintApp(
 		app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.FeeMarketKeeper,
 		tracer,
 		evmSs, nil,
+		keys,
 	)
 
 	// Create IBC Keeper

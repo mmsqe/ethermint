@@ -1,14 +1,14 @@
 package statedb
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 var _ JournalEntry = nativeChange{}
 
 type nativeChange struct {
-	snapshot sdk.CacheMultiStore
+	snapshot types.MultiStore
 }
 
 func (native nativeChange) Dirtied() *common.Address {
