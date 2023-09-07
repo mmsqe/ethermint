@@ -31,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 
-	ibckeeper "github.com/cosmos/ibc-go/v7/modules/core/keeper"
 	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/evm/keeper/precompiles"
 	"github.com/evmos/ethermint/x/evm/statedb"
@@ -62,8 +61,6 @@ type Keeper struct {
 	// fetch EIP1559 base fee and parameters
 	feeMarketKeeper types.FeeMarketKeeper
 
-	ibcKeeper *ibckeeper.Keeper
-
 	// chain ID number obtained from the context's chain id
 	eip155ChainID *big.Int
 
@@ -87,7 +84,6 @@ func NewKeeper(
 	bankKeeper types.BankKeeper,
 	sk types.StakingKeeper,
 	fmk types.FeeMarketKeeper,
-	ik *ibckeeper.Keeper,
 	tracer string,
 	ss paramstypes.Subspace,
 	customContractsFn func(ctx sdk.Context, stateDB vm.StateDB) []precompiles.StatefulPrecompiledContract,
@@ -110,7 +106,6 @@ func NewKeeper(
 		bankKeeper:        bankKeeper,
 		stakingKeeper:     sk,
 		feeMarketKeeper:   fmk,
-		ibcKeeper:         ik,
 		storeKey:          storeKey,
 		transientKey:      transientKey,
 		tracer:            tracer,
