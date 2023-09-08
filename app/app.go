@@ -132,6 +132,7 @@ import (
 	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/evm"
 	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
+	"github.com/evmos/ethermint/x/evm/keeper/precompiles"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 	"github.com/evmos/ethermint/x/feemarket"
 	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
@@ -141,6 +142,8 @@ import (
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 
 	simappparams "cosmossdk.io/simapp/params"
+	"github.com/ethereum/go-ethereum/core/vm"
+
 	// Force-load the tracer engines to trigger registration due to Go-Ethereum v1.10.15 changes
 	_ "github.com/ethereum/go-ethereum/eth/tracers/js"
 	_ "github.com/ethereum/go-ethereum/eth/tracers/native"
@@ -460,7 +463,12 @@ func NewEthermintApp(
 		appCodec, keys[evmtypes.StoreKey], tkeys[evmtypes.TransientKey], authtypes.NewModuleAddress(govtypes.ModuleName),
 		app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.FeeMarketKeeper,
 		tracer,
-		evmSs, nil,
+		evmSs,
+		func(ctx sdk.Context, stateDB vm.StateDB) []precompiles.StatefulPrecompiledContract {
+			return []precompiles.StatefulPrecompiledContract{
+				precompiles.NewBankContract(ctx, app.BankKeeper, stateDB.(precompiles.ExtStateDB)),
+			}
+		},
 		keys,
 	)
 
