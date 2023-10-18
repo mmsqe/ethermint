@@ -162,7 +162,7 @@ def test_percentiles(cluster):
         assert all(msg in res["error"]["message"] for res in result)
 
 
-def test_params(custom_ethermint):
+def test_concurrent(custom_ethermint):
     w3: Web3 = custom_ethermint.w3
     call = w3.provider.make_request
     b = w3.eth.block_number

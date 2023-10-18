@@ -260,7 +260,10 @@ func (b *Backend) FeeHistory(
 
 				// copy
 				thisBaseFee[index] = (*hexutil.Big)(oneFeeHistory.BaseFee)
+				// only use NextBaseFee as last item to avoid concurrent write
+				if int(index) == len(thisBaseFee)-2 {
 				thisBaseFee[index+1] = (*hexutil.Big)(oneFeeHistory.NextBaseFee)
+				}
 				thisGasUsedRatio[index] = oneFeeHistory.GasUsedRatio
 				if calculateRewards {
 					for j := 0; j < rewardCount; j++ {
