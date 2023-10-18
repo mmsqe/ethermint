@@ -160,3 +160,19 @@ def test_percentiles(cluster):
         ]
         result = [future.result() for future in as_completed(tasks)]
         assert all(msg in res["error"]["message"] for res in result)
+
+
+def test_params(custom_ethermint):
+    w3: Web3 = custom_ethermint.w3
+    call = w3.provider.make_request
+    b = w3.eth.block_number
+    field = "baseFeePerGas"
+    base = call("eth_getBlockByNumber", [b, False])["result"][field]
+    tx = {"to": ADDRS["community"], "value": 10, "gasPrice": w3.eth.gas_price}
+    send_transaction(w3, tx)
+    percentiles = []
+    method = "eth_feeHistory"
+
+    for i in range(3):
+        history = call(method, [i + 1, hex(b), percentiles])["result"][field]
+        assert history[i] == base
