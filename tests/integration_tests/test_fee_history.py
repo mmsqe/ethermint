@@ -1,5 +1,3 @@
-import hashlib
-import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -7,13 +5,7 @@ import pytest
 from web3 import Web3
 
 from .network import setup_custom_ethermint
-from .utils import (
-    ADDRS,
-    approve_proposal,
-    eth_to_bech32,
-    send_transaction,
-    w3_wait_for_new_blocks,
-)
+from .utils import ADDRS, send_transaction, w3_wait_for_new_blocks
 
 
 @pytest.fixture(scope="module")
