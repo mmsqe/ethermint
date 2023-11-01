@@ -354,7 +354,7 @@ func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
 			return nil, errorsmod.Wrap(err, "failed to apply state override")
 		}
 	}
-
+	ctx = ctx.WithValue(statedb.StateDBContextKey, stateDB)
 	evm := k.NewEVM(ctx, msg, cfg, tracer, stateDB, k.customContracts)
 	leftoverGas := msg.Gas()
 	// Allow the tracer captures the tx level events, mainly the gas consumption.
