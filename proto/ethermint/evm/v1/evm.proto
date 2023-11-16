@@ -117,15 +117,17 @@ message ChainConfig {
     (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int",
     (gogoproto.moretags) = "yaml:\"merge_netsplit_block\""
   ];
-  // shanghai_block switch block (nil = no fork, 0 = already on shanghai)
-  string shanghai_block = 22 [
-    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int",
-    (gogoproto.moretags) = "yaml:\"shanghai_block\""
+  // shanghai switch time (nil = no fork, 0 = already on shanghai)
+  uint64 shanghai_time = 22 [
+    (gogoproto.moretags) = "yaml:\"shanghai_time,omitempty\""
   ];
-  // cancun_block switch block (nil = no fork, 0 = already on cancun)
-  string cancun_block = 23 [
-    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int",
-    (gogoproto.moretags) = "yaml:\"cancun_block\""
+  // cancun switch time (nil = no fork, 0 = already on cancun)
+  uint64 cancun_time = 23 [
+    (gogoproto.moretags) = "yaml:\"cancun_time,omitempty\""
+  ];
+  // prague switch time (nil = no fork, 0 = already on prague)
+  uint64 prague_time = 24 [
+    (gogoproto.moretags) = "yaml:\"prague_time,omitempty\""
   ];
 }
 

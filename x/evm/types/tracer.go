@@ -18,7 +18,6 @@ package types
 import (
 	"math/big"
 	"os"
-	"time"
 
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 
@@ -45,7 +44,7 @@ func NewTracer(tracer string, msg core.Message, cfg *params.ChainConfig, height 
 
 	switch tracer {
 	case TracerAccessList:
-		preCompiles := vm.DefaultActivePrecompiles(cfg.Rules(big.NewInt(height), cfg.MergeNetsplitBlock != nil))
+		preCompiles := vm.DefaultActivePrecompiles(cfg.Rules(big.NewInt(height), cfg.MergeNetsplitBlock != nil, 0))
 		return logger.NewAccessListTracer(msg.AccessList(), msg.From(), *msg.To(), preCompiles)
 	case TracerJSON:
 		return logger.NewJSONLogger(logCfg, os.Stderr)
@@ -93,7 +92,7 @@ func (dt NoOpTracer) CaptureFault(_ uint64, _ vm.OpCode, _, _ uint64, _ *vm.Scop
 }
 
 // CaptureEnd implements vm.Tracer interface
-func (dt NoOpTracer) CaptureEnd(_ []byte, _ uint64, _ time.Duration, _ error) {}
+func (dt NoOpTracer) CaptureEnd(_ []byte, _ uint64, _ error) {}
 
 // CaptureEnter implements vm.Tracer interface
 func (dt NoOpTracer) CaptureEnter(_ vm.OpCode, _ common.Address, _ common.Address, _ []byte, _ uint64, _ *big.Int) {
