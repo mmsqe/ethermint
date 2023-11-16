@@ -94,12 +94,12 @@ func VerifyFee(
 		accessList = txData.GetAccessList()
 	}
 
-	intrinsicGas, err := core.IntrinsicGas(txData.GetData(), accessList, isContractCreation, homestead, shanghai, istanbul)
+	intrinsicGas, err := core.IntrinsicGas(txData.GetData(), accessList, isContractCreation, homestead, istanbul, shanghai)
 	if err != nil {
 		return nil, errorsmod.Wrapf(
 			err,
-			"failed to retrieve intrinsic gas, contract creation = %t; homestead = %t, istanbul = %t",
-			isContractCreation, homestead, istanbul,
+			"failed to retrieve intrinsic gas, contract creation = %t; homestead = %t, istanbul = %t, shanghai = %t",
+			isContractCreation, homestead, istanbul, shanghai,
 		)
 	}
 
