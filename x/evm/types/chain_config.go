@@ -48,12 +48,18 @@ func (cc ChainConfig) EthereumConfig(chainID *big.Int) *params.ChainConfig {
 		ArrowGlacierBlock:       getBlockValue(cc.ArrowGlacierBlock),
 		GrayGlacierBlock:        getBlockValue(cc.GrayGlacierBlock),
 		MergeNetsplitBlock:      getBlockValue(cc.MergeNetsplitBlock),
-		ShanghaiTime:            &cc.ShanghaiTime,
-		CancunTime:              &cc.CancunTime,
-		PragueTime:              &cc.PragueTime,
 		TerminalTotalDifficulty: nil,
 		Ethash:                  nil,
 		Clique:                  nil,
+	}
+	if cc.ShanghaiTime > 0 {
+		cfg.ShanghaiTime = &cc.ShanghaiTime
+	}
+	if cc.CancunTime > 0 {
+		cfg.CancunTime = &cc.CancunTime
+	}
+	if cc.PragueTime > 0 {
+		cfg.PragueTime = &cc.PragueTime
 	}
 	return cfg
 }
