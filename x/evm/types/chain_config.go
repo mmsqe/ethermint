@@ -51,15 +51,9 @@ func (cc ChainConfig) EthereumConfig(chainID *big.Int) *params.ChainConfig {
 		TerminalTotalDifficulty: nil,
 		Ethash:                  nil,
 		Clique:                  nil,
-	}
-	if cc.ShanghaiTime > 0 {
-		cfg.ShanghaiTime = &cc.ShanghaiTime
-	}
-	if cc.CancunTime > 0 {
-		cfg.CancunTime = &cc.CancunTime
-	}
-	if cc.PragueTime > 0 {
-		cfg.PragueTime = &cc.PragueTime
+		ShanghaiTime:            getTimeValue(cc.ShanghaiTime),
+		CancunTime:              getTimeValue(cc.CancunTime),
+		PragueTime:              getTimeValue(cc.PragueTime),
 	}
 	return cfg
 }
@@ -81,6 +75,7 @@ func DefaultChainConfig() ChainConfig {
 	arrowGlacierBlock := sdk.ZeroInt()
 	grayGlacierBlock := sdk.ZeroInt()
 	mergeNetsplitBlock := sdk.ZeroInt()
+	shanghaiTime := sdk.ZeroInt()
 
 	return ChainConfig{
 		HomesteadBlock:      &homesteadBlock,
@@ -100,6 +95,7 @@ func DefaultChainConfig() ChainConfig {
 		ArrowGlacierBlock:   &arrowGlacierBlock,
 		GrayGlacierBlock:    &grayGlacierBlock,
 		MergeNetsplitBlock:  &mergeNetsplitBlock,
+		ShanghaiTime:        &shanghaiTime,
 	}
 }
 
@@ -109,6 +105,14 @@ func getBlockValue(block *sdkmath.Int) *big.Int {
 	}
 
 	return block.BigInt()
+}
+
+func getTimeValue(time *sdkmath.Int) *uint64 {
+	if time == nil || time.IsNegative() {
+		return nil
+	}
+	t := time.BigInt().Uint64()
+	return &t
 }
 
 // Validate performs a basic validation of the ChainConfig params. The function will return an error
@@ -162,6 +166,15 @@ func (cc ChainConfig) Validate() error {
 	if err := ValidateBlock(cc.MergeNetsplitBlock); err != nil {
 		return errorsmod.Wrap(err, "MergeNetsplitBlock")
 	}
+	if err := ValidateTime(cc.ShanghaiTime); err != nil {
+		return errorsmod.Wrap(err, "ShanghaiTime")
+	}
+	if err := ValidateTime(cc.CancunTime); err != nil {
+		return errorsmod.Wrap(err, "CancunTime")
+	}
+	if err := ValidateTime(cc.PragueTime); err != nil {
+		return errorsmod.Wrap(err, "PragueTime")
+	}
 	// NOTE: chain ID is not needed to check config order
 	if err := cc.EthereumConfig(nil).CheckConfigForkOrder(); err != nil {
 		return errorsmod.Wrap(err, "invalid config fork order")
@@ -186,6 +199,21 @@ func ValidateBlock(block *sdkmath.Int) error {
 	if block.IsNegative() {
 		return errorsmod.Wrapf(
 			ErrInvalidChainConfig, "block value cannot be negative: %s", block,
+		)
+	}
+
+	return nil
+}
+
+func ValidateTime(time *sdkmath.Int) error {
+	// nil value means that the fork has not yet been applied
+	if time == nil {
+		return nil
+	}
+
+	if time.IsNegative() {
+		return errorsmod.Wrapf(
+			ErrInvalidChainConfig, "time value cannot be negative: %s", time,
 		)
 	}
 

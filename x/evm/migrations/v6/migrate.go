@@ -24,6 +24,8 @@ func MigrateStore(
 	bz := store.Get(types.KeyPrefixParams)
 	cdc.MustUnmarshal(bz, &params)
 	newParams = params.ToParams()
+	shanghaiTime := sdk.ZeroInt()
+	newParams.ChainConfig.ShanghaiTime = &shanghaiTime
 	if err := newParams.Validate(); err != nil {
 		return err
 	}

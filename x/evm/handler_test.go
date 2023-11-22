@@ -634,7 +634,7 @@ func (suite *EvmTestSuite) TestERC20TransferReverted() {
 }
 
 func (suite *EvmTestSuite) TestContractDeploymentRevert() {
-	intrinsicGas := uint64(134180)
+	intrinsicGas := uint64(134510)
 	testCases := []struct {
 		msg      string
 		gasLimit uint64

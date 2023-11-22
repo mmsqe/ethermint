@@ -103,9 +103,7 @@ func (suite *AnteTestSuite) SetupTest() {
 			evmGenesis.Params.ChainConfig.ArrowGlacierBlock = &maxInt
 			evmGenesis.Params.ChainConfig.GrayGlacierBlock = &maxInt
 			evmGenesis.Params.ChainConfig.MergeNetsplitBlock = &maxInt
-			evmGenesis.Params.ChainConfig.ShanghaiTime = math.MaxUint64
-			evmGenesis.Params.ChainConfig.CancunTime = math.MaxUint64
-			evmGenesis.Params.ChainConfig.PragueTime = math.MaxUint64
+			evmGenesis.Params.ChainConfig.ShanghaiTime = &maxInt
 		}
 		if suite.evmParamsOption != nil {
 			suite.evmParamsOption(&evmGenesis.Params)

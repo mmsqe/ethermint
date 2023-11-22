@@ -1813,19 +1813,16 @@ paths:
                           use as a network splitter
                       shanghai_time:
                         type: string
-                        format: uint64
                         title: >-
                           shanghai switch time (nil = no fork, 0 = already on
                           shanghai)
                       cancun_time:
                         type: string
-                        format: uint64
                         title: >-
                           cancun switch time (nil = no fork, 0 = already on
                           cancun)
                       prague_time:
                         type: string
-                        format: uint64
                         title: >-
                           prague switch time (nil = no fork, 0 = already on
                           prague)
@@ -2636,19 +2633,16 @@ paths:
           in: query
           required: false
           type: string
-          format: uint64
         - name: trace_config.overrides.cancun_time
           description: cancun switch time (nil = no fork, 0 = already on cancun).
           in: query
           required: false
           type: string
-          format: uint64
         - name: trace_config.overrides.prague_time
           description: prague switch time (nil = no fork, 0 = already on prague).
           in: query
           required: false
           type: string
-          format: uint64
         - name: trace_config.enable_memory
           description: enable_memory switches memory capture.
           in: query
@@ -3156,19 +3150,16 @@ paths:
           in: query
           required: false
           type: string
-          format: uint64
         - name: trace_config.overrides.cancun_time
           description: cancun switch time (nil = no fork, 0 = already on cancun).
           in: query
           required: false
           type: string
-          format: uint64
         - name: trace_config.overrides.prague_time
           description: prague switch time (nil = no fork, 0 = already on prague).
           in: query
           required: false
           type: string
-          format: uint64
         - name: trace_config.enable_memory
           description: enable_memory switches memory capture.
           in: query
@@ -3531,15 +3522,12 @@ definitions:
           splitter
       shanghai_time:
         type: string
-        format: uint64
         title: shanghai switch time (nil = no fork, 0 = already on shanghai)
       cancun_time:
         type: string
-        format: uint64
         title: cancun switch time (nil = no fork, 0 = already on cancun)
       prague_time:
         type: string
-        format: uint64
         title: prague switch time (nil = no fork, 0 = already on prague)
     description: >-
       ChainConfig defines the Ethereum ChainConfig parameters using *sdk.Int
@@ -4008,15 +3996,12 @@ definitions:
               network splitter
           shanghai_time:
             type: string
-            format: uint64
             title: shanghai switch time (nil = no fork, 0 = already on shanghai)
           cancun_time:
             type: string
-            format: uint64
             title: cancun switch time (nil = no fork, 0 = already on cancun)
           prague_time:
             type: string
-            format: uint64
             title: prague switch time (nil = no fork, 0 = already on prague)
         description: >-
           ChainConfig defines the Ethereum ChainConfig parameters using *sdk.Int
@@ -4207,15 +4192,12 @@ definitions:
                   network splitter
               shanghai_time:
                 type: string
-                format: uint64
                 title: shanghai switch time (nil = no fork, 0 = already on shanghai)
               cancun_time:
                 type: string
-                format: uint64
                 title: cancun switch time (nil = no fork, 0 = already on cancun)
               prague_time:
                 type: string
-                format: uint64
                 title: prague switch time (nil = no fork, 0 = already on prague)
             description: >-
               ChainConfig defines the Ethereum ChainConfig parameters using
@@ -4392,15 +4374,12 @@ definitions:
               network splitter
           shanghai_time:
             type: string
-            format: uint64
             title: shanghai switch time (nil = no fork, 0 = already on shanghai)
           cancun_time:
             type: string
-            format: uint64
             title: cancun switch time (nil = no fork, 0 = already on cancun)
           prague_time:
             type: string
-            format: uint64
             title: prague switch time (nil = no fork, 0 = already on prague)
         description: >-
           ChainConfig defines the Ethereum ChainConfig parameters using *sdk.Int

@@ -139,9 +139,7 @@ func (suite *KeeperTestSuite) SetupAppWithT(checkTx bool, t require.TestingT) {
 			evmGenesis.Params.ChainConfig.ArrowGlacierBlock = &maxInt
 			evmGenesis.Params.ChainConfig.GrayGlacierBlock = &maxInt
 			evmGenesis.Params.ChainConfig.MergeNetsplitBlock = &maxInt
-			evmGenesis.Params.ChainConfig.ShanghaiTime = math.MaxUint64
-			evmGenesis.Params.ChainConfig.CancunTime = math.MaxUint64
-			evmGenesis.Params.ChainConfig.PragueTime = math.MaxUint64
+			evmGenesis.Params.ChainConfig.ShanghaiTime = &maxInt
 			genesis[types.ModuleName] = app.AppCodec().MustMarshalJSON(evmGenesis)
 		}
 		return genesis
