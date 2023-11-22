@@ -29,10 +29,6 @@ func MigrateStore(
 	params.ChainConfig = chainConfig
 	extraEIPsBz := store.Get(v0types.ParamStoreKeyExtraEIPs)
 	cdc.MustUnmarshal(extraEIPsBz, &extraEIPs)
-	// revert ExtraEIP change for Evmos testnet
-	if ctx.ChainID() == "evmos_9000-4" {
-		extraEIPs.EIPs = []int64{}
-	}
 	params.ExtraEIPs = extraEIPs
 	params.EvmDenom = string(store.Get(v0types.ParamStoreKeyEVMDenom))
 	params.EnableCreate = store.Has(v0types.ParamStoreKeyEnableCreate)
