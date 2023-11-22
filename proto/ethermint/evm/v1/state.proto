@@ -1,8 +1,6 @@
 syntax = "proto3";
 package ethermint.evm.v1;
 
-import "gogoproto/gogo.proto";
-
 option go_package = "github.com/evmos/ethermint/x/evm/types";
 
 // State represents a single Storage key value pair item.
