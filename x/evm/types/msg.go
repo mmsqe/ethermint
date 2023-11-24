@@ -36,6 +36,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -57,7 +58,7 @@ const (
 // NewTx returns a reference to a new Ethereum transaction message.
 func NewTx(
 	chainID *big.Int, nonce uint64, to *common.Address, amount *big.Int,
-	gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, input []byte, accesses *ethtypes.AccessList,
+	gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, input []byte, accesses *types.AccessList,
 ) *MsgEthereumTx {
 	return newMsgEthereumTx(chainID, nonce, to, amount, gasLimit, gasPrice, gasFeeCap, gasTipCap, input, accesses)
 }
@@ -71,14 +72,14 @@ func NewTxContract(
 	gasLimit uint64,
 	gasPrice, gasFeeCap, gasTipCap *big.Int,
 	input []byte,
-	accesses *ethtypes.AccessList,
+	accesses *types.AccessList,
 ) *MsgEthereumTx {
 	return newMsgEthereumTx(chainID, nonce, nil, amount, gasLimit, gasPrice, gasFeeCap, gasTipCap, input, accesses)
 }
 
 func newMsgEthereumTx(
 	chainID *big.Int, nonce uint64, to *common.Address, amount *big.Int,
-	gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, input []byte, accesses *ethtypes.AccessList,
+	gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, input []byte, accesses *types.AccessList,
 ) *MsgEthereumTx {
 	var (
 		cid, amt, gp *sdkmath.Int
@@ -354,24 +355,26 @@ func (msg MsgEthereumTx) AsTransaction() *ethtypes.Transaction {
 func (msg MsgEthereumTx) AsMessage(baseFee *big.Int) (core.Message, error) {
 	txData, err := UnpackTxData(msg.Data)
 	if err != nil {
-		return nil, err
+		return core.Message{}, err
 	}
 
 	gasPrice, gasFeeCap, gasTipCap := txData.GetGasPrice(), txData.GetGasFeeCap(), txData.GetGasTipCap()
 	if baseFee != nil {
 		gasPrice = math.BigMin(gasPrice.Add(gasTipCap, baseFee), gasFeeCap)
 	}
-	ethMsg := ethtypes.NewMessage(
-		msg.GetSender(),
-		txData.GetTo(),
-		txData.GetNonce(),
-		txData.GetValue(),
-		txData.GetGas(),
-		gasPrice, gasFeeCap, gasTipCap,
-		txData.GetData(),
-		txData.GetAccessList(),
-		false,
-	)
+	ethMsg := core.Message{
+		From:              msg.GetSender(),
+		To:                txData.GetTo(),
+		Nonce:             txData.GetNonce(),
+		Value:             txData.GetValue(),
+		GasLimit:          txData.GetGas(),
+		GasPrice:          gasPrice,
+		GasFeeCap:         gasFeeCap,
+		GasTipCap:         gasTipCap,
+		Data:              txData.GetData(),
+		AccessList:        txData.GetAccessList(),
+		SkipAccountChecks: false,
+	}
 
 	return ethMsg, nil
 }
