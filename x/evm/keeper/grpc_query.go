@@ -450,7 +450,6 @@ func execTrace[T traceRequest](
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to load evm config: %s", err.Error())
 	}
-
 	msg, err := msgCb(ctx, cfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -479,7 +478,7 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 		req,
 		k,
 		func(ctx sdk.Context, cfg *EVMConfig) (*core.Message, error) {
-			signer := ethtypes.MakeSigner(cfg.ChainConfig, big.NewInt(ctx.BlockHeight()))
+			signer := ethtypes.MakeSigner(cfg.ChainConfig, big.NewInt(ctx.BlockHeight()), uint64(req.BlockTime.Unix()))
 			cfg.Tracer = types.NewNoOpTracer()
 			for i, tx := range req.Predecessors {
 				ethTx := tx.AsTransaction()
@@ -546,7 +545,7 @@ func (k Keeper) TraceBlock(c context.Context, req *types.QueryTraceBlockRequest)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to load evm config")
 	}
-	signer := ethtypes.MakeSigner(cfg.ChainConfig, big.NewInt(ctx.BlockHeight()))
+	signer := ethtypes.MakeSigner(cfg.ChainConfig, big.NewInt(ctx.BlockHeight()), uint64(req.BlockTime.Unix()))
 	txsLength := len(req.Txs)
 	results := make([]*types.TxTraceResult, 0, txsLength)
 

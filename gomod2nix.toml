@@ -66,7 +66,7 @@ schema = 3
     hash = "sha256-4EndKcspGC3GOPCmctXF1NnWzxWwMyY/OQpFMmr8Sc0="
   [mod."github.com/99designs/keyring"]
     version = "v1.2.0"
-    hash = "sha256-emQlH+RQpESoFCzpHS38fEhs1SLjotxNPlRK4B5Aybs="
+    hash = "sha256-N7uvSlt50V12ESr8TXttidKEarzMV9DI2uA67xK/Vqo="
     replaced = "github.com/cosmos/keyring"
   [mod."github.com/DataDog/datadog-go"]
     version = "v4.8.3+incompatible"
@@ -226,24 +226,21 @@ schema = 3
     version = "v1.7.0"
     hash = "sha256-Z/M62esiZ0fVwvueVQhwz18z0eS22LZ3DJ4O8FKp3AY="
   [mod."github.com/dop251/goja"]
-    version = "v0.0.0-20230122112309-96b1610dd4f7"
-    hash = "sha256-iKN5Eqr61dDSipTfdf8gd5Va+rSfsKdlDteAkjZXq2g="
+    version = "v0.0.0-20230605162241-28ee0ee714f3"
+    hash = "sha256-dm3HFq1Y+eRt3SGQKTQd5h8BQnPqf4l4/3KD1s95HKY="
   [mod."github.com/dustin/go-humanize"]
     version = "v1.0.1"
     hash = "sha256-yuvxYYngpfVkUg9yAmG99IUVmADTQA0tMbBXe0Fq0Mc="
   [mod."github.com/dvsekhvalnov/jose2go"]
     version = "v1.6.0"
     hash = "sha256-IXn2BuUp4fi/i2zf1tGGW1m9xoYh3VCksB6GJ5Sf06g="
-  [mod."github.com/edsrzf/mmap-go"]
-    version = "v1.0.0"
-    hash = "sha256-k1DYvCqO3BKNcGEve/nMW0RxzMkK2tGfXbUbycqcVSo="
   [mod."github.com/emicklei/dot"]
     version = "v1.6.1"
     hash = "sha256-zOpoaepCfPLmU9iQji/Ait+SVEHI9eF3rwtW0h/8lho="
   [mod."github.com/ethereum/go-ethereum"]
-    version = "v1.10.20-0.20231207063621-43cf32d91c3e"
-    hash = "sha256-lDIqRLUrXYCb9mmFBY/+WW+ee69+IkxOgqjHVyo4ij0="
-    replaced = "github.com/crypto-org-chain/go-ethereum"
+    version = "v1.10.24-0.20231124050704-12ae1c7d7014"
+    hash = "sha256-JytA+I6X9yq8wDJqL15mV2F+OmtoOcmb0nZfD2F9WsE="
+    replaced = "github.com/mmsqe/go-ethereum"
   [mod."github.com/fatih/color"]
     version = "v1.16.0"
     hash = "sha256-Aq/SM28aPJVzvapllQ64R/DM4aZ5CHPewcm/AUJPyJQ="
@@ -319,6 +316,9 @@ schema = 3
   [mod."github.com/google/orderedcode"]
     version = "v0.0.1"
     hash = "sha256-KrExYovtUQrHGI1mPQf57jGw8soz7eWOC2xqEaV0uGk="
+  [mod."github.com/google/pprof"]
+    version = "v0.0.0-20230228050547-1710fef4ab10"
+    hash = "sha256-ts+I48BUzyra4LFY+qc7I7uPliuMMAh1d1UfANDBqPo="
   [mod."github.com/google/s2a-go"]
     version = "v0.1.7"
     hash = "sha256-E+SX/3VmRI5qN7SbnRP4Tt+gQTq93pScpY9U2tTmIU0="
@@ -389,8 +389,8 @@ schema = 3
     version = "v2.0.3"
     hash = "sha256-5VsJMQzJSNd4F7yAl3iF/q6JodWOlE4dUvTQ0UGPe+k="
   [mod."github.com/holiman/uint256"]
-    version = "v1.2.2-0.20230321075855-87b91420868c"
-    hash = "sha256-Ek4KUYsFaAYfvnXJFLH4zFHQ6FzZGB+OsMIpjQ/kLGw="
+    version = "v1.2.3"
+    hash = "sha256-OGf+jb7sr0p8vwqiqIBZkzZDZ2zBWf9WpRi4iouS4uE="
   [mod."github.com/huandu/skiplist"]
     version = "v1.2.0"
     hash = "sha256-/r4QP1SldMlhpkr1ZQFHImSYaeMZEtqBW7R53yN+JtQ="
@@ -540,7 +540,7 @@ schema = 3
     hash = "sha256-oAE+fEaRfZPE541IPWE0GMeBBYgH2DMhtZNxzp7DFlY="
   [mod."github.com/spf13/pflag"]
     version = "v1.0.5"
-    hash = "sha256-w9LLYzxxP74WHT4ouBspH/iQZXjuAh2WQCHsuvyEjAw="
+    hash = "sha256-GG3BkKXQK0+pfRtkwA4DXOfYpFyPQU4dd60YmoEiJlw="
   [mod."github.com/spf13/viper"]
     version = "v1.18.2"
     hash = "sha256-MXYbK6w1LEaoZ2/L/STF3WU1tbK+7NwGVxUCLKPkwks="

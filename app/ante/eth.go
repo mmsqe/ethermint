@@ -112,7 +112,7 @@ func CheckEthGasConsume(
 	blockHeight := big.NewInt(ctx.BlockHeight())
 	homestead := ethCfg.IsHomestead(blockHeight)
 	istanbul := ethCfg.IsIstanbul(blockHeight)
-	shanghai := ethCfg.IsShanghai(uint64(ctx.BlockHeader().Time.Unix()))
+	shanghai := ethCfg.IsShanghai(blockHeight, uint64(ctx.BlockHeader().Time.Unix()))
 	var events sdk.Events
 
 	// Use the lowest priority of all the messages as the final one.
