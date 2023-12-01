@@ -34,6 +34,14 @@ message TraceConfig {
   bool enable_memory = 11 [(gogoproto.jsontag) = "enableMemory"];
   // enable_return_data switches the capture of return data
   bool enable_return_data = 12 [(gogoproto.jsontag) = "enableReturnData"];
-  // tracer_json_config configures the tracer using a JSON string
-  string tracer_json_config = 13 [(gogoproto.jsontag) = "tracerConfig"];
+  // tracer_config configures the tracer config
+  TracerConfig tracer_config = 13 [(gogoproto.jsontag) = "tracerConfig"];
+}
+
+// TracerConfig holds extra parameters for configuring the call tracer.
+message TracerConfig {
+  // If true, call tracer won't collect any subcalls
+  bool only_top_call = 1 [(gogoproto.jsontag) = "onlyTopCall"];
+  // If true, call tracer will collect event logs
+  bool with_log = 2 [(gogoproto.jsontag) = "withLog"];
 }

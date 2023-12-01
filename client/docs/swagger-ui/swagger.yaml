@@ -2653,11 +2653,16 @@ paths:
           in: query
           required: false
           type: boolean
-        - name: trace_config.tracer_json_config
-          description: tracer_json_config configures the tracer using a JSON string.
+        - name: trace_config.tracer_config.only_top_call
+          description: If true, call tracer won't collect any subcalls.
           in: query
           required: false
-          type: string
+          type: boolean
+        - name: trace_config.tracer_config.with_log
+          description: If true, call tracer will collect event logs.
+          in: query
+          required: false
+          type: boolean
         - name: block_number
           description: block_number of the traced block.
           in: query
@@ -3170,11 +3175,16 @@ paths:
           in: query
           required: false
           type: boolean
-        - name: trace_config.tracer_json_config
-          description: tracer_json_config configures the tracer using a JSON string.
+        - name: trace_config.tracer_config.only_top_call
+          description: If true, call tracer won't collect any subcalls.
           in: query
           required: false
-          type: string
+          type: boolean
+        - name: trace_config.tracer_config.with_log
+          description: If true, call tracer will collect event logs.
+          in: query
+          required: false
+          type: boolean
         - name: block_number
           description: block_number of requested transaction.
           in: query
@@ -4392,10 +4402,28 @@ definitions:
       enable_return_data:
         type: boolean
         title: enable_return_data switches the capture of return data
-      tracer_json_config:
-        type: string
-        title: tracer_json_config configures the tracer using a JSON string
+      tracer_config:
+        title: tracer_config configures the tracer config
+        type: object
+        properties:
+          only_top_call:
+            type: boolean
+            title: If true, call tracer won't collect any subcalls
+          with_log:
+            type: boolean
+            title: If true, call tracer will collect event logs
+        description: TracerConfig holds extra parameters for configuring the call tracer.
     description: TraceConfig holds extra parameters to trace functions.
+  ethermint.evm.v1.TracerConfig:
+    type: object
+    properties:
+      only_top_call:
+        type: boolean
+        title: If true, call tracer won't collect any subcalls
+      with_log:
+        type: boolean
+        title: If true, call tracer will collect event logs
+    description: TracerConfig holds extra parameters for configuring the call tracer.
   google.protobuf.Any:
     type: object
     properties:
