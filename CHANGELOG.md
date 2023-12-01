@@ -79,6 +79,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 - (statedb) [#359](https://github.com/crypto-org-chain/ethermint/pull/359) Add `CacheContext` method to StateDB, to support efficient read-only native actions.
 - (rpc) [#375](https://github.com/crypto-org-chain/ethermint/pull/375) Refactor websocket/subscription system to improve performance and stability.
 - (deps) [#381](https://github.com/crypto-org-chain/ethermint/pull/381) Upgrade Go-Ethereum version to [`v1.11.6`](https://github.com/ethereum/go-ethereum/releases/tag/v1.11.6).
+- (precompile) [#380](https://github.com/crypto-org-chain/ethermint/pull/380) Allow init precompiled contract with rules when new evm.
 
 ## [v0.21.0] - 2023-01-26
 
