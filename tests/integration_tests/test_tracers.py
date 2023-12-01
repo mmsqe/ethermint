@@ -33,7 +33,7 @@ def test_tracers(ethermint_rpc_ws):
     assert tx_res["result"] == EXPECTED_CALLTRACERS, ""
     tx_res = eth_rpc.make_request(
         method,
-        [tx_hash, tracer | {"tracerConfig": {"onlyTopCall": True}}],
+        [tx_hash, tracer | {"tracerConfig": "{\"onlyTopCall\":true}"}],
     )
     assert tx_res["result"] == EXPECTED_CALLTRACERS, ""
     _, tx = deploy_contract(w3, CONTRACTS["TestERC20A"])
@@ -54,8 +54,8 @@ def test_crosscheck(ethermint, geth):
     tracers = [
         [],
         [tracer],
-        [tracer | {"tracerConfig": {"onlyTopCall": True}}],
-        [tracer | {"tracerConfig": {"withLog": True}}],
+        [tracer | {"tracerConfig": "{\"onlyTopCall\":true}"}],
+        [tracer | {"tracerConfig": "{\"withLog\":true}"}],
     ]
     iterations = 1
 

@@ -583,11 +583,11 @@ func (k *Keeper) traceTx(
 		TxHash:    txConfig.TxHash,
 	}
 	if traceConfig.Tracer != "" {
-		bytes, err := json.Marshal(traceConfig.TracerConfig)
-		if err != nil {
-			return nil, 0, err
+		var cfg json.RawMessage
+		if traceConfig.TracerJsonConfig != "" {
+			cfg = json.RawMessage(traceConfig.TracerJsonConfig)
 		}
-		if tracer, err = tracers.DefaultDirectory.New(traceConfig.Tracer, tCtx, bytes); err != nil {
+		if tracer, err = tracers.DefaultDirectory.New(traceConfig.Tracer, tCtx, cfg); err != nil {
 			return nil, 0, status.Error(codes.Internal, err.Error())
 		}
 	}
