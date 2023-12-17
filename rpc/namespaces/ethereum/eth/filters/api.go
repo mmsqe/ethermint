@@ -103,7 +103,9 @@ func (api *PublicFilterAPI) timeoutLoop() {
 		for id, f := range api.filters {
 			select {
 			case <-f.deadline.C:
-				f.cancel()
+				if f.cancel != nil {
+					f.cancel()
+				}
 				delete(api.filters, id)
 			default:
 				continue
