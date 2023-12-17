@@ -46,7 +46,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (rpc) [#1773](https://github.com/evmos/ethermint/pull/1773) Avoid channel get changed when concurrent subscribe happens.
 - (rpc) [#1781](https://github.com/evmos/ethermint/pull/1781) Fix decode log for multi topics in websocket subscribe.
 * (mempool) [#310](https://github.com/crypto-org-chain/ethermint/pull/310) disable vesting messages in check tx mode.
-* (rpc) [#](https://github.com/crypto-org-chain/ethermint/pull/) Add nil check when cancel filter.
+* (rpc) [#386](https://github.com/crypto-org-chain/ethermint/pull/386) Add nil check when cancel filter.
 
 ### Features
 
