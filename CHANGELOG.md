@@ -47,7 +47,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 - (rpc) [#1781](https://github.com/evmos/ethermint/pull/1781) Fix decode log for multi topics in websocket subscribe.
 * (mempool) [#310](https://github.com/crypto-org-chain/ethermint/pull/310) disable vesting messages in check tx mode.
 * (rpc) [#386](https://github.com/crypto-org-chain/ethermint/pull/386) Cleanup unused cancel function in filter.
-* (rpc) [#](https://github.com/crypto-org-chain/ethermint/pull/) Avoid out of bound panic when error message.
+* (rpc) [#388](https://github.com/crypto-org-chain/ethermint/pull/388) Avoid out of bound panic when error message.
 
 ### Features
 
