@@ -232,55 +232,38 @@ def test_tracecall_struct_tracer(ethermint, geth):
     }, res
 
 
-def test_tracecall_prestate_tracer(ethermint: Ethermint):
-    w3 = ethermint.w3
-    eth_rpc = w3.provider
+def test_tracecall_prestate_tracer(ethermint, geth):
+    method = "debug_traceCall"
+    tracer = {"tracer": "prestateTracer"}
+    sender_acc = derive_random_account()
+    sender = sender_acc.address
+    receiver_acc = derive_random_account()
+    receiver = receiver_acc.address
+    addrs = [sender.lower(), receiver.lower()]
 
-    sender = ADDRS["signer1"]
-    receiver = ADDRS["signer2"]
+    def process(w3):
+        fund_acc(w3, sender_acc)
+        fund_acc(w3, receiver_acc)
+        tx = {"value": 1, "gas": 21000, "gasPrice": 88500000000}
+        # make a transaction make sure the nonce is not 0
+        send_transaction(w3, tx | {"from": sender, "to": receiver}, key=sender_acc.key)
+        tx = tx | {"from": receiver, "to": sender}
+        send_transaction(w3, tx, key=receiver_acc.key)
+        tx = {"from": sender, "to": receiver, "value": hex(1)}
+        tx_res = w3.provider.make_request(method, [tx, "latest", tracer])
+        assert "result" in tx_res
+        assert all(tx_res["result"][addr.lower()] == {
+            "balance": hex(w3.eth.get_balance(addr)),
+            "nonce": w3.eth.get_transaction_count(addr),
+        } for addr in [sender, receiver]), tx_res["result"]
+        return tx_res["result"]
 
-    # make a transaction make sure the nonce is not 0
-    w3.eth.send_transaction(
-        {
-            "from": sender,
-            "to": receiver,
-            "value": hex(1),
-        }
-    )
-
-    w3.eth.send_transaction(
-        {
-            "from": receiver,
-            "to": sender,
-            "value": hex(1),
-        }
-    )
-    w3_wait_for_new_blocks(w3, 1, sleep=0.1)
-
-    sender_nonce = w3.eth.get_transaction_count(sender)
-    sender_bal = w3.eth.get_balance(sender)
-    receiver_nonce = w3.eth.get_transaction_count(receiver)
-    receiver_bal = w3.eth.get_balance(receiver)
-
-    tx = {
-        "from": sender,
-        "to": receiver,
-        "value": hex(1),
-    }
-    w3_wait_for_new_blocks(w3, 1, sleep=0.1)
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall", [tx, "latest", {"tracer": "prestateTracer"}]
-    )
-
-    assert "result" in tx_res
-    assert tx_res["result"][sender.lower()] == {
-        "balance": hex(sender_bal),
-        "nonce": sender_nonce,
-    }
-    assert tx_res["result"][receiver.lower()] == {
-        "balance": hex(receiver_bal),
-        "nonce": receiver_nonce,
-    }
+    providers = [ethermint.w3, geth.w3]
+    with ThreadPoolExecutor(len(providers)) as exec:
+        tasks = [exec.submit(process, w3) for w3 in providers]
+        res = [future.result() for future in as_completed(tasks)]
+        assert len(res) == len(providers)
+        assert all(res[0][addr] == res[-1][addr] for addr in addrs), res
 
 
 def test_debug_tracecall_call_tracer(ethermint, geth):
