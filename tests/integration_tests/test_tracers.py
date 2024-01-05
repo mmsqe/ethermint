@@ -10,7 +10,6 @@ from .expected_constants import (
     EXPECTED_DEFAULT_GASCAP,
     EXPECTED_STRUCT_TRACER,
 )
-from .network import Ethermint
 from .utils import (
     ADDRS,
     CONTRACTS,
@@ -253,40 +252,35 @@ def test_custom_js_tracers(ethermint):
     assert tx_res[0] == "0:PUSH1"
 
 
-def test_tracecall_struct_tracer(ethermint: Ethermint):
-    w3 = ethermint.w3
-    eth_rpc = w3.provider
+def test_tracecall_struct_tracer(ethermint, geth):
+    method = "debug_traceCall"
+    acc = derive_random_account()
+    sender = acc.address
+    receiver = ADDRS["signer2"]
 
-    # set gas limit in tx
-    from_addr = ADDRS["signer1"]
-    to_addr = ADDRS["signer2"]
-    tx = {
-        "from": from_addr,
-        "to": to_addr,
-        "value": hex(100),
-        "gas": hex(21000),
-    }
+    def process(w3, gas):
+        fund_acc(w3, acc)
+        tx = {"from": sender, "to": receiver, "value": hex(100)}
+        if gas is not None:
+            # set gas limit in tx
+            tx["gas"] = hex(gas)
+        tx_res = w3.provider.make_request(method, [tx, "latest"])
+        assert "result" in tx_res
+        return tx_res["result"]
 
-    tx_res = eth_rpc.make_request("debug_traceCall", [tx, "latest"])
-    assert tx_res["result"] == EXPECTED_STRUCT_TRACER, ""
+    providers = [ethermint.w3, geth.w3]
+    gas = 21000
+    with ThreadPoolExecutor(len(providers)) as exec:
+        tasks = [exec.submit(process, w3, gas) for w3 in providers]
+        res = [future.result() for future in as_completed(tasks)]
+        assert len(res) == len(providers)
+        assert (res[0] == res[-1] == EXPECTED_STRUCT_TRACER), res
 
     # no gas limit set in tx
-    # default GasCap in ethermint
-    gas_cap = 25000000
-
-    tx = {
-        "from": from_addr,
-        "to": to_addr,
-        "value": hex(100),
-    }
-
-    tx_res = eth_rpc.make_request("debug_traceCall", [tx, "latest"])
-    assert tx_res["result"] == {
-        "failed": False,
-        "gas": gas_cap / 2,
-        "returnValue": "",
-        "structLogs": [],
-    }
+    res = process(ethermint.w3, None)
+    assert res == EXPECTED_STRUCT_TRACER | {
+        "gas": EXPECTED_DEFAULT_GASCAP / 2,
+    }, res
 
 
 def test_tracecall_prestate_tracer(ethermint: Ethermint):
