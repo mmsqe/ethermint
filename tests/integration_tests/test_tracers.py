@@ -383,36 +383,37 @@ def test_debug_tracecall_call_tracer(ethermint, geth):
     }, res
 
 
-def test_debug_tracecall_state_overrides(ethermint_rpc_ws):
-    w3: Web3 = ethermint_rpc_ws.w3
-    eth_rpc = w3.provider
-
-    # generate random address, set balance in stateOverrides,
-    # use prestateTracer to check balance
+def test_debug_tracecall_state_overrides(ethermint, geth):
     balance = "0xffffffff"
 
-    address = w3.eth.account.create().address
-
-    tx = {
-        "from": address,
-        "to": ADDRS["signer2"],
-        "value": hex(1),
-    }
-
-    config = {
-        "tracer": "prestateTracer",
-        "stateOverrides": {
-            address: {
-                "balance": balance,
+    def process(w3):
+        # generate random address, set balance in stateOverrides,
+        # use prestateTracer to check balance
+        address = w3.eth.account.create().address
+        tx = {
+            "from": address,
+            "to": ADDRS["signer2"],
+            "value": hex(1),
+        }
+        config = {
+            "tracer": "prestateTracer",
+            "stateOverrides": {
+                address: {
+                    "balance": balance,
+                },
             },
-        },
-    }
+        }
+        tx_res = w3.provider.make_request("debug_traceCall", [tx, "latest", config])
+        assert "result" in tx_res
+        tx_res = tx_res["result"]
+        return tx_res[address.lower()]["balance"]
 
-    tx_res = eth_rpc.make_request("debug_traceCall", [tx, "latest", config])
-
-    assert "result" in tx_res
-    tx_res = tx_res["result"]
-    assert tx_res[address.lower()]["balance"] == balance
+    providers = [ethermint.w3, geth.w3]
+    with ThreadPoolExecutor(len(providers)) as exec:
+        tasks = [exec.submit(process, w3) for w3 in providers]
+        res = [future.result() for future in as_completed(tasks)]
+        assert len(res) == len(providers)
+        assert (res[0] == res[-1] == balance), res
 
 
 def test_debug_tracecall_return_revert_data_when_call_failed(ethermint, geth):
