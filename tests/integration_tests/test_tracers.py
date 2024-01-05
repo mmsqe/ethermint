@@ -425,32 +425,26 @@ def test_debug_tracecall_state_overrides(ethermint_rpc_ws):
     assert tx_res[address.lower()]["balance"] == balance
 
 
-def test_debug_tracecall_return_revert_data_when_call_failed(ethermint):
-    w3: Web3 = ethermint.w3
-    eth_rpc = w3.provider
+def test_debug_tracecall_return_revert_data_when_call_failed(ethermint, geth):
+    expected = "08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001a46756e6374696f6e20686173206265656e207265766572746564000000000000"  # noqa: E501
 
-    test_revert, _ = deploy_contract(
-        w3,
-        CONTRACTS["TestRevert"],
-    )
-
-    w3_wait_for_new_blocks(w3, 1, sleep=0.1)
-
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall",
-        [
-            {
+    def process(w3):
+        test_revert, _ = deploy_contract(w3, CONTRACTS["TestRevert"])
+        tx_res = w3.provider.make_request(
+            "debug_traceCall", [{
                 "value": "0x0",
                 "to": test_revert.address,
                 "from": ADDRS["validator"],
                 "data": "0x9ffb86a5",
-            },
-            "latest",
-        ],
-    )
-    assert "result" in tx_res
-    tx_res = tx_res["result"]
-    assert (
-        tx_res["returnValue"]
-        == "08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001a46756e6374696f6e20686173206265656e207265766572746564000000000000"  # noqa: E501
-    )
+            }, "latest"]
+        )
+        assert "result" in tx_res
+        tx_res = tx_res["result"]
+        return tx_res["returnValue"]
+
+    providers = [ethermint.w3, geth.w3]
+    with ThreadPoolExecutor(len(providers)) as exec:
+        tasks = [exec.submit(process, w3) for w3 in providers]
+        res = [future.result() for future in as_completed(tasks)]
+        assert len(res) == len(providers)
+        assert (res[0] == res[-1] == expected), res
