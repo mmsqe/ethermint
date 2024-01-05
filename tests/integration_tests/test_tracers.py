@@ -8,12 +8,14 @@ from .expected_constants import (
     EXPECTED_CALLTRACERS,
     EXPECTED_CONTRACT_CREATE_TRACER,
     EXPECTED_DEFAULT_GASCAP,
+    EXPECTED_JS_TRACERS,
     EXPECTED_STRUCT_TRACER,
 )
 from .utils import (
     ADDRS,
     CONTRACTS,
     deploy_contract,
+    derive_new_account,
     derive_random_account,
     send_transaction,
     w3_wait_for_new_blocks,
@@ -143,113 +145,60 @@ def test_tracecall_insufficient_funds(ethermint, geth):
         ]), res
 
 
-def test_js_tracers(ethermint):
-    w3: Web3 = ethermint.w3
-    eth_rpc = w3.provider
+def test_js_tracers(ethermint, geth):
+    method = "debug_traceCall"
+    acc = derive_new_account(n=2)
+    sender = acc.address
 
-    from_addr = ADDRS["validator"]
+    def process(w3):
+        # fund new sender to deploy contract with same address
+        fund_acc(w3, acc)
+        contract, _ = deploy_contract(w3, CONTRACTS["Greeter"], key=acc.key)
+        tx = contract.functions.setGreeting("world").build_transaction()
+        tx = {"from": sender, "to": contract.address, "data": tx["data"]}
+        # https://geth.ethereum.org/docs/developers/evm-tracing/built-in-tracers#js-tracers
+        tracers = [
+            "bigramTracer",
+            "evmdisTracer",
+            "opcountTracer",
+            "trigramTracer",
+            "unigramTracer",
+            """{
+                data: [],
+                fault: function(log) {},
+                step: function(log) {
+                    if(log.op.toString() == "POP") this.data.push(log.stack.peek(0));
+                },
+                result: function() { return this.data; }
+            }""",
+            """{
+                retVal: [],
+                step: function(log,db) {
+                    this.retVal.push(log.getPC() + ":" + log.op.toString())
+                },
+                fault: function(log,db) {
+                    this.retVal.push("FAULT: " + JSON.stringify(log))
+                },
+                result: function(ctx,db) {
+                    return this.retVal
+                }
+            }
+            """
+        ]
+        res = []
+        call = w3.provider.make_request
+        with ThreadPoolExecutor(len(tracers)) as exec:
+            params = [[tx, "latest", {"tracer": tracer}] for tracer in tracers]
+            exec_map = exec.map(call, itertools.repeat(method), params)
+            res = [json.dumps(resp["result"], sort_keys=True) for resp in exec_map]
+        return res
 
-    contract, _ = deploy_contract(w3, CONTRACTS["Greeter"])
-    w3_wait_for_new_blocks(w3, 1, sleep=0.1)
-
-    tx = contract.functions.setGreeting("world").build_transaction()
-
-    tx = {
-        "from": from_addr,
-        "to": contract.address,
-        "data": tx["data"],
-    }
-
-    # bigramTracer
-    # https://geth.ethereum.org/docs/developers/evm-tracing/built-in-tracers#js-tracers
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall", [tx, "latest", {"tracer": "bigramTracer"}]
-    )
-    assert "result" in tx_res
-    tx_res = tx_res["result"]
-    assert tx_res["ADD-ADD"] == 2
-    assert tx_res["ADD-PUSH1"] == 6
-
-    # evmdis
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall", [tx, "latest", {"tracer": "evmdisTracer"}]
-    )
-    assert "result" in tx_res
-    tx_res = tx_res["result"]
-    assert tx_res[0] == {"depth": 1, "len": 2, "op": 96, "result": ["80"]}
-
-    # opcount
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall", [tx, "latest", {"tracer": "opcountTracer"}]
-    )
-    assert "result" in tx_res
-    tx_res = tx_res["result"]
-    assert tx_res > 0
-
-    # trigram
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall", [tx, "latest", {"tracer": "trigramTracer"}]
-    )
-    assert "result" in tx_res
-    tx_res = tx_res["result"]
-    assert tx_res["ADD-ADD-MSTORE"] == 1
-    assert tx_res["DUP2-MLOAD-DUP1"] == 1
-
-    # unigram
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall", [tx, "latest", {"tracer": "unigramTracer"}]
-    )
-    assert "result" in tx_res
-    tx_res = tx_res["result"]
-    assert tx_res["POP"] == 24
-
-
-def test_custom_js_tracers(ethermint):
-    w3: Web3 = ethermint.w3
-    eth_rpc = w3.provider
-
-    from_addr = ADDRS["validator"]
-
-    contract, _ = deploy_contract(w3, CONTRACTS["Greeter"])
-    w3_wait_for_new_blocks(w3, 1, sleep=0.1)
-
-    tx = contract.functions.setGreeting("world").build_transaction()
-
-    tx = {
-        "from": from_addr,
-        "to": contract.address,
-        "data": tx["data"],
-    }
-
-    tracer = """{
-        data: [],
-        fault: function(log) {},
-        step: function(log) {
-            if(log.op.toString() == "POP") this.data.push(log.stack.peek(0));
-        },
-        result: function() { return this.data; }
-    }"""
-    tx_res = eth_rpc.make_request("debug_traceCall", [tx, "latest", {"tracer": tracer}])
-    assert "result" in tx_res
-    tx_res = tx_res["result"]
-
-    tracer = """{
-        retVal: [],
-        step: function(log,db) {
-            this.retVal.push(log.getPC() + ":" + log.op.toString())
-        },
-        fault: function(log,db) {
-            this.retVal.push("FAULT: " + JSON.stringify(log))
-        },
-        result: function(ctx,db) {
-            return this.retVal
-        }
-    }
-    """
-    tx_res = eth_rpc.make_request("debug_traceCall", [tx, "latest", {"tracer": tracer}])
-    assert "result" in tx_res
-    tx_res = tx_res["result"]
-    assert tx_res[0] == "0:PUSH1"
+    providers = [ethermint.w3, geth.w3]
+    with ThreadPoolExecutor(len(providers)) as exec:
+        tasks = [exec.submit(process, w3) for w3 in providers]
+        res = [future.result() for future in as_completed(tasks)]
+        assert len(res) == len(providers)
+        assert (res[0] == res[1] == EXPECTED_JS_TRACERS), res
 
 
 def test_tracecall_struct_tracer(ethermint, geth):
