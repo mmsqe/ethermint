@@ -7,6 +7,7 @@ from web3 import Web3
 from .expected_constants import (
     EXPECTED_CALLTRACERS,
     EXPECTED_CONTRACT_CREATE_TRACER,
+    EXPECTED_DEFAULT_GASCAP,
     EXPECTED_STRUCT_TRACER,
 )
 from .network import Ethermint
@@ -339,55 +340,47 @@ def test_tracecall_prestate_tracer(ethermint: Ethermint):
     }
 
 
-def test_debug_tracecall_call_tracer(ethermint_rpc_ws):
-    w3: Web3 = ethermint_rpc_ws.w3
-    eth_rpc = w3.provider
+def test_debug_tracecall_call_tracer(ethermint, geth):
+    method = "debug_traceCall"
+    acc = derive_random_account()
+    sender = acc.address
+    receiver = ADDRS["signer2"]
 
-    tx = {
-        "from": ADDRS["signer1"],
-        "to": ADDRS["signer2"],
-        "value": hex(1),
-        "gas": hex(21000),
-    }
+    def process(w3, gas):
+        fund_acc(w3, acc)
+        tx = {"from": sender, "to": receiver, "value": hex(1)}
+        if gas is not None:
+            # set gas limit in tx
+            tx["gas"] = hex(gas)
+        tx_res = w3.provider.make_request(
+            method, [tx, "latest", {"tracer": "callTracer"}],
+        )
+        assert "result" in tx_res
+        return tx_res["result"]
 
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall", [tx, "latest", {"tracer": "callTracer"}]
-    )
-
-    assert "result" in tx_res
-    assert tx_res["result"] == {
+    providers = [ethermint.w3, geth.w3]
+    gas = 21000
+    expected = {
         "type": "CALL",
-        "from": ADDRS["signer1"].lower(),
-        "to": ADDRS["signer2"].lower(),
+        "from": sender.lower(),
+        "to": receiver.lower(),
         "value": hex(1),
-        "gas": hex(21000),
-        "gasUsed": hex(21000),
+        "gas": hex(gas),
+        "gasUsed": hex(gas),
         "input": "0x",
     }
+    with ThreadPoolExecutor(len(providers)) as exec:
+        tasks = [exec.submit(process, w3, gas) for w3 in providers]
+        res = [future.result() for future in as_completed(tasks)]
+        assert len(res) == len(providers)
+        assert (res[0] == res[-1] == expected), res
 
     # no gas limit set in tx
-    tx = {
-        "from": ADDRS["signer1"],
-        "to": ADDRS["signer2"],
-        "value": hex(1),
-    }
-
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall", [tx, "latest", {"tracer": "callTracer"}]
-    )
-
-    gas_cap = 25000000
-
-    assert "result" in tx_res
-    assert tx_res["result"] == {
-        "type": "CALL",
-        "from": ADDRS["signer1"].lower(),
-        "to": ADDRS["signer2"].lower(),
-        "value": hex(1),
-        "gas": hex(gas_cap),
-        "gasUsed": hex(int(gas_cap / 2)),
-        "input": "0x",
-    }
+    res = process(ethermint.w3, None)
+    assert res == expected | {
+        "gas": hex(EXPECTED_DEFAULT_GASCAP),
+        "gasUsed": hex(int(EXPECTED_DEFAULT_GASCAP / 2)),
+    }, res
 
 
 def test_debug_tracecall_state_overrides(ethermint_rpc_ws):
