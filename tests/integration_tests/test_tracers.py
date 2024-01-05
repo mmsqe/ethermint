@@ -14,7 +14,7 @@ from .utils import (
     ADDRS,
     CONTRACTS,
     deploy_contract,
-    derive_new_account,
+    derive_random_account,
     send_transaction,
     w3_wait_for_new_blocks,
 )
@@ -47,13 +47,18 @@ def test_trace_transactions_tracers(ethermint_rpc_ws):
     assert tx_res["result"] == EXPECTED_CONTRACT_CREATE_TRACER, ""
 
 
-def test_crosscheck(ethermint, geth):
+def fund_acc(w3, acc):
+    fund = 3000000000000000000
+    addr = acc.address
+    if w3.eth.get_balance(addr, "latest") == 0:
+        tx = {"to": addr, "value": fund, "gasPrice": w3.eth.gas_price}
+        send_transaction(w3, tx)
+        assert w3.eth.get_balance(addr, "latest") == fund
+
+
+def test_trace_tx(ethermint, geth):
     method = "debug_traceTransaction"
     tracer = {"tracer": "callTracer"}
-    acc = derive_new_account(4)
-    sender = acc.address
-    # fund new sender to deploy contract with same address
-    fund = 3000000000000000000
     tracers = [
         [],
         [tracer],
@@ -62,11 +67,11 @@ def test_crosscheck(ethermint, geth):
         [tracer | {"tracerConfig": {"diffMode": True}}],
     ]
     iterations = 1
+    acc = derive_random_account()
 
     def process(w3):
-        tx = {"to": sender, "value": fund, "gasPrice": w3.eth.gas_price}
-        send_transaction(w3, tx)
-        assert w3.eth.get_balance(sender, "latest") == fund
+        # fund new sender to deploy contract with same address
+        fund_acc(w3, acc)
         contract, _ = deploy_contract(w3, CONTRACTS["TestMessageCall"], key=acc.key)
         tx = contract.functions.test(iterations).build_transaction()
         tx_hash = send_transaction(w3, tx)["transactionHash"].hex()
@@ -86,64 +91,56 @@ def test_crosscheck(ethermint, geth):
         assert res[0] == res[1], res
 
 
-def test_tracecall_insufficient_funds(ethermint_rpc_ws):
-    w3: Web3 = ethermint_rpc_ws.w3
-    eth_rpc = w3.provider
-    gas_price = w3.eth.gas_price
+def test_tracecall_insufficient_funds(ethermint, geth):
+    method = "debug_traceCall"
+    acc = derive_random_account()
+    sender = acc.address
+    receiver = ADDRS["community"]
+    value = hex(100)
+    gas = hex(21000)
 
-    # Insufficient funds
-    tx = {
-        # an non-exist address
-        "from": "0x1000000000000000000000000000000000000000",
-        "to": ADDRS["community"],
-        "value": hex(100),
-        "gasPrice": hex(gas_price),
-        "gas": hex(21000),
-    }
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall", [tx, "latest", {"tracer": "prestateTracer"}]
-    )
-    assert "error" in tx_res
-    assert tx_res["error"] == {
-        "code": -32000,
-        "message": "rpc error: code = Internal desc = insufficient balance for transfer",  # noqa: E501
-    }, ""
+    def process(w3):
+        fund_acc(w3, acc)
+        # Insufficient funds
+        tx = {
+            # an non-exist address
+            "from": "0x1000000000000000000000000000000000000000",
+            "to": receiver,
+            "value": value,
+            "gasPrice": hex(w3.eth.gas_price),
+            "gas": gas,
+        }
+        call = w3.provider.make_request
+        tracers = ["prestateTracer", "callTracer"]
+        with ThreadPoolExecutor(len(tracers)) as exec:
+            params = [([tx, "latest", {"tracer": tracer}]) for tracer in tracers]
+            for resp in exec.map(call, itertools.repeat(method), params):
+                assert "error" in resp
+                assert "insufficient" in resp["error"]["message"], resp["error"]
 
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall", [tx, "latest", {"tracer": "callTracer"}]
-    )
-    assert "error" in tx_res
-    assert tx_res["error"] == {
-        "code": -32000,
-        "message": "rpc error: code = Internal desc = insufficient balance for transfer",  # noqa: #E501
-    }, ""
+        tx = {"from": sender, "to": receiver, "value": value, "gas": gas}
+        tracer = {"tracer": "callTracer"}
+        tracers = [
+            [],
+            [tracer],
+            [tracer | {"tracerConfig": {"onlyTopCall": True}}],
+        ]
+        res = []
+        with ThreadPoolExecutor(len(tracers)) as exec:
+            params = [([tx, "latest"] + cfg) for cfg in tracers]
+            exec_map = exec.map(call, itertools.repeat(method), params)
+            res = [json.dumps(resp["result"], sort_keys=True) for resp in exec_map]
+        return res
 
-    from_addr = ADDRS["validator"]
-    to_addr = ADDRS["community"]
-    tx = {
-        "from": from_addr,
-        "to": to_addr,
-        "value": hex(100),
-        "gas": hex(21000),
-    }
-
-    tx_res = eth_rpc.make_request("debug_traceCall", [tx, "latest"])
-    assert tx_res["result"] == EXPECTED_STRUCT_TRACER, ""
-
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall", [tx, "latest", {"tracer": "callTracer"}]
-    )
-    assert tx_res["result"] == EXPECTED_CALLTRACERS, ""
-
-    tx_res = eth_rpc.make_request(
-        "debug_traceCall",
-        [
-            tx,
-            "latest",
-            {"tracer": "callTracer", "tracerConfig": {'onlyTopCall': True}},
-        ],
-    )
-    assert tx_res["result"] == EXPECTED_CALLTRACERS, ""
+    providers = [ethermint.w3, geth.w3]
+    expected = json.dumps(EXPECTED_CALLTRACERS | {"from": sender.lower()})
+    with ThreadPoolExecutor(len(providers)) as exec:
+        tasks = [exec.submit(process, w3) for w3 in providers]
+        res = [future.result() for future in as_completed(tasks)]
+        assert len(res) == len(providers)
+        assert (res[0] == res[1] == [
+            json.dumps(EXPECTED_STRUCT_TRACER), expected, expected,
+        ]), res
 
 
 def test_js_tracers(ethermint):
