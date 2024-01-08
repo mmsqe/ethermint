@@ -70,7 +70,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (rpc) [#382](https://github.com/crypto-org-chain/ethermint/pull/382) Align tracer config with go-ethereum.
 * (rpc) [#386](https://github.com/crypto-org-chain/ethermint/pull/386) Cleanup unused cancel function in filter.
 * (rpc) [#388](https://github.com/crypto-org-chain/ethermint/pull/388) Avoid out of bound panic when error message.
-* (rpc) [#](https://github.com/crypto-org-chain/ethermint/pull/) Align block param with go-ethereum in debug_traceCall.
+* (rpc) [#391](https://github.com/crypto-org-chain/ethermint/pull/391) Align block param with go-ethereum in debug_traceCall.
 
 ### Improvements
 
