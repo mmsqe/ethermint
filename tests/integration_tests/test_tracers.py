@@ -266,6 +266,45 @@ def test_tracecall_prestate_tracer(ethermint, geth):
         assert all(res[0][addr] == res[-1][addr] for addr in addrs), res
 
 
+def test_tracecall_diff(ethermint, geth):
+    method = "debug_traceCall"
+    tracer = {"tracer": "prestateTracer", "tracerConfig": {"diffMode": True}}
+    sender_acc = derive_new_account(4)
+    sender = sender_acc.address
+    receiver = derive_new_account(5).address
+    fund = 3000000000000000000
+    gas = 21000
+    price = 88500000000
+    fee = gas * price
+
+    def process(w3):
+        fund_acc(w3, sender_acc)
+        tx = {"from": sender, "to": receiver, "value": 1, "gas": gas, "gasPrice": price}
+        send_transaction(w3, tx, key=sender_acc.key)
+        res = send_transaction(w3, tx, key=sender_acc.key)
+        send_transaction(w3, tx, key=sender_acc.key)
+        tx = {"from": sender, "to": receiver, "value": hex(1)}
+        tx_res = w3.provider.make_request(method, [tx, hex(res["blockNumber"]), tracer])
+        return json.dumps(tx_res["result"], sort_keys=True)
+
+    providers = [ethermint.w3, geth.w3]
+    expected = json.dumps({
+        "post": {
+            receiver.lower(): {"balance": hex(3)},
+            sender.lower(): {"balance": hex(fund - 3 - fee * 2), "nonce": 3}
+        },
+        "pre": {
+            receiver.lower(): {"balance": hex(2)},
+            sender.lower(): {"balance": hex(fund - 2 - fee * 2), "nonce": 2}
+        }
+    }, sort_keys=True)
+    with ThreadPoolExecutor(len(providers)) as exec:
+        tasks = [exec.submit(process, w3) for w3 in providers]
+        res = [future.result() for future in as_completed(tasks)]
+        assert len(res) == len(providers)
+        assert (res[0] == res[-1] == expected), res
+
+
 def test_debug_tracecall_call_tracer(ethermint, geth):
     method = "debug_traceCall"
     acc = derive_random_account()
