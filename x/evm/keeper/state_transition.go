@@ -26,7 +26,6 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	rpctypes "github.com/evmos/ethermint/rpc/types"
 	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
@@ -39,7 +38,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-func (k *Keeper) NewEVMBlockContext(ctx sdk.Context, cfg *statedb.EVMConfig) vm.BlockContext {
+func (k *Keeper) NewEVMBlockContext(ctx sdk.Context, cfg *EVMConfig) vm.BlockContext {
 	return vm.BlockContext{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,
@@ -65,7 +64,7 @@ func (k *Keeper) NewEVMBlockContext(ctx sdk.Context, cfg *statedb.EVMConfig) vm.
 func (k *Keeper) NewEVM(
 	ctx sdk.Context,
 	msg core.Message,
-	cfg *statedb.EVMConfig,
+	cfg *EVMConfig,
 	tracer vm.EVMLogger,
 	stateDB vm.StateDB,
 ) *vm.EVM {
@@ -76,7 +75,7 @@ func (k *Keeper) NewEVM(
 func (k *Keeper) NewEVMWithBlockCtx(
 	ctx sdk.Context,
 	msg core.Message,
-	cfg *statedb.EVMConfig,
+	cfg *EVMConfig,
 	tracer vm.EVMLogger,
 	stateDB vm.StateDB,
 	blockCtx vm.BlockContext,
@@ -186,12 +185,11 @@ func (k *Keeper) ApplyTransaction(ctx sdk.Context, msgEth *types.MsgEthereumTx) 
 		bloomReceipt ethtypes.Bloom
 	)
 
-	cfg, err := k.EVMConfig(ctx, sdk.ConsAddress(ctx.BlockHeader().ProposerAddress), k.eip155ChainID)
+	ethTx := msgEth.AsTransaction()
+	cfg, err := k.EVMConfig(ctx, sdk.ConsAddress(ctx.BlockHeader().ProposerAddress), k.eip155ChainID, ethTx.Hash())
 	if err != nil {
 		return nil, errorsmod.Wrap(err, "failed to load evm config")
 	}
-	ethTx := msgEth.AsTransaction()
-	txConfig := k.TxConfig(ctx, ethTx.Hash())
 
 	msg, err := msgEth.AsMessage(cfg.BaseFee)
 	if err != nil {
@@ -210,7 +208,7 @@ func (k *Keeper) ApplyTransaction(ctx sdk.Context, msgEth *types.MsgEthereumTx) 
 	}
 
 	// pass true to commit the StateDB
-	res, err := k.ApplyMessageWithConfig(tmpCtx, msg, nil, true, cfg, txConfig, nil, nil, false)
+	res, err := k.ApplyMessageWithConfig(tmpCtx, msg, cfg, true)
 	if err != nil {
 		return nil, errorsmod.Wrap(err, "failed to apply ethereum core message")
 	}
@@ -244,12 +242,12 @@ func (k *Keeper) ApplyTransaction(ctx sdk.Context, msgEth *types.MsgEthereumTx) 
 		CumulativeGasUsed: cumulativeGasUsed,
 		Bloom:             bloomReceipt,
 		Logs:              logs,
-		TxHash:            txConfig.TxHash,
+		TxHash:            cfg.TxConfig.TxHash,
 		ContractAddress:   contractAddr,
 		GasUsed:           res.GasUsed,
-		BlockHash:         txConfig.BlockHash,
+		BlockHash:         cfg.TxConfig.BlockHash,
 		BlockNumber:       big.NewInt(ctx.BlockHeight()),
-		TransactionIndex:  txConfig.TxIndex,
+		TransactionIndex:  cfg.TxConfig.TxIndex,
 	}
 
 	if !res.Failed() {
@@ -279,10 +277,10 @@ func (k *Keeper) ApplyTransaction(ctx sdk.Context, msgEth *types.MsgEthereumTx) 
 	if len(receipt.Logs) > 0 {
 		// Update transient block bloom filter
 		k.SetBlockBloomTransient(ctx, receipt.Bloom.Big())
-		k.SetLogSizeTransient(ctx, uint64(txConfig.LogIndex)+uint64(len(receipt.Logs)))
+		k.SetLogSizeTransient(ctx, uint64(cfg.TxConfig.LogIndex)+uint64(len(receipt.Logs)))
 	}
 
-	k.SetTxIndexTransient(ctx, uint64(txConfig.TxIndex)+1)
+	k.SetTxIndexTransient(ctx, uint64(cfg.TxConfig.TxIndex)+1)
 
 	totalGasUsed, err := k.AddTransientGasUsed(ctx, res.GasUsed)
 	if err != nil {
@@ -296,13 +294,13 @@ func (k *Keeper) ApplyTransaction(ctx sdk.Context, msgEth *types.MsgEthereumTx) 
 
 // ApplyMessage calls ApplyMessageWithConfig with an empty TxConfig.
 func (k *Keeper) ApplyMessage(ctx sdk.Context, msg core.Message, tracer vm.EVMLogger, commit bool) (*types.MsgEthereumTxResponse, error) {
-	cfg, err := k.EVMConfig(ctx, sdk.ConsAddress(ctx.BlockHeader().ProposerAddress), k.eip155ChainID)
+	cfg, err := k.EVMConfig(ctx, sdk.ConsAddress(ctx.BlockHeader().ProposerAddress), k.eip155ChainID, common.Hash{})
 	if err != nil {
 		return nil, errorsmod.Wrap(err, "failed to load evm config")
 	}
 
-	txConfig := statedb.NewEmptyTxConfig(common.BytesToHash(ctx.HeaderHash()))
-	return k.ApplyMessageWithConfig(ctx, msg, tracer, commit, cfg, txConfig, nil, nil, false)
+	cfg.Tracer = tracer
+	return k.ApplyMessageWithConfig(ctx, msg, cfg, commit)
 }
 
 // ApplyMessageWithConfig computes the new state by applying the given message against the existing state.
@@ -352,15 +350,11 @@ func (k *Keeper) ApplyMessage(ctx sdk.Context, msg core.Message, tracer vm.EVMLo
 //  1. the sender is consumed with gasLimit * gasPrice in full at the beginning of the execution and
 //     then refund with unused gas after execution.
 //  2. sender nonce is incremented by 1 before execution
-func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
+func (k *Keeper) ApplyMessageWithConfig(
+	ctx sdk.Context,
 	msg core.Message,
-	tracer vm.EVMLogger,
+	cfg *EVMConfig,
 	commit bool,
-	cfg *statedb.EVMConfig,
-	txConfig statedb.TxConfig,
-	overrides *rpctypes.StateOverride,
-	blockOverrides *rpctypes.BlockOverrides,
-	debugTrace bool,
 ) (*types.MsgEthereumTxResponse, error) {
 	var (
 		ret   []byte // return bytes from evm execution
@@ -374,19 +368,19 @@ func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
 		return nil, errorsmod.Wrap(types.ErrCallDisabled, "failed to call contract")
 	}
 
-	stateDB := statedb.NewWithParams(ctx, k, txConfig, cfg.Params)
+	stateDB := statedb.NewWithParams(ctx, k, cfg.TxConfig, cfg.Params)
 	var evm *vm.EVM
-	if overrides != nil {
-		if err := overrides.Apply(stateDB); err != nil {
+	if cfg.Overrides != nil {
+		if err := cfg.Overrides.Apply(stateDB); err != nil {
 			return nil, errorsmod.Wrap(err, "failed to apply state override")
 		}
 	}
-	if debugTrace && blockOverrides != nil {
+	if cfg.DebugTrace && cfg.BlockOverrides != nil {
 		blockCtx := k.NewEVMBlockContext(ctx, cfg)
-		blockOverrides.Apply(&blockCtx)
-		evm = k.NewEVMWithBlockCtx(ctx, msg, cfg, tracer, stateDB, blockCtx)
+		cfg.BlockOverrides.Apply(&blockCtx)
+		evm = k.NewEVMWithBlockCtx(ctx, msg, cfg, cfg.Tracer, stateDB, blockCtx)
 	} else {
-		evm = k.NewEVM(ctx, msg, cfg, tracer, stateDB)
+		evm = k.NewEVM(ctx, msg, cfg, cfg.Tracer, stateDB)
 	}
 
 	leftoverGas := msg.GasLimit
@@ -394,14 +388,14 @@ func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
 	// Allow the tracer captures the tx level events, mainly the gas consumption.
 	vmCfg := evm.Config
 	if vmCfg.Tracer != nil {
-		if debugTrace {
+		if cfg.DebugTrace {
 			// msg.GasPrice should have been set to effective gas price
 			stateDB.SubBalance(sender.Address(), new(big.Int).Mul(msg.GasPrice, new(big.Int).SetUint64(msg.GasLimit)))
 			stateDB.SetNonce(sender.Address(), stateDB.GetNonce(sender.Address())+1)
 		}
 		vmCfg.Tracer.CaptureTxStart(leftoverGas)
 		defer func() {
-			if debugTrace {
+			if cfg.DebugTrace {
 				stateDB.AddBalance(sender.Address(), new(big.Int).Mul(msg.GasPrice, new(big.Int).SetUint64(leftoverGas)))
 			}
 			vmCfg.Tracer.CaptureTxEnd(leftoverGas)
@@ -496,7 +490,7 @@ func (k *Keeper) ApplyMessageWithConfig(ctx sdk.Context,
 		VmError:   vmError,
 		Ret:       ret,
 		Logs:      types.NewLogsFromEth(stateDB.Logs()),
-		Hash:      txConfig.TxHash.Hex(),
+		Hash:      cfg.TxConfig.TxHash.Hex(),
 		BlockHash: ctx.HeaderHash().Bytes(),
 	}, nil
 }
