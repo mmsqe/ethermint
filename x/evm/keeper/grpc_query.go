@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"reflect"
 	"time"
 
 	"github.com/ethereum/go-ethereum/eth/tracers"
@@ -404,6 +403,7 @@ func (k Keeper) EstimateGas(c context.Context, req *types.EthCallRequest) (*type
 }
 
 type traceRequest interface {
+	comparable
 	GetTraceConfig() *types.TraceConfig
 	GetBlockNumber() int64
 	GetBlockTime() time.Time
@@ -412,9 +412,10 @@ type traceRequest interface {
 	GetProposerAddress() sdk.ConsAddress
 }
 
-func (k Keeper) execTrace(
+func execTrace[T traceRequest](
 	c context.Context,
-	req traceRequest,
+	req T,
+	k Keeper,
 	msgCb func(
 		ctx sdk.Context,
 		cfg *statedb.EVMConfig,
@@ -429,8 +430,8 @@ func (k Keeper) execTrace(
 		commitMessage bool,
 	) (*interface{}, uint, error),
 ) ([]byte, error) {
-	// typed nil check for interface
-	if reflect.ValueOf(req).IsNil() {
+	var zero T
+	if req == zero {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
@@ -483,9 +484,10 @@ func (k Keeper) execTrace(
 // executes the given message in the provided environment. The return value will
 // be tracer dependent.
 func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*types.QueryTraceTxResponse, error) {
-	resultData, err := k.execTrace(
+	resultData, err := execTrace(
 		c,
 		req,
+		k,
 		func(ctx sdk.Context, cfg *statedb.EVMConfig, txConfig *statedb.TxConfig) (*core.Message, error) {
 			signer := ethtypes.MakeSigner(cfg.ChainConfig, big.NewInt(ctx.BlockHeight()))
 			for i, tx := range req.Predecessors {
@@ -593,9 +595,10 @@ func (k Keeper) TraceBlock(c context.Context, req *types.QueryTraceBlockRequest)
 // executes the given call in the provided environment. The return value will
 // be tracer dependent.
 func (k Keeper) TraceCall(c context.Context, req *types.QueryTraceCallRequest) (*types.QueryTraceCallResponse, error) {
-	resultData, err := k.execTrace(
+	resultData, err := execTrace(
 		c,
 		req,
+		k,
 		func(ctx sdk.Context, cfg *statedb.EVMConfig, txConfig *statedb.TxConfig) (*core.Message, error) {
 			var args types.TransactionArgs
 			err := json.Unmarshal(req.Args, &args)
