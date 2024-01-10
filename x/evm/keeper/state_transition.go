@@ -65,26 +65,24 @@ func (k *Keeper) NewEVM(
 	ctx sdk.Context,
 	msg core.Message,
 	cfg *EVMConfig,
-	tracer vm.EVMLogger,
 	stateDB vm.StateDB,
 ) *vm.EVM {
 	blockCtx := k.NewEVMBlockContext(ctx, cfg)
-	return k.NewEVMWithBlockCtx(ctx, msg, cfg, tracer, stateDB, blockCtx)
+	return k.NewEVMWithBlockCtx(ctx, msg, cfg, stateDB, blockCtx)
 }
 
 func (k *Keeper) NewEVMWithBlockCtx(
 	ctx sdk.Context,
 	msg core.Message,
 	cfg *EVMConfig,
-	tracer vm.EVMLogger,
 	stateDB vm.StateDB,
 	blockCtx vm.BlockContext,
 ) *vm.EVM {
 	txCtx := core.NewEVMTxContext(&msg)
-	if tracer == nil {
-		tracer = k.Tracer(ctx, msg, cfg.ChainConfig)
+	if cfg.Tracer == nil {
+		cfg.Tracer = k.Tracer(ctx, msg, cfg.ChainConfig)
 	}
-	vmConfig := k.VMConfig(ctx, msg, cfg, tracer)
+	vmConfig := k.VMConfig(ctx, msg, cfg)
 	rules := cfg.ChainConfig.Rules(big.NewInt(ctx.BlockHeight()), cfg.ChainConfig.MergeNetsplitBlock != nil, blockCtx.Time)
 	contracts := make(map[common.Address]vm.PrecompiledContract)
 	active := make([]common.Address, 0)
@@ -378,9 +376,9 @@ func (k *Keeper) ApplyMessageWithConfig(
 	if cfg.DebugTrace && cfg.BlockOverrides != nil {
 		blockCtx := k.NewEVMBlockContext(ctx, cfg)
 		cfg.BlockOverrides.Apply(&blockCtx)
-		evm = k.NewEVMWithBlockCtx(ctx, msg, cfg, cfg.Tracer, stateDB, blockCtx)
+		evm = k.NewEVMWithBlockCtx(ctx, msg, cfg, stateDB, blockCtx)
 	} else {
-		evm = k.NewEVM(ctx, msg, cfg, cfg.Tracer, stateDB)
+		evm = k.NewEVM(ctx, msg, cfg, stateDB)
 	}
 
 	leftoverGas := msg.GasLimit
