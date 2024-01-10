@@ -417,13 +417,6 @@ func execTrace[T traceRequest](
 		ctx sdk.Context,
 		cfg *EVMConfig,
 	) (*core.Message, error),
-	traceFn func(
-		ctx sdk.Context,
-		cfg *EVMConfig,
-		msg core.Message,
-		traceConfig *types.TraceConfig,
-		commitMessage bool,
-	) (*interface{}, uint, error),
 ) ([]byte, error) {
 	var zero T
 	if req == zero {
@@ -460,7 +453,7 @@ func execTrace[T traceRequest](
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	result, _, err := traceFn(ctx, cfg, *msg, req.GetTraceConfig(), false)
+	result, _, err := k.prepareTrace(ctx, cfg, *msg, req.GetTraceConfig(), false)
 	if err != nil {
 		// error will be returned with detail status from traceTx
 		return nil, err
@@ -507,7 +500,6 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 
 			return core.TransactionToMessage(tx, signer, cfg.BaseFee)
 		},
-		k.prepareTrace,
 	)
 	if err != nil {
 		return nil, err
@@ -609,7 +601,6 @@ func (k Keeper) TraceCall(c context.Context, req *types.QueryTraceCallRequest) (
 			}
 			return &msg, nil
 		},
-		k.prepareTrace,
 	)
 	if err != nil {
 		return nil, err
