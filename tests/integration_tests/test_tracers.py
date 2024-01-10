@@ -464,7 +464,14 @@ def test_debug_tracecall_block_overrides(ethermint, geth):
     # https://github.com/ethereum/go-ethereum/blob/v1.11.6/core/vm/opcodes.go#L95
     tx = {"from": ADDRS["validator"], "input": "0x43", "gas": gas, "gasPrice": price}
     future_blk = "0x1337"
-    tracer = {"blockOverrides": {"number": future_blk}}
+    tracer = {"blockOverrides": {
+        "number": future_blk,
+        "coinbase": "0x1111111111111111111111111111111111111111",
+        "difficulty": hex(2),
+        "time": hex(3),
+        "baseLimit": hex(4),
+        "baseFee": hex(5),
+    }}
 
     def process(w3):
         w3_wait_for_new_blocks(w3, 1)
