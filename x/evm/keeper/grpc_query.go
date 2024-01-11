@@ -689,12 +689,7 @@ func (k *Keeper) prepareTrace(
 
 	if traceConfig.StateOverrides != nil {
 		var stateOverrides rpctypes.StateOverride
-		config, err := json.Marshal(traceConfig.StateOverrides)
-		if err != nil {
-			return nil, 0, status.Error(codes.InvalidArgument, err.Error())
-		}
-
-		if err := json.Unmarshal(config, &stateOverrides); err != nil {
+		if err := json.Unmarshal(traceConfig.StateOverrides, &stateOverrides); err != nil {
 			return nil, 0, status.Error(codes.InvalidArgument, err.Error())
 		}
 

@@ -135,6 +135,7 @@ func (b *Backend) convertConfig(config *rpctypes.TraceConfig) *evmtypes.TraceCon
 	}
 	cfg := config.TraceConfig
 	cfg.TracerJsonConfig = string(config.TracerConfig)
+	cfg.StateOverrides = []byte(config.StateOverrides)
 	cfg.BlockOverrides = []byte(config.BlockOverrides)
 	return &cfg
 }

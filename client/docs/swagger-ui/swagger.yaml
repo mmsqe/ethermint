@@ -2658,6 +2658,14 @@ paths:
           in: query
           required: false
           type: string
+        - name: trace_config.state_overrides
+          description: >-
+            temporary state modifications to Geth in order to simulate the
+            effects of eth_call.
+          in: query
+          required: false
+          type: string
+          format: byte
         - name: trace_config.block_overrides
           description: block overrides block context fields encoded as json.
           in: query
@@ -3112,6 +3120,14 @@ paths:
           in: query
           required: false
           type: string
+        - name: trace_config.state_overrides
+          description: >-
+            temporary state modifications to Geth in order to simulate the
+            effects of eth_call.
+          in: query
+          required: false
+          type: string
+          format: byte
         - name: trace_config.block_overrides
           description: block overrides block context fields encoded as json.
           in: query
@@ -3629,6 +3645,14 @@ paths:
           in: query
           required: false
           type: string
+        - name: trace_config.state_overrides
+          description: >-
+            temporary state modifications to Geth in order to simulate the
+            effects of eth_call.
+          in: query
+          required: false
+          type: string
+          format: byte
         - name: trace_config.block_overrides
           description: block overrides block context fields encoded as json.
           in: query
@@ -4347,29 +4371,6 @@ definitions:
         format: byte
         title: include the block hash for json-rpc to use
     description: MsgEthereumTxResponse defines the Msg/EthereumTx response type.
-  ethermint.evm.v1.OverrideAccount:
-    type: object
-    properties:
-      nonce:
-        type: string
-        format: uint64
-      code:
-        type: string
-      balance:
-        type: string
-      state:
-        type: object
-        additionalProperties:
-          type: string
-      state_diff:
-        type: object
-        additionalProperties:
-          type: string
-    description: >-
-      OverrideAccount indicates the overriding fields of account during the
-      execution of
-
-      a message call.
   ethermint.evm.v1.Params:
     type: object
     properties:
@@ -4887,30 +4888,8 @@ definitions:
         type: string
         title: tracer_json_config configures the tracer using a JSON string
       state_overrides:
-        type: object
-        additionalProperties:
-          type: object
-          properties:
-            nonce:
-              type: string
-              format: uint64
-            code:
-              type: string
-            balance:
-              type: string
-            state:
-              type: object
-              additionalProperties:
-                type: string
-            state_diff:
-              type: object
-              additionalProperties:
-                type: string
-          description: >-
-            OverrideAccount indicates the overriding fields of account during
-            the execution of
-
-            a message call.
+        type: string
+        format: byte
         title: >-
           temporary state modifications to Geth in order to simulate the effects
           of eth_call
