@@ -477,6 +477,7 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 		k,
 		func(ctx sdk.Context, cfg *EVMConfig) (*core.Message, error) {
 			signer := ethtypes.MakeSigner(cfg.ChainConfig, big.NewInt(ctx.BlockHeight()))
+			cfg.Tracer = types.NewNoOpTracer()
 			for i, tx := range req.Predecessors {
 				ethTx := tx.AsTransaction()
 				msg, err := core.TransactionToMessage(ethTx, signer, cfg.BaseFee)
