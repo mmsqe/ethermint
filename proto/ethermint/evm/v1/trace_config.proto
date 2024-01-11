@@ -16,17 +16,6 @@ message OverrideAccount {
   map<string, string> state_diff = 5 [(gogoproto.jsontag) = "stateDiff"];
 }
 
-// BlockOverrides is a set of header fields to override.
-message BlockOverrides {
-  string number = 1;
-  string difficulty = 2;
-  string time = 3;
-  string gas_limit = 4 [(gogoproto.jsontag) = "gasLimit"];
-  string coinbase = 5;
-  string random = 6;
-  string base_fee = 7 [(gogoproto.jsontag) = "baseFee"];
-}
-
 // TraceConfig holds extra parameters to trace functions.
 message TraceConfig {
   // DEPRECATED: DisableMemory and DisableReturnData have been renamed to
@@ -59,6 +48,6 @@ message TraceConfig {
   string tracer_json_config = 13 [(gogoproto.jsontag) = "tracerConfig"];
   // temporary state modifications to Geth in order to simulate the effects of eth_call
   map<string, OverrideAccount> state_overrides = 14 [(gogoproto.jsontag) = "stateOverrides"];
-  // overrides block context fields
-  BlockOverrides block_overrides = 15 [(gogoproto.jsontag) = "blockOverrides"];
+  // block overrides block context fields encoded as json
+  bytes block_overrides = 15 [(gogoproto.jsontag) = "blockOverrides"];
 }
