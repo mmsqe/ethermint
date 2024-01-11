@@ -184,5 +184,6 @@ type OneFeeHistory struct {
 
 type TraceConfig struct {
 	evmtypes.TraceConfig
-	TracerConfig json.RawMessage `json:"tracerConfig"`
+	TracerConfig   json.RawMessage `json:"tracerConfig"`
+	BlockOverrides json.RawMessage `json:"blockOverrides"`
 }

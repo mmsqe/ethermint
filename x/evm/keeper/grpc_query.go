@@ -703,12 +703,7 @@ func (k *Keeper) prepareTrace(
 
 	if traceConfig.BlockOverrides != nil {
 		var blockOverrides rpctypes.BlockOverrides
-		config, err := json.Marshal(traceConfig.BlockOverrides)
-		if err != nil {
-			return nil, 0, status.Error(codes.InvalidArgument, err.Error())
-		}
-
-		if err := json.Unmarshal(config, &blockOverrides); err != nil {
+		if err := json.Unmarshal(traceConfig.BlockOverrides, &blockOverrides); err != nil {
 			return nil, 0, status.Error(codes.InvalidArgument, err.Error())
 		}
 
