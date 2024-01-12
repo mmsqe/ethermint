@@ -89,7 +89,7 @@ func (k Keeper) VMConfig(ctx sdk.Context, _ core.Message, cfg *EVMConfig) vm.Con
 		noBaseFee = k.feeMarketKeeper.GetParams(ctx).NoBaseFee
 	}
 
-	if _, ok := cfg.Tracer.(types.NoOpTracer); ok {
+	if _, ok := cfg.Tracer.(*types.NoOpTracer); ok {
 		cfg.Tracer = nil
 	}
 
