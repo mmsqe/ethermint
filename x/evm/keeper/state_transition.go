@@ -38,21 +38,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-func (k *Keeper) NewEVMBlockContext(ctx sdk.Context, cfg *EVMConfig) vm.BlockContext {
-	return vm.BlockContext{
-		CanTransfer: core.CanTransfer,
-		Transfer:    core.Transfer,
-		GetHash:     k.GetHashFn(ctx),
-		Coinbase:    cfg.CoinBase,
-		GasLimit:    ethermint.BlockGasLimit(ctx),
-		BlockNumber: big.NewInt(ctx.BlockHeight()),
-		Time:        uint64(ctx.BlockHeader().Time.Unix()),
-		Difficulty:  big.NewInt(0), // unused. Only required in PoW context
-		BaseFee:     cfg.BaseFee,
-		Random:      nil, // not supported
-	}
-}
-
 // NewEVM generates a go-ethereum VM from the provided Message fields and the chain parameters
 // (ChainConfig and module Params). It additionally sets the validator operator address as the
 // coinbase address to make it available for the COINBASE opcode, even though there is no
@@ -67,17 +52,21 @@ func (k *Keeper) NewEVM(
 	cfg *EVMConfig,
 	stateDB vm.StateDB,
 ) *vm.EVM {
-	blockCtx := k.NewEVMBlockContext(ctx, cfg)
-	return k.NewEVMWithBlockCtx(ctx, msg, cfg, stateDB, blockCtx)
-}
-
-func (k *Keeper) NewEVMWithBlockCtx(
-	ctx sdk.Context,
-	msg core.Message,
-	cfg *EVMConfig,
-	stateDB vm.StateDB,
-	blockCtx vm.BlockContext,
-) *vm.EVM {
+	blockCtx := vm.BlockContext{
+		CanTransfer: core.CanTransfer,
+		Transfer:    core.Transfer,
+		GetHash:     k.GetHashFn(ctx),
+		Coinbase:    cfg.CoinBase,
+		GasLimit:    ethermint.BlockGasLimit(ctx),
+		BlockNumber: big.NewInt(ctx.BlockHeight()),
+		Time:        uint64(ctx.BlockHeader().Time.Unix()),
+		Difficulty:  big.NewInt(0), // unused. Only required in PoW context
+		BaseFee:     cfg.BaseFee,
+		Random:      nil, // not supported
+	}
+	if cfg.BlockOverrides != nil {
+		cfg.BlockOverrides.Apply(&blockCtx)
+	}
 	txCtx := core.NewEVMTxContext(&msg)
 	if cfg.Tracer == nil {
 		cfg.Tracer = k.Tracer(ctx, msg, cfg.ChainConfig)
@@ -373,12 +362,7 @@ func (k *Keeper) ApplyMessageWithConfig(
 			return nil, errorsmod.Wrap(err, "failed to apply state override")
 		}
 	}
-	blockCtx := k.NewEVMBlockContext(ctx, cfg)
-	if cfg.BlockOverrides != nil {
-		cfg.BlockOverrides.Apply(&blockCtx)
-	}
-	evm = k.NewEVMWithBlockCtx(ctx, msg, cfg, stateDB, blockCtx)
-
+	evm = k.NewEVM(ctx, msg, cfg, stateDB)
 	leftoverGas := msg.GasLimit
 	sender := vm.AccountRef(msg.From)
 	// Allow the tracer captures the tx level events, mainly the gas consumption.
