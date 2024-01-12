@@ -373,13 +373,11 @@ func (k *Keeper) ApplyMessageWithConfig(
 			return nil, errorsmod.Wrap(err, "failed to apply state override")
 		}
 	}
-	if cfg.DebugTrace && cfg.BlockOverrides != nil {
-		blockCtx := k.NewEVMBlockContext(ctx, cfg)
+	blockCtx := k.NewEVMBlockContext(ctx, cfg)
+	if cfg.BlockOverrides != nil {
 		cfg.BlockOverrides.Apply(&blockCtx)
-		evm = k.NewEVMWithBlockCtx(ctx, msg, cfg, stateDB, blockCtx)
-	} else {
-		evm = k.NewEVM(ctx, msg, cfg, stateDB)
 	}
+	evm = k.NewEVMWithBlockCtx(ctx, msg, cfg, stateDB, blockCtx)
 
 	leftoverGas := msg.GasLimit
 	sender := vm.AccountRef(msg.From)
