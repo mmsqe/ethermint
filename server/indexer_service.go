@@ -94,6 +94,13 @@ func (eis *EVMIndexerService) OnStart() error {
 	}
 	if lastBlock == -1 {
 		lastBlock = latestBlock
+	} else if lastBlock < status.SyncInfo.EarliestBlockHeight {
+		// to avoid infinite failed to fetch block error when lastBlock is smaller than earliest
+		lastBlock = status.SyncInfo.EarliestBlockHeight
+	}
+	// to avoid height must be greater than 0 error
+	if lastBlock <= 0 {
+		lastBlock = 1
 	}
 	for {
 		if latestBlock <= lastBlock {
