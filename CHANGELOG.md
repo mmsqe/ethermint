@@ -88,6 +88,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 - (precompile) [#380](https://github.com/crypto-org-chain/ethermint/pull/380) Allow init precompiled contract with rules when new evm.
 - (precompile) [#383](https://github.com/crypto-org-chain/ethermint/pull/383) Allow init precompiled contract with ctx.
 - (evm) [#393](https://github.com/crypto-org-chain/ethermint/pull/393) Cleanup ApplyMessageWithConfig interface.
+- (rpc) [#400](https://github.com/crypto-org-chain/ethermint/pull/400) Align `eth_call` response when call block before contract deploy as Ethereum.
 
 ## [v0.21.0] - 2023-01-26
 
