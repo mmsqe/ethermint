@@ -118,7 +118,7 @@ func (b *Backend) getAccountNonce(accAddr common.Address, pending bool, height i
 }
 
 // CalcBaseFee calculates the basefee of the header.
-func CalcBaseFee(config *params.ChainConfig, parent *ethtypes.Header, baseFeeChangeDenominator, elasticityMultiplier uint32) *big.Int {
+func CalcBaseFee(config *params.ChainConfig, parent *ethtypes.Header, baseFeeChangeDenominator, elasticityMultiplier uint32, minGasPrice *big.Int) *big.Int {
 	// If the current block is the first EIP-1559 block, return the InitialBaseFee.
 	if !config.IsLondon(parent.Number) {
 		return new(big.Int).SetUint64(params.InitialBaseFee)
@@ -154,8 +154,7 @@ func CalcBaseFee(config *params.ChainConfig, parent *ethtypes.Header, baseFeeCha
 	num.Div(num, denom.SetUint64(parentGasTarget))
 	num.Div(num, denom.SetUint64(uint64(baseFeeChangeDenominator)))
 	baseFee := num.Sub(parent.BaseFee, num)
-
-	return math.BigMax(baseFee, common.Big0)
+	return math.BigMax(baseFee, minGasPrice)
 }
 
 // output: targetOneFeeHistory
@@ -201,7 +200,7 @@ func (b *Backend) processBlock(
 		if err != nil {
 			return err
 		}
-		targetOneFeeHistory.NextBaseFee = CalcBaseFee(cfg, &header, params.Params.BaseFeeChangeDenominator, params.Params.ElasticityMultiplier)
+		targetOneFeeHistory.NextBaseFee = CalcBaseFee(cfg, &header, params.Params.BaseFeeChangeDenominator, params.Params.ElasticityMultiplier, params.Params.MinGasPrice.TruncateInt().BigInt())
 	} else {
 		targetOneFeeHistory.NextBaseFee = new(big.Int)
 	}
