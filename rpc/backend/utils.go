@@ -118,7 +118,10 @@ func (b *Backend) getAccountNonce(accAddr common.Address, pending bool, height i
 }
 
 // CalcBaseFee calculates the basefee of the header.
-func CalcBaseFee(config *params.ChainConfig, parent *ethtypes.Header, p feemarkettypes.Params) *big.Int {
+func (b *Backend) CalcBaseFee(config *params.ChainConfig, parent *ethtypes.Header, p feemarkettypes.Params) *big.Int {
+	if b.cfg.JSONRPC.ForkHeight != 0 && b.cfg.JSONRPC.ForkHeight < parent.Number.Int64() {
+		p = *b.cfg.JSONRPC.ForkParams
+	}
 	// If the current block is the first EIP-1559 block, return the InitialBaseFee.
 	if !config.IsLondon(parent.Number) {
 		return new(big.Int).SetUint64(params.InitialBaseFee)
@@ -201,7 +204,7 @@ func (b *Backend) processBlock(
 		if err != nil {
 			return err
 		}
-		targetOneFeeHistory.NextBaseFee = CalcBaseFee(cfg, &header, params.Params)
+		targetOneFeeHistory.NextBaseFee = b.CalcBaseFee(cfg, &header, params.Params)
 	} else {
 		targetOneFeeHistory.NextBaseFee = new(big.Int)
 	}

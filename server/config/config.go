@@ -16,6 +16,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path"
@@ -28,6 +29,7 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
+	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 )
 
 const (
@@ -78,6 +80,8 @@ const (
 
 	// DefaultReturnDataLimit is maximum number of bytes returned from eth_call or similar invocations
 	DefaultReturnDataLimit = 100000
+
+	DefaultForkHeight = 0
 )
 
 var evmTracers = []string{"json", "markdown", "struct", "access_list"}
@@ -142,7 +146,9 @@ type JSONRPCConfig struct {
 	// FixRevertGasRefundHeight defines the upgrade height for fix of revert gas refund logic when transaction reverted
 	FixRevertGasRefundHeight int64 `mapstructure:"fix-revert-gas-refund-height"`
 	// ReturnDataLimit defines maximum number of bytes returned from `eth_call` or similar invocations
-	ReturnDataLimit int64 `mapstructure:"return-data-limit"`
+	ReturnDataLimit int64                  `mapstructure:"return-data-limit"`
+	ForkHeight      int64                  `mapstructure:"fork-height"`
+	ForkParams      *feemarkettypes.Params `mapstructure:"fork-params"`
 }
 
 // TLSConfig defines the certificate and matching private key for the server.
@@ -247,6 +253,7 @@ func DefaultJSONRPCConfig() *JSONRPCConfig {
 		MetricsAddress:           DefaultJSONRPCMetricsAddress,
 		FixRevertGasRefundHeight: DefaultFixRevertGasRefundHeight,
 		ReturnDataLimit:          DefaultReturnDataLimit,
+		ForkHeight:               DefaultForkHeight,
 	}
 }
 
@@ -286,6 +293,16 @@ func (c JSONRPCConfig) Validate() error {
 
 	if c.HTTPIdleTimeout < 0 {
 		return errors.New("JSON-RPC HTTP idle timeout duration cannot be negative")
+	}
+
+	if c.ForkHeight > 0 && c.ForkParams != nil {
+		return errors.New("JSON-RPC fork params cannot be empty with fork height")
+	}
+
+	if c.ForkParams != nil {
+		if err := c.ForkParams.Validate(); err != nil {
+			return err
+		}
 	}
 
 	// check for duplicates
@@ -333,6 +350,16 @@ func GetConfig(v *viper.Viper) (Config, error) {
 		return Config{}, err
 	}
 
+	var forkParams *feemarkettypes.Params
+	formParamsJsonStr := v.GetString("json-rpc.fork-params")
+	if formParamsJsonStr != "" {
+		forkParams = new(feemarkettypes.Params)
+		err = json.Unmarshal([]byte(formParamsJsonStr), forkParams)
+		if err != nil {
+			return Config{}, err
+		}
+	}
+
 	return Config{
 		Config: cfg,
 		EVM: EVMConfig{
@@ -358,6 +385,8 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			MetricsAddress:           v.GetString("json-rpc.metrics-address"),
 			FixRevertGasRefundHeight: v.GetInt64("json-rpc.fix-revert-gas-refund-height"),
 			ReturnDataLimit:          v.GetInt64("json-rpc.return-data-limit"),
+			ForkHeight:               v.GetInt64("json-rpc.fork-height"),
+			ForkParams:               forkParams,
 		},
 		TLS: TLSConfig{
 			CertificatePath: v.GetString("tls.certificate-path"),

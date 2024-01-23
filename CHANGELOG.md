@@ -74,6 +74,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (rpc) [#391](https://github.com/crypto-org-chain/ethermint/pull/391) Align block param with go-ethereum in debug_traceCall.
 - (evm) [#396](https://github.com/crypto-org-chain/ethermint/pull/396) Align evm tx type with go-ethereum.
 - (rpc) [#401](https://github.com/crypto-org-chain/ethermint/pull/401) Align max nextBaseFee with minGasPrice in eth_feeHistory.
+* (rpc) [#](https://github.com/crypto-org-chain/ethermint/pull/) Patch fee history before the fork update of feemarket params.
 
 ### Improvements
 

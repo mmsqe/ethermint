@@ -98,6 +98,11 @@ fix-revert-gas-refund-height = {{ .JSONRPC.FixRevertGasRefundHeight }}
 # Maximum number of bytes returned from eth_call or similar invocations.
 return-data-limit = {{ .JSONRPC.ReturnDataLimit }}
 
+# Height for the fork update of feemarket params.
+fork-height = {{ .JSONRPC.ForkHeight }}
+# Params for the fork update of feemarket params.
+fork-params = "{{range $k, $v := .JSONRPC.ForkParams}}{{$k}}:{{$v}},{{end}}"
+
 ###############################################################################
 ###                             TLS Configuration                           ###
 ###############################################################################
