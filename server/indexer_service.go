@@ -40,16 +40,18 @@ const (
 type EVMIndexerService struct {
 	service.BaseService
 
-	txIdxr ethermint.EVMTxIndexer
-	client rpcclient.Client
+	txIdxr   ethermint.EVMTxIndexer
+	client   rpcclient.Client
+	allowGap bool
 }
 
 // NewEVMIndexerService returns a new service instance.
 func NewEVMIndexerService(
 	txIdxr ethermint.EVMTxIndexer,
 	client rpcclient.Client,
+	allowGap bool,
 ) *EVMIndexerService {
-	is := &EVMIndexerService{txIdxr: txIdxr, client: client}
+	is := &EVMIndexerService{txIdxr: txIdxr, client: client, allowGap: allowGap}
 	is.BaseService = *service.NewBaseService(nil, ServiceName, is)
 	return is
 }
@@ -99,6 +101,9 @@ func (eis *EVMIndexerService) OnStart() error {
 	if lastBlock == -1 {
 		lastBlock = latestBlock
 	} else if lastBlock < status.SyncInfo.EarliestBlockHeight {
+		if !eis.allowGap {
+			panic("Block gap detected, please recover the missing data")
+		}
 		// to avoid infinite failed to fetch block error when lastBlock is smaller than earliest
 		lastBlock = status.SyncInfo.EarliestBlockHeight
 	}
