@@ -22,6 +22,7 @@ import (
 
 	"github.com/cometbft/cometbft/libs/service"
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	"github.com/cometbft/cometbft/types"
 
 	ethermint "github.com/evmos/ethermint/types"
@@ -33,7 +34,8 @@ const (
 	NewBlockWaitTimeout = 60 * time.Second
 
 	// https://github.com/cometbft/cometbft/blob/v0.37.4/rpc/core/env.go#L193
-	NotFoundErr = "is not available"
+	NotFoundErr          = "is not available"
+	ErrorBackoffDuration = 1 * time.Second
 )
 
 // EVMIndexerService indexes transactions for json-rpc service.
@@ -122,8 +124,13 @@ func (eis *EVMIndexerService) OnStart() error {
 			}
 			continue
 		}
+		var (
+			err         error
+			block       *ctypes.ResultBlock
+			blockResult *ctypes.ResultBlockResults
+		)
 		for i := lastBlock + 1; i <= latestBlock; i++ {
-			block, err := eis.client.Block(ctx, &i)
+			block, err = eis.client.Block(ctx, &i)
 			if err != nil {
 				if eis.allowGap && strings.Contains(err.Error(), NotFoundErr) {
 					continue
@@ -131,7 +138,7 @@ func (eis *EVMIndexerService) OnStart() error {
 				eis.Logger.Error("failed to fetch block", "height", i, "err", err)
 				break
 			}
-			blockResult, err := eis.client.BlockResults(ctx, &i)
+			blockResult, err = eis.client.BlockResults(ctx, &i)
 			if err != nil {
 				if eis.allowGap && strings.Contains(err.Error(), NotFoundErr) {
 					continue
@@ -143,6 +150,9 @@ func (eis *EVMIndexerService) OnStart() error {
 				eis.Logger.Error("failed to index block", "height", i, "err", err)
 			}
 			lastBlock = blockResult.Height
+		}
+		if err != nil {
+			time.Sleep(ErrorBackoffDuration)
 		}
 	}
 }
