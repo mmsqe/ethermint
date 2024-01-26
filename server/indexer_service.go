@@ -17,6 +17,7 @@ package server
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/cometbft/cometbft/libs/service"
@@ -30,6 +31,9 @@ const (
 	ServiceName = "EVMIndexerService"
 
 	NewBlockWaitTimeout = 60 * time.Second
+
+	// https://github.com/cometbft/cometbft/blob/v0.37.4/rpc/core/env.go#L193
+	NotFoundErr = "is not available"
 )
 
 // EVMIndexerService indexes transactions for json-rpc service.
@@ -141,6 +145,9 @@ func (eis *EVMIndexerService) OnStart() error {
 		for i := lastBlock + 1; i <= latestBlock; i++ {
 			block, err := eis.client.Block(ctx, &i)
 			if err != nil {
+				if strings.Contains(err.Error(), NotFoundErr) {
+					continue
+				}
 				if !isIndexerMarkedReady && markFailedToIndexBlock(i) {
 					lastBlock = i
 				}
@@ -149,6 +156,9 @@ func (eis *EVMIndexerService) OnStart() error {
 			}
 			blockResult, err := eis.client.BlockResults(ctx, &i)
 			if err != nil {
+				if strings.Contains(err.Error(), NotFoundErr) {
+					continue
+				}
 				if !isIndexerMarkedReady && markFailedToIndexBlock(i) {
 					lastBlock = i
 				}
