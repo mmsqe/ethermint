@@ -290,7 +290,7 @@ func (suite AnteTestSuite) TestEthGasConsumeDecorator() {
 				suite.ctx = suite.ctx.WithIsReCheckTx(true)
 			},
 			true, false,
-			0,
+			1,
 		},
 	}
 
