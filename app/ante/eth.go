@@ -146,7 +146,9 @@ func getMinPriority(msgs []sdk.Msg, baseFee *big.Int, callback func(*evmtypes.Ms
 		}
 
 		if callback != nil {
-			callback(msgEthTx, txData)
+			if err = callback(msgEthTx, txData); err != nil {
+				return minPriority, err
+			}
 		}
 	}
 	return minPriority, nil
