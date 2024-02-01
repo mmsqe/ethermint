@@ -129,31 +129,6 @@ func NewEthGasConsumeDecorator(
 	}
 }
 
-func getMinPriority(msgs []sdk.Msg, baseFee *big.Int, callback func(*evmtypes.MsgEthereumTx, evmtypes.TxData) error) (int64, error) {
-	minPriority := int64(math.MaxInt64)
-	for _, msg := range msgs {
-		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
-		if !ok {
-			return minPriority, errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
-		}
-		txData, err := evmtypes.UnpackTxData(msgEthTx.Data)
-		if err != nil {
-			return minPriority, errorsmod.Wrap(err, "failed to unpack tx data")
-		}
-		priority := evmtypes.GetTxPriority(txData, baseFee)
-		if priority < minPriority {
-			minPriority = priority
-		}
-
-		if callback != nil {
-			if err = callback(msgEthTx, txData); err != nil {
-				return minPriority, err
-			}
-		}
-	}
-	return minPriority, nil
-}
-
 // AnteHandle validates that the Ethereum tx message has enough to cover intrinsic gas
 // (during CheckTx only) and that the sender has enough balance to pay for the gas cost.
 //
@@ -171,25 +146,6 @@ func getMinPriority(msgs []sdk.Msg, baseFee *big.Int, callback func(*evmtypes.Ms
 // - gas limit is greater than the block gas meter limit
 func (egcd EthGasConsumeDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
 	gasWanted := uint64(0)
-	// gas consumption limit already checked during CheckTx so there's no need to
-	// verify it again during ReCheckTx
-	if ctx.IsReCheckTx() {
-		// Use new context with gasWanted = 0
-		// Otherwise, there's an error on txmempool.postCheck (tendermint)
-		// that is not bubbled up. Thus, the Tx never runs on DeliverMode
-		// Error: "gas wanted -1 is negative"
-		// For more information, see issue #1554
-		// https://github.com/evmos/ethermint/issues/1554
-		minPriority, err := getMinPriority(tx.GetMsgs(), egcd.baseFee, nil)
-		if err != nil {
-			return ctx, err
-		}
-
-		newCtx := ctx.
-			WithGasMeter(ethermint.NewInfiniteGasMeterWithLimit(gasWanted)).
-			WithPriority(minPriority)
-		return next(newCtx, tx, simulate)
-	}
 
 	blockHeight := big.NewInt(ctx.BlockHeight())
 	homestead := egcd.ethCfg.IsHomestead(blockHeight)
@@ -198,7 +154,25 @@ func (egcd EthGasConsumeDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simula
 	var events sdk.Events
 
 	// Use the lowest priority of all the messages as the final one.
-	minPriority, err := getMinPriority(tx.GetMsgs(), egcd.baseFee, func(msgEthTx *evmtypes.MsgEthereumTx, txData evmtypes.TxData) error {
+	minPriority := int64(math.MaxInt64)
+
+	for _, msg := range tx.GetMsgs() {
+		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
+		if !ok {
+			return ctx, errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
+		}
+
+		txData, err := evmtypes.UnpackTxData(msgEthTx.Data)
+		if err != nil {
+			return ctx, errorsmod.Wrap(err, "failed to unpack tx data")
+		}
+
+		priority := evmtypes.GetTxPriority(txData, egcd.baseFee)
+
+		if priority < minPriority {
+			minPriority = priority
+		}
+
 		if ctx.IsCheckTx() && egcd.maxGasWanted != 0 {
 			// We can't trust the tx gas limit, because we'll refund the unused gas.
 			if txData.GetGas() > egcd.maxGasWanted {
@@ -210,14 +184,27 @@ func (egcd EthGasConsumeDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simula
 			gasWanted += txData.GetGas()
 		}
 
+		// user balance is already checked during CheckTx so there's no need to
+		// verify it again during ReCheckTx
+		if ctx.IsReCheckTx() {
+			// Use new context with gasWanted = 0
+			// Otherwise, there's an error on txmempool.postCheck (tendermint)
+			// that is not bubbled up. Thus, the Tx never runs on DeliverMode
+			// Error: "gas wanted -1 is negative"
+			// For more information, see issue #1554
+			// https://github.com/evmos/ethermint/issues/1554
+			gasWanted = uint64(0)
+			continue
+		}
+
 		fees, err := keeper.VerifyFee(txData, egcd.evmDenom, egcd.baseFee, homestead, istanbul, shanghai, ctx.IsCheckTx())
 		if err != nil {
-			return errorsmod.Wrapf(err, "failed to verify the fees")
+			return ctx, errorsmod.Wrapf(err, "failed to verify the fees")
 		}
 
 		err = egcd.evmKeeper.DeductTxCostsFromUserBalance(ctx, fees, common.BytesToAddress(msgEthTx.From))
 		if err != nil {
-			return errorsmod.Wrapf(err, "failed to deduct transaction costs from user balance")
+			return ctx, errorsmod.Wrapf(err, "failed to deduct transaction costs from user balance")
 		}
 
 		events = append(events,
@@ -226,10 +213,6 @@ func (egcd EthGasConsumeDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simula
 				sdk.NewAttribute(sdk.AttributeKeyFee, fees.String()),
 			),
 		)
-		return nil
-	})
-	if err != nil {
-		return ctx, err
 	}
 
 	ctx.EventManager().EmitEvents(events)
