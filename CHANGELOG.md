@@ -76,6 +76,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (rpc) [#398](https://github.com/crypto-org-chain/ethermint/pull/398) Avoid infinite failed to fetch block error when lastBlock is smaller than earliest on prune node.
 - (rpc) [#401](https://github.com/crypto-org-chain/ethermint/pull/401) Align max nextBaseFee with minGasPrice in eth_feeHistory.
 - (ante) [#404](https://github.com/crypto-org-chain/ethermint/pull/404) Correct priority under recheck mode.
+- (evm) [#405](https://github.com/crypto-org-chain/ethermint/pull/405) Avoid duplicate cache events emitted from evm hooks.
 
 ### Improvements
 
