@@ -187,13 +187,6 @@ func (egcd EthGasConsumeDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simula
 		// user balance is already checked during CheckTx so there's no need to
 		// verify it again during ReCheckTx
 		if ctx.IsReCheckTx() {
-			// Use new context with gasWanted = 0
-			// Otherwise, there's an error on txmempool.postCheck (tendermint)
-			// that is not bubbled up. Thus, the Tx never runs on DeliverMode
-			// Error: "gas wanted -1 is negative"
-			// For more information, see issue #1554
-			// https://github.com/evmos/ethermint/issues/1554
-			gasWanted = uint64(0)
 			continue
 		}
 
