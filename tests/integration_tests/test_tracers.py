@@ -19,36 +19,43 @@ from .utils import (
     derive_new_account,
     derive_random_account,
     send_transaction,
-    sign_transaction,
+    send_txs,
     w3_wait_for_new_blocks,
 )
 
 
-def test_trace_transactions_tracers(ethermint_rpc_ws):
-    w3: Web3 = ethermint_rpc_ws.w3
-    eth_rpc = w3.provider
-    gas_price = w3.eth.gas_price
-
-    tx = {"to": ADDRS["community"], "value": 100, "gasPrice": gas_price}
-    tx_hash = send_transaction(w3, tx)["transactionHash"].hex()
+def test_trace_transactions_tracers(ethermint, geth):
     method = "debug_traceTransaction"
     tracer = {"tracer": "callTracer"}
-    tx_res = eth_rpc.make_request(method, [tx_hash])
-    assert tx_res["result"] == EXPECTED_STRUCT_TRACER, ""
-    tx_res = eth_rpc.make_request(method, [tx_hash, tracer])
-    assert tx_res["result"] == EXPECTED_CALLTRACERS, ""
-    tx_res = eth_rpc.make_request(
-        method,
-        [tx_hash, tracer | {"tracerConfig": {"onlyTopCall": True}}],
-    )
-    assert tx_res["result"] == EXPECTED_CALLTRACERS, ""
-    _, tx = deploy_contract(w3, CONTRACTS["TestERC20A"])
-    tx_hash = tx["transactionHash"].hex()
+    price = hex(88500000000)
+    acc = derive_new_account(7)
 
-    w3_wait_for_new_blocks(w3, 1)
-    tx_res = eth_rpc.make_request(method, [tx_hash, tracer])
-    tx_res["result"]["to"] = EXPECTED_CONTRACT_CREATE_TRACER["to"]
-    assert tx_res["result"] == EXPECTED_CONTRACT_CREATE_TRACER, ""
+    def process(w3):
+        fund_acc(w3, acc)
+        call = w3.provider.make_request
+        tx = {"to": ADDRS["community"], "value": 100, "gasPrice": price}
+        tx_hash = send_transaction(w3, tx)["transactionHash"].hex()
+        tx_res = call(method, [tx_hash])
+        assert tx_res["result"] == EXPECTED_STRUCT_TRACER, ""
+        tx_res = call(method, [tx_hash, tracer])
+        assert tx_res["result"] == EXPECTED_CALLTRACERS, ""
+        tx_res = call(
+            method,
+            [tx_hash, tracer | {"tracerConfig": {"onlyTopCall": True}}],
+        )
+        assert tx_res["result"] == EXPECTED_CALLTRACERS, ""
+        _, tx = deploy_contract(w3, CONTRACTS["TestERC20A"], key=acc.key)
+        tx_hash = tx["transactionHash"].hex()
+        w3_wait_for_new_blocks(w3, 1)
+        tx_res = call(method, [tx_hash, tracer])
+        return json.dumps(tx_res["result"], sort_keys=True)
+
+    providers = [ethermint.w3, geth.w3]
+    with ThreadPoolExecutor(len(providers)) as exec:
+        tasks = [exec.submit(process, w3) for w3 in providers]
+        res = [future.result() for future in as_completed(tasks)]
+        assert len(res) == len(providers)
+        assert (res[0] == res[-1] == EXPECTED_CONTRACT_CREATE_TRACER), res
 
 
 def fund_acc(w3, acc):
@@ -441,7 +448,7 @@ def test_trace_staticcall(ethermint, geth):
     method = "debug_traceTransaction"
     tracer = {"tracer": "callTracer"}
     acc = derive_new_account(6)
-    sender = acc.address
+    acc1 = derive_new_account(7)
     price = 58500000000
     func = "callCalculator()"
     selector = f"0x{Web3.keccak(text=func).hex()[2:10]}"
@@ -450,39 +457,28 @@ def test_trace_staticcall(ethermint, geth):
 
     def process(w3):
         fund_acc(w3, acc)
+        fund_acc(w3, acc1)
         calculator, _ = deploy_contract(w3, CONTRACTS["Calculator"], key=acc.key)
         caller, _ = deploy_contract(
             w3, CONTRACTS["Caller"], (calculator.address,), key=acc.key,
         )
         w3_wait_for_new_blocks(w3, 1, sleep=0.1)
-        txhashes = []
-        total = 3
-        nonce = w3.eth.get_transaction_count(sender)
-        for n in range(total):
-            tx = {
-                "to": caller.address,
-                "data": selector,
-                "nonce": nonce + n,
-                "gasPrice": price,
-            }
-            if n == 1:
-                tx["accessList"] = [{
-                    "address": calculator.address,
-                    "storageKeys": (x, y),
-                }]
-
-            signed = sign_transaction(w3, tx, acc.key)
-            txhash = w3.eth.send_raw_transaction(signed.rawTransaction)
-            txhashes.append(txhash)
-        for txhash in txhashes:
-            w3.eth.wait_for_transaction_receipt(txhash, timeout=10)
+        tx = {"to": caller.address, "data": selector, "gasPrice": price}
+        txs = {key: tx for key in [acc.key, acc1.key]}
+        txs[acc1.key] = txs[acc1.key] | {
+            "accessList": [{
+                "address": calculator.address, "storageKeys": (x, y),
+            }]
+        }
+        sended_hash_set = send_txs(w3, txs)
+        for txhash in sended_hash_set:
+            res = w3.eth.wait_for_transaction_receipt(txhash, timeout=10)
         res = []
         call = w3.provider.make_request
-        with ThreadPoolExecutor(len(txhashes)) as exec:
-            params = [[(tx_hash.hex())] + [tracer] for tx_hash in txhashes]
+        with ThreadPoolExecutor(len(sended_hash_set)) as exec:
+            params = [[tx_hash.hex(), tracer] for tx_hash in sended_hash_set]
             exec_map = exec.map(call, itertools.repeat(method), params)
-            for resp in exec_map:
-                res = [json.dumps(resp["result"], sort_keys=True)]
+            res = [json.dumps(resp["result"], sort_keys=True) for resp in exec_map]
         return res
 
     providers = [ethermint.w3, geth.w3]

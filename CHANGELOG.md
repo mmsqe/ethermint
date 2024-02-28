@@ -73,8 +73,12 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (rpc) [#388](https://github.com/crypto-org-chain/ethermint/pull/388) Avoid out of bound panic when error message.
 * (rpc) [#391](https://github.com/crypto-org-chain/ethermint/pull/391) Align block param with go-ethereum in debug_traceCall.
 - (evm) [#396](https://github.com/crypto-org-chain/ethermint/pull/396) Align evm tx type with go-ethereum.
+* (rpc) [#398](https://github.com/crypto-org-chain/ethermint/pull/398) Avoid infinite failed to fetch block error when lastBlock is smaller than earliest on prune node.
 - (rpc) [#401](https://github.com/crypto-org-chain/ethermint/pull/401) Align max nextBaseFee with minGasPrice in eth_feeHistory.
-* (rpc) [#](https://github.com/crypto-org-chain/ethermint/pull/) Patch fee history before the fork update of feemarket params.
+* (rpc) [#402](https://github.com/crypto-org-chain/ethermint/pull/402) Patch fee history before the fork update of feemarket params.
+- (ante) [#404](https://github.com/crypto-org-chain/ethermint/pull/404) Correct priority under recheck mode.
+- (evm) [#405](https://github.com/crypto-org-chain/ethermint/pull/405) Avoid duplicate cache events emitted from evm hooks.
+- (rpc) [#406](https://github.com/crypto-org-chain/ethermint/pull/406) Align filter rule for eth_getLogs when toBlock is newer than latest or extract error occurs.
 
 ### Improvements
 
@@ -90,6 +94,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 - (precompile) [#380](https://github.com/crypto-org-chain/ethermint/pull/380) Allow init precompiled contract with rules when new evm.
 - (precompile) [#383](https://github.com/crypto-org-chain/ethermint/pull/383) Allow init precompiled contract with ctx.
 - (evm) [#393](https://github.com/crypto-org-chain/ethermint/pull/393) Cleanup ApplyMessageWithConfig interface.
+- (cmd) [#399](https://github.com/crypto-org-chain/ethermint/pull/399) Add pruning and snapshot cmd.
 
 ## [v0.21.0] - 2023-01-26
 
