@@ -103,49 +103,35 @@ def test_change(cluster):
             assert history1 == history0
 
 
-def adjust_base_fee(parent_fee, gas_limit, gas_used, denominator, multiplier):
+def adjust_base_fee(parent_fee, gas_limit, gas_used, params):
     "spec: https://eips.ethereum.org/EIPS/eip-1559#specification"
-    gas_target = gas_limit // multiplier
-    delta = parent_fee * (gas_target - gas_used) // gas_target // denominator
-    return parent_fee - delta
+    change_denominator = params["base_fee_change_denominator"]
+    elasticity_multiplier = params["elasticity_multiplier"]
+    gas_target = gas_limit // elasticity_multiplier
+    if gas_used == gas_target:
+        return parent_fee
+    delta = parent_fee * abs(gas_target - gas_used) // gas_target // change_denominator
+    # https://github.com/crypto-org-chain/ethermint/blob/develop/x/feemarket/keeper/eip1559.go#L104
+    if gas_target > gas_used:
+        return max(parent_fee - delta, int(float(params["min_gas_price"])))
+    else:
+        return parent_fee + max(delta, 1)
 
 
 def test_next(cluster, custom_ethermint):
     w3: Web3 = cluster.w3
     # geth default
-    elasticity_multiplier = 2
-    change_denominator = 8
+    params = {
+        "elasticity_multiplier": 2,
+        "base_fee_change_denominator": 8,
+        "min_gas_price": 0,
+    }
     if cluster == custom_ethermint:
         params = cluster.cosmos_cli().get_params("feemarket")["params"]
-        elasticity_multiplier = params["elasticity_multiplier"]
-        change_denominator = params["base_fee_change_denominator"]
     call = w3.provider.make_request
     tx = {"to": ADDRS["community"], "value": 10, "gasPrice": w3.eth.gas_price}
     send_transaction(w3, tx)
-    method = "eth_feeHistory"
-    field = "baseFeePerGas"
-    percentiles = [100]
-    blocks = []
-    histories = []
-    for _ in range(3):
-        b = w3.eth.block_number
-        blocks.append(b)
-        histories.append(tuple(call(method, [1, hex(b), percentiles])["result"][field]))
-        w3_wait_for_new_blocks(w3, 1, 0.1)
-    blocks.append(w3.eth.block_number)
-    expected = []
-    for b in blocks:
-        next_base_price = w3.eth.get_block(b).baseFeePerGas
-        blk = w3.eth.get_block(b - 1)
-        assert next_base_price == adjust_base_fee(
-            blk.baseFeePerGas,
-            blk.gasLimit,
-            blk.gasUsed,
-            change_denominator,
-            elasticity_multiplier,
-        )
-        expected.append(hex(next_base_price))
-    assert histories == list(zip(expected, expected[1:]))
+    assert_histories(w3, call, w3.eth.block_number, params, percentiles=[100])
 
 
 def test_beyond_head(cluster):
@@ -170,30 +156,15 @@ def test_percentiles(cluster):
         assert all(msg in res["error"]["message"] for res in result)
 
 
-def test_concurrent(custom_ethermint, tmp_path):
-    w3: Web3 = custom_ethermint.w3
-    tx = {"to": ADDRS["community"], "value": 10, "gasPrice": w3.eth.gas_price}
-    # send multi txs, overlap happens with query with 2nd tx's block number
-    send_transaction(w3, tx)
-    receipt1 = send_transaction(w3, tx)
-    b1 = receipt1.blockNumber
-    send_transaction(w3, tx)
-
-    call = w3.provider.make_request
-    field = "baseFeePerGas"
-
-    cli = custom_ethermint.cosmos_cli()
+def update_feemarket_param(node, tmp_path, new_multiplier=2, new_denominator=200000000):
+    cli = node.cosmos_cli()
     p = cli.get_params("feemarket")["params"]
-    new_multiplier = 2
-    new_denominator = 200000000
     p["elasticity_multiplier"] = new_multiplier
     p["base_fee_change_denominator"] = new_denominator
-
     proposal = tmp_path / "proposal.json"
     # governance module account as signer
     data = hashlib.sha256("gov".encode()).digest()[:20]
     signer = eth_to_bech32(data)
-    print("mm-signer", signer)
     proposal_src = {
         "messages": [
             {
@@ -209,12 +180,24 @@ def test_concurrent(custom_ethermint, tmp_path):
     proposal.write_text(json.dumps(proposal_src))
     rsp = cli.submit_gov_proposal(proposal, from_="community")
     assert rsp["code"] == 0, rsp["raw_log"]
-    approve_proposal(custom_ethermint, rsp)
+    approve_proposal(node, rsp)
     print("check params have been updated now")
     p = cli.get_params("feemarket")["params"]
     assert p["elasticity_multiplier"] == new_multiplier
     assert p["base_fee_change_denominator"] == new_denominator
 
+
+def test_concurrent(custom_ethermint, tmp_path):
+    w3: Web3 = custom_ethermint.w3
+    tx = {"to": ADDRS["community"], "value": 10, "gasPrice": w3.eth.gas_price}
+    # send multi txs, overlap happens with query with 2nd tx's block number
+    send_transaction(w3, tx)
+    receipt1 = send_transaction(w3, tx)
+    b1 = receipt1.blockNumber
+    send_transaction(w3, tx)
+    call = w3.provider.make_request
+    field = "baseFeePerGas"
+    update_feemarket_param(custom_ethermint, tmp_path)
     percentiles = []
     method = "eth_feeHistory"
     # big enough concurrent requests to trigger overwrite bug
@@ -226,3 +209,44 @@ def test_concurrent(custom_ethermint, tmp_path):
         t = [exec.submit(call, method, params) for i in range(total)]
         res = [future.result()["result"][field] for future in as_completed(t)]
     assert all(sublist == res[0] for sublist in res), res
+
+
+def assert_histories(w3, call, blk, param, percentiles=[]):
+    method = "eth_feeHistory"
+    field = "baseFeePerGas"
+    expected = []
+    blocks = []
+    histories = []
+    for i in range(2):
+        b = blk + i
+        blocks.append(b)
+        histories.append(tuple(call(method, [1, hex(b), percentiles])["result"][field]))
+        w3_wait_for_new_blocks(w3, 1, 0.1)
+    blocks.append(b + 1)
+    for b in blocks:
+        next_base_price = w3.eth.get_block(b).baseFeePerGas
+        blk = w3.eth.get_block(b - 1)
+        res = adjust_base_fee(
+            blk.baseFeePerGas,
+            blk.gasLimit,
+            blk.gasUsed,
+            param,
+        )
+        assert next_base_price == res
+        expected.append(hex(next_base_price))
+    assert histories == list(zip(expected, expected[1:]))
+
+
+def test_param_change(custom_ethermint, tmp_path):
+    w3: Web3 = custom_ethermint.w3
+    cli = custom_ethermint.cosmos_cli()
+    old_blk = w3.eth.block_number
+    old_param = cli.get_params("feemarket", height=old_blk)["params"]
+    update_feemarket_param(custom_ethermint, tmp_path)
+    call = w3.provider.make_request
+    assert_histories(w3, call, old_blk, old_param)
+    tx = {"to": ADDRS["community"], "value": 10, "gasPrice": w3.eth.gas_price}
+    receipt = send_transaction(w3, tx)
+    new_blk = receipt.blockNumber
+    new_param = cli.get_params("feemarket", height=new_blk)["params"]
+    assert_histories(w3, call, new_blk, new_param)

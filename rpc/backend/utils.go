@@ -197,7 +197,8 @@ func (b *Backend) processBlock(
 		header.BaseFee = baseFee.ToInt()
 		header.GasLimit = uint64(gasLimitUint64)
 		header.GasUsed = gasUsedBig.ToInt().Uint64()
-		params, err := b.queryClient.FeeMarket.Params(b.ctx, &feemarkettypes.QueryParamsRequest{})
+		ctx := types.ContextWithHeight(blockHeight)
+		params, err := b.queryClient.FeeMarket.Params(ctx, &feemarkettypes.QueryParamsRequest{})
 		if err != nil {
 			return err
 		}
