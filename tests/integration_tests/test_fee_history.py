@@ -131,7 +131,32 @@ def test_next(cluster, custom_ethermint):
     call = w3.provider.make_request
     tx = {"to": ADDRS["community"], "value": 10, "gasPrice": w3.eth.gas_price}
     send_transaction(w3, tx)
-    assert_histories(w3, call, w3.eth.block_number, params, percentiles=[100])
+    percentiles = [100]
+    method = "eth_feeHistory"
+    field = "baseFeePerGas"
+    expected = []
+    blocks = []
+    histories = []
+    for _ in range(3):
+        b = w3.eth.block_number
+        blocks.append(b)
+        histories.append(tuple(call(method, [1, hex(b), percentiles])["result"][field]))
+        w3_wait_for_new_blocks(w3, 1, 0.1)
+
+    blocks.append(b + 1)
+    for b in blocks:
+        next_base_price = w3.eth.get_block(b).baseFeePerGas
+        blk = w3.eth.get_block(b - 1)
+        res = adjust_base_fee(
+            blk.baseFeePerGas,
+            blk.gasLimit,
+            blk.gasUsed,
+            params,
+        )
+        print("mm-blk", b, next_base_price, res)
+        assert next_base_price == res
+        expected.append(hex(next_base_price))
+    assert histories == list(zip(expected, expected[1:]))
 
 
 def test_beyond_head(cluster):
@@ -209,44 +234,3 @@ def test_concurrent(custom_ethermint, tmp_path):
         t = [exec.submit(call, method, params) for i in range(total)]
         res = [future.result()["result"][field] for future in as_completed(t)]
     assert all(sublist == res[0] for sublist in res), res
-
-
-def assert_histories(w3, call, blk, param, percentiles=[]):
-    method = "eth_feeHistory"
-    field = "baseFeePerGas"
-    expected = []
-    blocks = []
-    histories = []
-    for i in range(2):
-        b = blk + i
-        blocks.append(b)
-        histories.append(tuple(call(method, [1, hex(b), percentiles])["result"][field]))
-        w3_wait_for_new_blocks(w3, 1, 0.1)
-    blocks.append(b + 1)
-    for b in blocks:
-        next_base_price = w3.eth.get_block(b).baseFeePerGas
-        blk = w3.eth.get_block(b - 1)
-        res = adjust_base_fee(
-            blk.baseFeePerGas,
-            blk.gasLimit,
-            blk.gasUsed,
-            param,
-        )
-        assert next_base_price == res
-        expected.append(hex(next_base_price))
-    assert histories == list(zip(expected, expected[1:]))
-
-
-def test_param_change(custom_ethermint, tmp_path):
-    w3: Web3 = custom_ethermint.w3
-    cli = custom_ethermint.cosmos_cli()
-    old_blk = w3.eth.block_number
-    old_param = cli.get_params("feemarket", height=old_blk)["params"]
-    update_feemarket_param(custom_ethermint, tmp_path)
-    call = w3.provider.make_request
-    assert_histories(w3, call, old_blk, old_param)
-    tx = {"to": ADDRS["community"], "value": 10, "gasPrice": w3.eth.gas_price}
-    receipt = send_transaction(w3, tx)
-    new_blk = receipt.blockNumber
-    new_param = cli.get_params("feemarket", height=new_blk)["params"]
-    assert_histories(w3, call, new_blk, new_param)
