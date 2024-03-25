@@ -37,6 +37,15 @@ Ref: https://keepachangelog.com/en/1.0.0/
 
 ## Unreleased
 
+### Bug Fixes
+
+- (ante) [#422](https://github.com/crypto-org-chain/ethermint/pull/422) vendor `NewDeductFeeDecorator` to re-use the custom `checkTxFeeWithValidatorMinGasPrices` method, so it'll repsect the `DefaultPriorityReduction` config.
+- (feemarket) [#433](https://github.com/crypto-org-chain/ethermint/pull/433) Fix sdk int conversion panic with baseFee.
+
+### Features
+
+## v0.21.x-cronos
+
 ### Features
 
 * (rpc) [#1682](https://github.com/evmos/ethermint/pull/1682) Add config for maximum number of bytes returned from eth_call.
