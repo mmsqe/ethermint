@@ -66,7 +66,7 @@ schema = 3
     hash = "sha256-4EndKcspGC3GOPCmctXF1NnWzxWwMyY/OQpFMmr8Sc0="
   [mod."github.com/99designs/keyring"]
     version = "v1.2.0"
-    hash = "sha256-N7uvSlt50V12ESr8TXttidKEarzMV9DI2uA67xK/Vqo="
+    hash = "sha256-emQlH+RQpESoFCzpHS38fEhs1SLjotxNPlRK4B5Aybs="
     replaced = "github.com/cosmos/keyring"
   [mod."github.com/DataDog/datadog-go"]
     version = "v4.8.3+incompatible"
@@ -540,7 +540,7 @@ schema = 3
     hash = "sha256-oAE+fEaRfZPE541IPWE0GMeBBYgH2DMhtZNxzp7DFlY="
   [mod."github.com/spf13/pflag"]
     version = "v1.0.5"
-    hash = "sha256-GG3BkKXQK0+pfRtkwA4DXOfYpFyPQU4dd60YmoEiJlw="
+    hash = "sha256-w9LLYzxxP74WHT4ouBspH/iQZXjuAh2WQCHsuvyEjAw="
   [mod."github.com/spf13/viper"]
     version = "v1.18.2"
     hash = "sha256-MXYbK6w1LEaoZ2/L/STF3WU1tbK+7NwGVxUCLKPkwks="
