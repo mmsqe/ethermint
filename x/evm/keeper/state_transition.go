@@ -341,7 +341,7 @@ func (k *Keeper) ApplyMessageWithConfig(
 	msg core.Message,
 	cfg *EVMConfig,
 	commit bool,
-) (*types.MsgEthereumTxResponse, error) {
+) (res *types.MsgEthereumTxResponse, err error) {
 	var (
 		ret   []byte // return bytes from evm execution
 		vmErr error  // vm errors do not effect consensus and are therefore not assigned to err
@@ -362,6 +362,16 @@ func (k *Keeper) ApplyMessageWithConfig(
 		}
 	}
 	evm = k.NewEVM(ctx, msg, cfg, stateDB)
+	defer func() {
+		if e := recover(); e != nil {
+			if evm.Context.Random == nil {
+				k.Logger(ctx).Error("panic", "error", e)
+				err = fmt.Errorf("RANDOM opcode is currently not supported")
+			} else {
+				panic(e)
+			}
+		}
+	}()
 	leftoverGas := msg.GasLimit
 	sender := vm.AccountRef(msg.From)
 	// Allow the tracer captures the tx level events, mainly the gas consumption.
