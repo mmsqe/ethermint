@@ -46,6 +46,7 @@ func (t *panicRandomTracer) CaptureState(pc uint64, op vm.OpCode, gas, cost uint
 	if op == vm.PREVRANDAO {
 		panic("unsupported random")
 	}
+	t.EVMLogger.CaptureState(pc, op, gas, cost, scope, rData, depth, err)
 }
 
 // NewEVM generates a go-ethereum VM from the provided Message fields and the chain parameters
@@ -78,10 +79,9 @@ func (k *Keeper) NewEVM(
 		cfg.BlockOverrides.Apply(&blockCtx)
 	}
 	txCtx := core.NewEVMTxContext(&msg)
-	// if cfg.Tracer == nil {
-	cfg.Tracer = k.Tracer(ctx, msg, cfg.ChainConfig)
-	// }
-	vmConfig := k.VMConfig(ctx, msg, cfg)
+	if cfg.Tracer == nil {
+		cfg.Tracer = k.Tracer(ctx, msg, cfg.ChainConfig)
+	}
 	rules := cfg.ChainConfig.Rules(big.NewInt(ctx.BlockHeight()), cfg.ChainConfig.MergeNetsplitBlock != nil, blockCtx.Time)
 	contracts := make(map[common.Address]vm.PrecompiledContract)
 	active := make([]common.Address, 0)
@@ -103,6 +103,7 @@ func (k *Keeper) NewEVM(
 			EVMLogger: cfg.Tracer,
 		}
 	}
+	vmConfig := k.VMConfig(ctx, msg, cfg)
 	evm := vm.NewEVM(blockCtx, txCtx, stateDB, cfg.ChainConfig, vmConfig)
 	evm.WithPrecompiles(contracts, active)
 	return evm
