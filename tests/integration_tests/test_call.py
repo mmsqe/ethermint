@@ -103,4 +103,4 @@ def test_opcode(ethermint):
     )
     with pytest.raises(ValueError) as e_info:
         contract.caller.randomTokenId()
-    assert "RANDOM opcode is currently not supported" in str(e_info.value)
+    assert "unsupported random" in str(e_info.value)

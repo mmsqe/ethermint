@@ -38,6 +38,16 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
+type panicRandomTracer struct {
+	vm.EVMLogger
+}
+
+func (t *panicRandomTracer) CaptureState(pc uint64, op vm.OpCode, gas, cost uint64, scope *vm.ScopeContext, rData []byte, depth int, err error) {
+	if op == vm.PREVRANDAO {
+		panic("unsupported random")
+	}
+}
+
 // NewEVM generates a go-ethereum VM from the provided Message fields and the chain parameters
 // (ChainConfig and module Params). It additionally sets the validator operator address as the
 // coinbase address to make it available for the COINBASE opcode, even though there is no
@@ -68,9 +78,9 @@ func (k *Keeper) NewEVM(
 		cfg.BlockOverrides.Apply(&blockCtx)
 	}
 	txCtx := core.NewEVMTxContext(&msg)
-	if cfg.Tracer == nil {
-		cfg.Tracer = k.Tracer(ctx, msg, cfg.ChainConfig)
-	}
+	// if cfg.Tracer == nil {
+	cfg.Tracer = k.Tracer(ctx, msg, cfg.ChainConfig)
+	// }
 	vmConfig := k.VMConfig(ctx, msg, cfg)
 	rules := cfg.ChainConfig.Rules(big.NewInt(ctx.BlockHeight()), cfg.ChainConfig.MergeNetsplitBlock != nil, blockCtx.Time)
 	contracts := make(map[common.Address]vm.PrecompiledContract)
@@ -88,6 +98,11 @@ func (k *Keeper) NewEVM(
 	sort.SliceStable(active, func(i, j int) bool {
 		return bytes.Compare(active[i].Bytes(), active[j].Bytes()) < 0
 	})
+	if rules.IsShanghai {
+		cfg.Tracer = &panicRandomTracer{
+			EVMLogger: cfg.Tracer,
+		}
+	}
 	evm := vm.NewEVM(blockCtx, txCtx, stateDB, cfg.ChainConfig, vmConfig)
 	evm.WithPrecompiles(contracts, active)
 	return evm
@@ -362,16 +377,6 @@ func (k *Keeper) ApplyMessageWithConfig(
 		}
 	}
 	evm = k.NewEVM(ctx, msg, cfg, stateDB)
-	defer func() {
-		if e := recover(); e != nil {
-			if evm.Context.Random == nil {
-				k.Logger(ctx).Error("panic", "error", e)
-				err = fmt.Errorf("RANDOM opcode is currently not supported")
-			} else {
-				panic(e)
-			}
-		}
-	}()
 	leftoverGas := msg.GasLimit
 	sender := vm.AccountRef(msg.From)
 	// Allow the tracer captures the tx level events, mainly the gas consumption.
