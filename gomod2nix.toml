@@ -241,9 +241,9 @@ schema = 3
     version = "v1.6.1"
     hash = "sha256-zOpoaepCfPLmU9iQji/Ait+SVEHI9eF3rwtW0h/8lho="
   [mod."github.com/ethereum/go-ethereum"]
-    version = "v1.10.24-0.20240329041712-6d580e0090f8"
-    hash = "sha256-AYvnmnq16hMKZ/vn47HAQmT+xT2s6XoC23GxpSOnSOE="
-    replaced = "github.com/mmsqe/go-ethereum"
+    version = "v1.10.20-0.20231207063621-43cf32d91c3e"
+    hash = "sha256-lDIqRLUrXYCb9mmFBY/+WW+ee69+IkxOgqjHVyo4ij0="
+    replaced = "github.com/crypto-org-chain/go-ethereum"
   [mod."github.com/fatih/color"]
     version = "v1.16.0"
     hash = "sha256-Aq/SM28aPJVzvapllQ64R/DM4aZ5CHPewcm/AUJPyJQ="
