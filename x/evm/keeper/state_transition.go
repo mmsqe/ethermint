@@ -38,17 +38,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-type panicRandomTracer struct {
-	vm.EVMLogger
-}
-
-func (t *panicRandomTracer) CaptureState(pc uint64, op vm.OpCode, gas, cost uint64, scope *vm.ScopeContext, rData []byte, depth int, err error) {
-	if op == vm.PREVRANDAO {
-		panic("unsupported random")
-	}
-	t.EVMLogger.CaptureState(pc, op, gas, cost, scope, rData, depth, err)
-}
-
 // NewEVM generates a go-ethereum VM from the provided Message fields and the chain parameters
 // (ChainConfig and module Params). It additionally sets the validator operator address as the
 // coinbase address to make it available for the COINBASE opcode, even though there is no
@@ -82,6 +71,7 @@ func (k *Keeper) NewEVM(
 	if cfg.Tracer == nil {
 		cfg.Tracer = k.Tracer(ctx, msg, cfg.ChainConfig)
 	}
+	vmConfig := k.VMConfig(ctx, msg, cfg)
 	rules := cfg.ChainConfig.Rules(big.NewInt(ctx.BlockHeight()), cfg.ChainConfig.MergeNetsplitBlock != nil, blockCtx.Time)
 	contracts := make(map[common.Address]vm.PrecompiledContract)
 	active := make([]common.Address, 0)
@@ -98,12 +88,6 @@ func (k *Keeper) NewEVM(
 	sort.SliceStable(active, func(i, j int) bool {
 		return bytes.Compare(active[i].Bytes(), active[j].Bytes()) < 0
 	})
-	if rules.IsShanghai {
-		cfg.Tracer = &panicRandomTracer{
-			EVMLogger: cfg.Tracer,
-		}
-	}
-	vmConfig := k.VMConfig(ctx, msg, cfg)
 	evm := vm.NewEVM(blockCtx, txCtx, stateDB, cfg.ChainConfig, vmConfig)
 	evm.WithPrecompiles(contracts, active)
 	return evm
@@ -357,7 +341,7 @@ func (k *Keeper) ApplyMessageWithConfig(
 	msg core.Message,
 	cfg *EVMConfig,
 	commit bool,
-) (res *types.MsgEthereumTxResponse, err error) {
+) (*types.MsgEthereumTxResponse, error) {
 	var (
 		ret   []byte // return bytes from evm execution
 		vmErr error  // vm errors do not effect consensus and are therefore not assigned to err
