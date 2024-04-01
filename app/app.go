@@ -366,12 +366,14 @@ func NewEthermintApp(
 	app.CapabilityKeeper.Seal()
 
 	// use custom Ethermint account for contracts
+	authS := app.GetSubspace(authtypes.ModuleName)
 	app.AccountKeeper = authkeeper.NewAccountKeeper(
 		appCodec, keys[authtypes.StoreKey],
 		ethermint.ProtoAccount,
 		maccPerms,
 		sdk.GetConfig().GetBech32AccountAddrPrefix(),
 		authAddr,
+		authS,
 	)
 	app.BankKeeper = bankkeeper.NewBaseKeeper(
 		appCodec,
@@ -380,12 +382,15 @@ func NewEthermintApp(
 		app.BlockedAddrs(),
 		authAddr,
 	)
+	stakingS := app.GetSubspace(stakingtypes.ModuleName)
 	app.StakingKeeper = stakingkeeper.NewKeeper(
 		appCodec, keys[stakingtypes.StoreKey],
 		app.AccountKeeper,
 		app.BankKeeper,
 		authAddr,
+		stakingS,
 	)
+	mintS := app.GetSubspace(minttypes.ModuleName)
 	app.MintKeeper = mintkeeper.NewKeeper(
 		appCodec,
 		keys[minttypes.StoreKey],
@@ -394,7 +399,9 @@ func NewEthermintApp(
 		app.BankKeeper,
 		authtypes.FeeCollectorName,
 		authAddr,
+		mintS,
 	)
+	distrS := app.GetSubspace(distrtypes.ModuleName)
 	app.DistrKeeper = distrkeeper.NewKeeper(
 		appCodec,
 		keys[distrtypes.StoreKey],
@@ -403,14 +410,18 @@ func NewEthermintApp(
 		app.StakingKeeper,
 		authtypes.FeeCollectorName,
 		authAddr,
+		distrS,
 	)
+	slashS := app.GetSubspace(slashingtypes.ModuleName)
 	app.SlashingKeeper = slashingkeeper.NewKeeper(
 		appCodec,
 		app.LegacyAmino(),
 		keys[slashingtypes.StoreKey],
 		app.StakingKeeper,
 		authAddr,
+		slashS,
 	)
+	crisS := app.GetSubspace(crisistypes.ModuleName)
 	app.CrisisKeeper = *crisiskeeper.NewKeeper(
 		appCodec,
 		keys[crisistypes.StoreKey],
@@ -418,6 +429,7 @@ func NewEthermintApp(
 		app.BankKeeper,
 		authtypes.FeeCollectorName,
 		authAddr,
+		crisS,
 	)
 	app.FeeGrantKeeper = feegrantkeeper.NewKeeper(
 		appCodec,
@@ -500,9 +512,10 @@ func NewEthermintApp(
 		Example of setting gov params:
 		govConfig.MaxMetadataLen = 10000
 	*/
+	govS := app.GetSubspace(govtypes.ModuleName)
 	govKeeper := govkeeper.NewKeeper(
 		appCodec, keys[govtypes.StoreKey], app.AccountKeeper, app.BankKeeper,
-		app.StakingKeeper, app.MsgServiceRouter(), govConfig, authAddr,
+		app.StakingKeeper, app.MsgServiceRouter(), govConfig, authAddr, govS,
 	)
 
 	// Set legacy router for backwards compatibility with gov v1beta1
@@ -549,24 +562,24 @@ func NewEthermintApp(
 			app.AccountKeeper, app.StakingKeeper, app.BaseApp.DeliverTx,
 			txConfig,
 		),
-		auth.NewAppModule(appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
+		auth.NewAppModule(appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, authS),
 		vesting.NewAppModule(app.AccountKeeper, app.BankKeeper),
 		bank.NewAppModule(appCodec, app.BankKeeper, app.AccountKeeper, app.GetSubspace(banktypes.ModuleName)),
 		capability.NewAppModule(appCodec, *app.CapabilityKeeper, false),
-		crisis.NewAppModule(&app.CrisisKeeper, skipGenesisInvariants, app.GetSubspace(crisistypes.ModuleName)),
+		crisis.NewAppModule(&app.CrisisKeeper, skipGenesisInvariants, crisS),
 		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
-		gov.NewAppModule(appCodec, &app.GovKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(govtypes.ModuleName)),
-		mint.NewAppModule(appCodec, app.MintKeeper, app.AccountKeeper, nil, app.GetSubspace(minttypes.ModuleName)),
+		gov.NewAppModule(appCodec, &app.GovKeeper, app.AccountKeeper, app.BankKeeper, govS),
+		mint.NewAppModule(appCodec, app.MintKeeper, app.AccountKeeper, nil, mintS),
 		slashing.NewAppModule(
 			appCodec,
 			app.SlashingKeeper,
 			app.AccountKeeper,
 			app.BankKeeper,
 			app.StakingKeeper,
-			app.GetSubspace(slashingtypes.ModuleName),
+			slashS,
 		),
-		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(distrtypes.ModuleName)),
-		staking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(stakingtypes.ModuleName)),
+		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, distrS),
+		staking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper, stakingS),
 		upgrade.NewAppModule(&app.UpgradeKeeper),
 		evidence.NewAppModule(app.EvidenceKeeper),
 		params.NewAppModule(app.ParamsKeeper),
