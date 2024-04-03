@@ -9,6 +9,7 @@ pkgs.mkShell {
     pkgs.poetry
     pkgs.nodejs
     pkgs.test-env
+    pkgs.rocksdb
   ];
   shellHook = ''
     . ${../../scripts/env}

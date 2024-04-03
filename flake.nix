@@ -23,6 +23,7 @@
           pkgs = import nixpkgs {
             inherit system;
             overlays = [
+              (import ./nix/build_overlay.nix)
               gomod2nix.overlays.default
               self.overlay
             ];
