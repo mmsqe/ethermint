@@ -60,6 +60,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (evm) [#448](https://github.com/crypto-org-chain/ethermint/pull/448) Refactor the evm transfer to be more efficient.
 * (evm) [#450](https://github.com/crypto-org-chain/ethermint/pull/450) Refactor transient stores to be compatible with parallel tx execution.
 * (evm) [#454](https://github.com/crypto-org-chain/ethermint/pull/454) Migrate transient stores to object stores.
+* (encoding) [#460](https://github.com/crypto-org-chain/ethermint/pull/460) Allow create encoding config with custom GetSignersFunc.
 
 ## v0.21.x-cronos
 

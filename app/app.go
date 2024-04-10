@@ -285,7 +285,7 @@ func NewEthermintApp(
 	appOpts servertypes.AppOptions,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *EthermintApp {
-	encodingConfig := encoding.MakeConfig()
+	encodingConfig := encoding.MakeConfig(nil)
 	appCodec := encodingConfig.Codec
 	cdc := encodingConfig.Amino
 	txConfig := encodingConfig.TxConfig

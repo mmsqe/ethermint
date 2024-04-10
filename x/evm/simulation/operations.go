@@ -187,7 +187,7 @@ func SimulateEthTx(
 		return simtypes.NoOpMsg(types.ModuleName, types.TypeMsgEthereumTx, "can not create valid eth tx"), nil, err
 	}
 
-	txConfig := encoding.MakeConfig().TxConfig
+	txConfig := encoding.MakeConfig(nil).TxConfig
 	txBuilder := txConfig.NewTxBuilder()
 	signedTx, err := GetSignedTx(ctx, txBuilder, ethTx, prv)
 	if err != nil {

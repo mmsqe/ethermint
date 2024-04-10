@@ -64,7 +64,7 @@ func (suite *KeeperTestSuite) SetupTest() {
 		}
 		return genesis
 	})
-	encodingConfig := encoding.MakeConfig()
+	encodingConfig := encoding.MakeConfig(nil)
 	suite.clientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig)
 	suite.ethSigner = ethtypes.LatestSignerForChainID(suite.App.EvmKeeper.ChainID())
 	suite.denom = types.DefaultEVMDenom

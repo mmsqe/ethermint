@@ -44,7 +44,7 @@ func customGetSignerFn(path string) func(msg proto.Message) ([][]byte, error) {
 }
 
 // MakeConfig creates an EncodingConfig
-func MakeConfig() ethermint.EncodingConfig {
+func MakeConfig(customGetSigners map[protoreflect.FullName]signing.GetSignersFunc) ethermint.EncodingConfig {
 	cdc := amino.NewLegacyAmino()
 	signingOptions := signing.Options{
 		AddressCodec: address.Bech32Codec{
@@ -56,6 +56,9 @@ func MakeConfig() ethermint.EncodingConfig {
 		CustomGetSigners: map[protoreflect.FullName]signing.GetSignersFunc{
 			"ethermint.evm.v1.MsgEthereumTx": customGetSignerFn("from"),
 		},
+	}
+	for k, v := range customGetSigners {
+		signingOptions.CustomGetSigners[k] = v
 	}
 	interfaceRegistry, err := types.NewInterfaceRegistryWithOptions(types.InterfaceRegistryOptions{
 		ProtoFiles:     gogoproto.HybridResolver,

@@ -317,7 +317,7 @@ func genesisStateWithValSet(codec codec.Codec, genesisState GenesisState,
 }
 
 func MakeConfigForTest() ethermint.EncodingConfig {
-	config := encoding.MakeConfig()
+	config := encoding.MakeConfig(nil)
 	ModuleBasics.RegisterLegacyAminoCodec(config.Amino)
 	ModuleBasics.RegisterInterfaces(config.InterfaceRegistry)
 	return config
