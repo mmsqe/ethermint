@@ -51,7 +51,6 @@ func (k *Keeper) NewEVM(
 	msg core.Message,
 	cfg *EVMConfig,
 	stateDB vm.StateDB,
-	random *common.Hash,
 ) *vm.EVM {
 	blockCtx := vm.BlockContext{
 		CanTransfer: core.CanTransfer,
@@ -63,7 +62,7 @@ func (k *Keeper) NewEVM(
 		Time:        uint64(ctx.BlockHeader().Time.Unix()),
 		Difficulty:  big.NewInt(0), // unused. Only required in PoW context
 		BaseFee:     cfg.BaseFee,
-		Random:      random, // not supported
+		Random:      nil, // not supported
 	}
 	if cfg.BlockOverrides != nil {
 		cfg.BlockOverrides.Apply(&blockCtx)
@@ -362,12 +361,7 @@ func (k *Keeper) ApplyMessageWithConfig(
 			return nil, errorsmod.Wrap(err, "failed to apply state override")
 		}
 	}
-	var random *common.Hash
-	if k.forkEnabledFunc(ctx) {
-		zero := common.BigToHash(big.NewInt(0))
-		random = &zero
-	}
-	evm = k.NewEVM(ctx, msg, cfg, stateDB, random)
+	evm = k.NewEVM(ctx, msg, cfg, stateDB)
 	leftoverGas := msg.GasLimit
 	sender := vm.AccountRef(msg.From)
 	// Allow the tracer captures the tx level events, mainly the gas consumption.

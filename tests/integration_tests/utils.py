@@ -40,7 +40,6 @@ TEST_CONTRACTS = {
     "TestMessageCall": "TestMessageCall.sol",
     "Calculator": "Calculator.sol",
     "Caller": "Caller.sol",
-    "Random": "Random.sol",
 }
 
 
