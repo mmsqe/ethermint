@@ -21,21 +21,16 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	errorsmod "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
@@ -45,6 +40,7 @@ import (
 	rpctypes "github.com/evmos/ethermint/rpc/types"
 	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/evm/types"
+	"github.com/evmos/ethermint/x/utils"
 )
 
 var _ types.QueryServer = Keeper{}
@@ -221,40 +217,22 @@ func (k Keeper) Code(c context.Context, req *types.QueryCodeRequest) (*types.Que
 	}, nil
 }
 
-func checkNegativeHeight(height int64) error {
-	if height < 0 {
-		return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "cannot query with height < 0; please provide a valid height")
-	}
-
-	return nil
-}
-
 // Params implements the Query/Params gRPC method
 func (k Keeper) Params(c context.Context, req *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c)
-	md, ok := metadata.FromIncomingContext(c)
-	if ok {
-		heightHeaders := md.Get(grpctypes.GRPCBlockHeightHeader)
-		// Get height header from the request context, if present.
-		var height int64
-		var err error
-		if len(heightHeaders) == 1 {
-			height, err = strconv.ParseInt(heightHeaders[0], 10, 64)
-			if err != nil {
-				return nil, errorsmod.Wrapf(
-					sdkerrors.ErrInvalidRequest,
-					"invalid height header %q: %v", grpctypes.GRPCBlockHeightHeader, err)
-			}
-			if err := checkNegativeHeight(height); err != nil {
-				return nil, err
-			}
-		}
-
-		for blocks, client := range k.backupQueryClients {
-			if int64(blocks[0]) <= height && int64(blocks[1]) >= height {
-				params, err := client.Params(c, req)
-				return params, err
-			}
+	// grpc
+	height, err := utils.GetHeightFromMetadata(c)
+	if err != nil {
+		return nil, err
+	}
+	// cli
+	if height == 0 {
+		height = ctx.BlockHeight()
+	}
+	for blocks, client := range k.backupQueryClients {
+		if int64(blocks[0]) <= height && int64(blocks[1]) >= height {
+			params, err := client.Params(c, req)
+			return params, err
 		}
 	}
 	params := k.GetParams(ctx)

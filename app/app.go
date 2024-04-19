@@ -31,6 +31,7 @@ import (
 	"cosmossdk.io/core/appmodule"
 	runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
 	"github.com/cosmos/cosmos-sdk/server"
+	grpc1 "github.com/cosmos/gogoproto/grpc"
 	"github.com/cosmos/gogoproto/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -280,8 +281,8 @@ type EthermintApp struct {
 	configurator module.Configurator
 }
 
-func BackupQueryClients(appOpts servertypes.AppOptions, interfaceRegistry types.InterfaceRegistry) map[[2]int]evmtypes.QueryClient {
-	backupQueryClients := make(map[[2]int]evmtypes.QueryClient)
+func BackupQueryClients[T any](appOpts servertypes.AppOptions, interfaceRegistry types.InterfaceRegistry, queryClientFn func(grpc1.ClientConn) T) map[[2]int]T {
+	backupQueryClients := make(map[[2]int]T)
 	if v, ok := appOpts.(*viper.Viper); ok {
 		cfg, err := srvconfig.GetConfig(v)
 		if err == nil {
@@ -313,7 +314,7 @@ func BackupQueryClients(appOpts servertypes.AppOptions, interfaceRegistry types.
 				if err != nil {
 					continue
 				}
-				backupQueryClients[k] = evmtypes.NewQueryClient(conn)
+				backupQueryClients[k] = queryClientFn(conn)
 			}
 		}
 	}
@@ -556,6 +557,7 @@ func NewEthermintApp(
 		authtypes.NewModuleAddress(govtypes.ModuleName),
 		keys[feemarkettypes.StoreKey],
 		feeMarketSs,
+		BackupQueryClients(appOpts, interfaceRegistry, feemarkettypes.NewQueryClient),
 	)
 
 	// Set authority to x/gov module account to only expect the module account to update params
@@ -567,7 +569,7 @@ func NewEthermintApp(
 		tracer,
 		evmSs,
 		nil,
-		BackupQueryClients(appOpts, interfaceRegistry),
+		BackupQueryClients(appOpts, interfaceRegistry, evmtypes.NewQueryClient),
 	)
 
 	// register the proposal types
