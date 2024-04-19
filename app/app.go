@@ -32,9 +32,12 @@ import (
 	runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/gogoproto/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/cast"
+	"github.com/spf13/viper"
 
 	"cosmossdk.io/log"
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -132,6 +135,7 @@ import (
 	"github.com/evmos/ethermint/app/ante"
 	"github.com/evmos/ethermint/encoding"
 	"github.com/evmos/ethermint/ethereum/eip712"
+	srv "github.com/evmos/ethermint/server"
 	srvconfig "github.com/evmos/ethermint/server/config"
 	srvflags "github.com/evmos/ethermint/server/flags"
 	ethermint "github.com/evmos/ethermint/types"
@@ -274,6 +278,46 @@ type EthermintApp struct {
 
 	// the configurator
 	configurator module.Configurator
+}
+
+func BackupQueryClients(appOpts servertypes.AppOptions, interfaceRegistry types.InterfaceRegistry) map[[2]int]evmtypes.QueryClient {
+	backupQueryClients := make(map[[2]int]evmtypes.QueryClient)
+	if v, ok := appOpts.(*viper.Viper); ok {
+		cfg, err := srvconfig.GetConfig(v)
+		if err == nil {
+			maxSendMsgSize := cfg.GRPC.MaxSendMsgSize
+			if maxSendMsgSize == 0 {
+				maxSendMsgSize = config.DefaultGRPCMaxSendMsgSize
+			}
+
+			maxRecvMsgSize := cfg.GRPC.MaxRecvMsgSize
+			if maxRecvMsgSize == 0 {
+				maxRecvMsgSize = config.DefaultGRPCMaxRecvMsgSize
+			}
+
+			for k, address := range cfg.JSONRPC.BackupGRPCBlockAddressBlockRange {
+				grpcAddr, err := srv.ParseGRPCAddress(address)
+				if err != nil {
+					continue
+				}
+
+				conn, err := grpc.Dial(
+					grpcAddr,
+					grpc.WithTransportCredentials(insecure.NewCredentials()),
+					grpc.WithDefaultCallOptions(
+						grpc.ForceCodec(codec.NewProtoCodec(interfaceRegistry).GRPCCodec()),
+						grpc.MaxCallRecvMsgSize(maxRecvMsgSize),
+						grpc.MaxCallSendMsgSize(maxSendMsgSize),
+					),
+				)
+				if err != nil {
+					continue
+				}
+				backupQueryClients[k] = evmtypes.NewQueryClient(conn)
+			}
+		}
+	}
+	return backupQueryClients
 }
 
 // NewEthermintApp returns a reference to a new initialized Ethermint application.
@@ -523,6 +567,7 @@ func NewEthermintApp(
 		tracer,
 		evmSs,
 		nil,
+		BackupQueryClients(appOpts, interfaceRegistry),
 	)
 
 	// register the proposal types
