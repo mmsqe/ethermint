@@ -108,7 +108,8 @@ return-data-limit = {{ .JSONRPC.ReturnDataLimit }}
 
 # A list of backup grpc address with block range
 # Example: "0.0.0.0:26113" = [0, 20]
-backup-grpc-address-block-range = "{{ "{" }}{{ range $k, $v := .JSONRPC.BackupGRPCBlockAddressBlockRange }}\"{{ $v }}\": [{{index $k 0 }}, {{ index $k 1}}]{{ end }}{{ "}" }}"
+backup-grpc-address-block-range = "{{ "{" }}{{ range $k, $v := .JSONRPC.BackupGRPCBlockAddressBlockRange }}" +
+    "\"{{ $v }}\": [{{index $k 0 }}, {{ index $k 1}}]{{ end }}{{ "}" }}"
 
 ###############################################################################
 ###                             TLS Configuration                           ###

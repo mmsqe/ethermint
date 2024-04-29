@@ -254,7 +254,11 @@ type EthermintApp struct {
 	configurator module.Configurator
 }
 
-func BackupQueryClients[T any](appOpts servertypes.AppOptions, interfaceRegistry types.InterfaceRegistry, queryClientFn func(grpc1.ClientConn) T) map[[2]int]T {
+func BackupQueryClients[T any](
+	appOpts servertypes.AppOptions,
+	interfaceRegistry types.InterfaceRegistry,
+	queryClientFn func(grpc1.ClientConn) T,
+) map[[2]int]T {
 	backupQueryClients := make(map[[2]int]T)
 	if v, ok := appOpts.(*viper.Viper); ok {
 		cfg, err := srvconfig.GetConfig(v)
