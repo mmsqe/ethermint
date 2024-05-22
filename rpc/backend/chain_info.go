@@ -134,7 +134,6 @@ func (b *Backend) PendingTransactions() ([]*sdk.Tx, error) {
 		}
 		result = append(result, &tx)
 	}
-
 	return result, nil
 }
 

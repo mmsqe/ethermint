@@ -399,7 +399,6 @@ func (api *pubSubAPI) subscribeNewHeads(wsConn *wsConn, subID rpc.ID) (context.C
 					Result:       header.EthHeader,
 				},
 			}
-
 			if err := wsConn.WriteJSON(res); err != nil {
 				api.logger.Error("error writing header, will drop peer", "error", err.Error())
 
@@ -562,7 +561,7 @@ func (api *pubSubAPI) subscribeLogs(wsConn *wsConn, subID rpc.ID, extra interfac
 func (api *pubSubAPI) subscribePendingTransactions(wsConn *wsConn, subID rpc.ID) (context.CancelFunc, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	//nolint: errcheck
-	go api.events.TxStream().Subscribe(ctx, func(items []common.Hash, _ int) error {
+	go api.events.PendingTxStream().Subscribe(ctx, func(items []common.Hash, _ int) error {
 		for _, hash := range items {
 			// write to ws conn
 			res := &SubscriptionNotification{
@@ -573,7 +572,6 @@ func (api *pubSubAPI) subscribePendingTransactions(wsConn *wsConn, subID rpc.ID)
 					Result:       hash,
 				},
 			}
-
 			err := wsConn.WriteJSON(res)
 			if err != nil {
 				api.logger.Debug("error writing header, will drop peer", "error", err.Error())
