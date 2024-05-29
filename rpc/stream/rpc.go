@@ -163,21 +163,23 @@ func (s *RPCStream) start(
 				s.logger.Error("event data type mismatch", "type", fmt.Sprintf("%T", ev.Data))
 				continue
 			}
-			tx, err := s.txDecoder(data.Tx)
-			if err != nil {
-				s.logger.Error("fail to decode tx", "error", err.Error())
-				continue
-			}
-
-			var hashes []common.Hash
-			for _, msg := range tx.GetMsgs() {
-				ethTx, ok := msg.(*evmtypes.MsgEthereumTx)
-				if ok {
-					h := ethTx.AsTransaction().Hash()
-					hashes = append(hashes, h)
+			for _, t := range data.Txs {
+				tx, err := s.txDecoder(t)
+				if err != nil {
+					s.logger.Error("fail to decode tx", "error", err.Error())
+					continue
 				}
+
+				var hashes []common.Hash
+				for _, msg := range tx.GetMsgs() {
+					ethTx, ok := msg.(*evmtypes.MsgEthereumTx)
+					if ok {
+						h := ethTx.AsTransaction().Hash()
+						hashes = append(hashes, h)
+					}
+				}
+				s.pendingTxStream.Add(hashes...)
 			}
-			s.pendingTxStream.Add(hashes...)
 		case ev, ok := <-chLogs:
 			if !ok {
 				chLogs = nil

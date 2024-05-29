@@ -227,7 +227,7 @@ require (
 replace (
 	// use cosmos keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
-	github.com/cometbft/cometbft => github.com/mmsqe/cometbft v0.37.0-rc3.0.20240522022348-4d00e28bcfec
+	github.com/cometbft/cometbft => github.com/mmsqe/cometbft v0.37.0-rc3.0.20240529011850-8b2dd3c43b48
 	github.com/cometbft/cometbft-db => github.com/crypto-org-chain/cometbft-db v0.0.0-20231011055109-57922ac52a63
 	// release/v0.47.x
 	github.com/cosmos/cosmos-sdk => github.com/crypto-org-chain/cosmos-sdk v0.46.0-beta2.0.20240517084251-5ba20d99ec23
