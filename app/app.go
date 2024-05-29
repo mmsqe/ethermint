@@ -231,6 +231,8 @@ type EthermintApp struct {
 
 	invCheckPeriod uint
 
+	chPendingTx chan []byte
+
 	// keys to access the substores
 	keys    map[string]*storetypes.KVStoreKey
 	tkeys   map[string]*storetypes.TransientStoreKey
@@ -344,6 +346,7 @@ func NewEthermintApp(
 		keys:              keys,
 		tkeys:             tkeys,
 		memKeys:           memKeys,
+		chPendingTx:       make(chan []byte),
 	}
 
 	// init params keeper and subspaces
@@ -945,6 +948,21 @@ func (app *EthermintApp) RegisterTendermintService(clientCtx client.Context) {
 
 func (app *EthermintApp) RegisterNodeService(clientCtx client.Context) {
 	node.RegisterNodeService(clientCtx, app.GRPCQueryRouter())
+}
+
+func (app *EthermintApp) PendingTxStream() <-chan []byte {
+	return app.chPendingTx
+}
+
+func (app *EthermintApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
+	res := app.BaseApp.CheckTx(req)
+	if res.Code == 0 {
+		select {
+		case app.chPendingTx <- req.Tx:
+		default:
+		}
+	}
+	return res
 }
 
 // RegisterSwaggerAPI registers swagger route with API Server

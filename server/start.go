@@ -72,6 +72,10 @@ import (
 // DBOpener is a function to open `application.db`, potentially with customized options.
 type DBOpener func(opts types.AppOptions, rootDir string, backend dbm.BackendType) (dbm.DB, error)
 
+type AppWithPendingTxStream interface {
+	PendingTxStream() <-chan []byte
+}
+
 // StartOptions defines options that can be customized in `StartCmd`
 type StartOptions struct {
 	AppCreator      types.AppCreator
@@ -556,7 +560,11 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, opts Start
 	)
 
 	if config.JSONRPC.Enable {
-		httpSrv, httpSrvDone, err = StartJSONRPC(svrCtx, clientCtx, &config, idxer)
+		var chPendingTx <-chan []byte
+		if app, ok := app.(AppWithPendingTxStream); ok {
+			chPendingTx = app.PendingTxStream()
+		}
+		httpSrv, httpSrvDone, err = StartJSONRPC(svrCtx, clientCtx, &config, idxer, chPendingTx)
 		if err != nil {
 			return err
 		}

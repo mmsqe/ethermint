@@ -41,6 +41,7 @@ func StartJSONRPC(ctx *server.Context,
 	clientCtx client.Context,
 	config *config.Config,
 	indexer ethermint.EVMTxIndexer,
+	chPendingTx <-chan []byte,
 ) (*http.Server, chan struct{}, error) {
 	logger := ctx.Logger.With("module", "geth")
 
@@ -49,7 +50,7 @@ func StartJSONRPC(ctx *server.Context,
 		return nil, nil, fmt.Errorf("client %T does not implement EventsClient", clientCtx.Client)
 	}
 
-	stream, err := stream.NewRPCStreams(evtClient, logger, clientCtx.TxConfig.TxDecoder())
+	stream, err := stream.NewRPCStreams(evtClient, chPendingTx, logger, clientCtx.TxConfig.TxDecoder())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create rpc streams: %w", err)
 	}
