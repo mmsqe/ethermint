@@ -956,7 +956,7 @@ func (app *EthermintApp) PendingTxStream() <-chan []byte {
 
 func (app *EthermintApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 	res := app.BaseApp.CheckTx(req)
-	if res.Code == 0 {
+	if res.Code == 0 && req.Type == abci.CheckTxType_New {
 		select {
 		case app.chPendingTx <- req.Tx:
 		default:
