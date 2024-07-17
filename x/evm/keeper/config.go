@@ -22,6 +22,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	rpctypes "github.com/evmos/ethermint/rpc/types"
 	"github.com/evmos/ethermint/x/evm/statedb"
@@ -65,12 +66,17 @@ func (k *Keeper) EVMBlockConfig(ctx sdk.Context, chainID *big.Int) (*EVMBlockCon
 	if v != nil {
 		return v.(*EVMBlockConfig), nil
 	}
-
+	time := ctx.BlockHeader().Time
+	blockTime := uint64(time.Unix())
+	blockNumber := big.NewInt(ctx.BlockHeight())
+	bz, err := time.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	randomHash := crypto.Keccak256Hash(bz)
 	params := k.GetParams(ctx)
 	ethCfg := params.ChainConfig.EthereumConfig(chainID)
-
 	feemarketParams := k.feeMarketKeeper.GetParams(ctx)
-
 	// get the coinbase address from the block proposer
 	coinbase, err := k.GetCoinbaseAddress(ctx)
 	if err != nil {
@@ -85,12 +91,7 @@ func (k *Keeper) EVMBlockConfig(ctx sdk.Context, chainID *big.Int) (*EVMBlockCon
 			baseFee = new(big.Int)
 		}
 	}
-
-	blockTime := uint64(ctx.BlockHeader().Time.Unix())
-	blockNumber := big.NewInt(ctx.BlockHeight())
 	rules := ethCfg.Rules(blockNumber, ethCfg.MergeNetsplitBlock != nil, blockTime)
-
-	var zero common.Hash
 	cfg := &EVMBlockConfig{
 		Params:          params,
 		FeeMarketParams: feemarketParams,
@@ -98,7 +99,7 @@ func (k *Keeper) EVMBlockConfig(ctx sdk.Context, chainID *big.Int) (*EVMBlockCon
 		CoinBase:        coinbase,
 		BaseFee:         baseFee,
 		Difficulty:      big.NewInt(0),
-		Random:          &zero,
+		Random:          &randomHash,
 		BlockNumber:     blockNumber,
 		BlockTime:       blockTime,
 		Rules:           rules,

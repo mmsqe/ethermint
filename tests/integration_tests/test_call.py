@@ -4,7 +4,7 @@ from hexbytes import HexBytes
 from web3 import Web3
 from web3._utils.contracts import encode_transaction_data
 
-from .utils import CONTRACTS, deploy_contract
+from .utils import CONTRACTS, deploy_contract, w3_wait_for_new_blocks
 
 
 def test_temporary_contract_code(ethermint):
@@ -100,5 +100,14 @@ def test_opcode(ethermint):
         ethermint.w3,
         CONTRACTS["Random"],
     )
-    res = contract.caller.randomTokenId()
-    assert res > 0, res
+    ids = set()
+    total = 5
+
+    for _ in range(total):
+        id = contract.caller.randomTokenId()
+        assert id > 0, id
+        w3_wait_for_new_blocks(ethermint.w3, 1, 0.1)
+        assert id not in ids, "duplicate id generated"
+        ids.add(id)
+
+    assert len(ids) == total, "ids are not unique"
