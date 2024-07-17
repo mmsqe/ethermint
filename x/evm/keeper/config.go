@@ -38,7 +38,7 @@ type EVMBlockConfig struct {
 	ChainConfig     *params.ChainConfig
 	CoinBase        common.Address
 	BaseFee         *big.Int
-	// not supported, always zero
+	// use hash of block timestamp for random opcode
 	Random *common.Hash
 	// unused, always zero
 	Difficulty *big.Int
