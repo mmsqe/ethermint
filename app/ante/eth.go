@@ -244,10 +244,10 @@ func CheckEthCanTransfer(
 		if value == nil || value.Sign() == -1 {
 			return fmt.Errorf("value (%s) must be positive", value)
 		}
-		from := common.BytesToAddress(msgEthTx.From)
 		// check that caller has enough balance to cover asset transfer for **topmost** call
 		// NOTE: here the gas consumed is from the context with the infinite gas meter
-		if value.Sign() > 0 && !canTransfer(ctx, evmKeeper, evmParams.EvmDenom, from, value) {
+		if value.Sign() > 0 && !canTransfer(ctx, evmKeeper, evmParams.EvmDenom, msgEthTx.From, value) {
+			from := common.BytesToAddress(msgEthTx.From)
 			return errorsmod.Wrapf(
 				errortypes.ErrInsufficientFunds,
 				"failed to transfer %s from address %s using the EVM block context transfer function",
@@ -261,8 +261,8 @@ func CheckEthCanTransfer(
 }
 
 // canTransfer adapted the core.CanTransfer from go-ethereum
-func canTransfer(ctx sdk.Context, evmKeeper EVMKeeper, denom string, from common.Address, amount *big.Int) bool {
-	balance := evmKeeper.GetBalance(ctx, sdk.AccAddress(from.Bytes()), denom)
+func canTransfer(ctx sdk.Context, evmKeeper EVMKeeper, denom string, addr sdk.AccAddress, amount *big.Int) bool {
+	balance := evmKeeper.GetBalance(ctx, addr, denom)
 	return balance.Cmp(amount) >= 0
 }
 
