@@ -93,7 +93,8 @@ func (suite *AnteTestSuite) TestNewEthAccountVerificationDecorator() {
 			suite.Require().NoError(vmdb.Commit())
 
 			accountGetter := ante.NewCachedAccountGetter(suite.ctx, suite.app.AccountKeeper)
-			err := ante.VerifyEthAccount(suite.ctx.WithIsCheckTx(tc.checkTx), tc.tx, suite.app.EvmKeeper, evmtypes.DefaultEVMDenom, accountGetter)
+			balanceGetter := ante.NewCachedBalanceGetter(suite.ctx, suite.app.EvmKeeper)
+			err := ante.VerifyEthAccount(suite.ctx.WithIsCheckTx(tc.checkTx), tc.tx, evmtypes.DefaultEVMDenom, accountGetter, balanceGetter)
 
 			if tc.expPass {
 				suite.Require().NoError(err)
@@ -460,9 +461,9 @@ func (suite *AnteTestSuite) TestCanTransferDecorator() {
 			tc.malleate()
 			suite.Require().NoError(vmdb.Commit())
 
+			balanceGetter := ante.NewCachedBalanceGetter(suite.ctx, suite.app.EvmKeeper)
 			err := ante.CheckEthCanTransfer(
-				suite.ctx.WithIsCheckTx(true), tc.tx,
-				baseFee, rules, suite.app.EvmKeeper, &evmParams,
+				tc.tx, baseFee, rules, &evmParams, balanceGetter,
 			)
 
 			if tc.expPass {
