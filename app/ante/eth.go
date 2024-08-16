@@ -37,6 +37,8 @@ import (
 
 type AccountGetter func(sdk.AccAddress) sdk.AccountI
 
+type BalanceGetter func(sdk.AccAddress, string) *big.Int
+
 // NewCachedAccountGetter cache the account objects during the ante handler execution,
 // it's safe because there's no store branching in the ante handlers,
 // it also creates new account in memory if it doesn't exist in the store.
@@ -57,6 +59,19 @@ func NewCachedAccountGetter(ctx sdk.Context, ak evmtypes.AccountKeeper) AccountG
 	}
 }
 
+// NewCachedBalanceGetter cache the balance objects during the ante handler execution.
+func NewCachedBalanceGetter(ctx sdk.Context, evmKeeper EVMKeeper) BalanceGetter {
+	balances := make(map[string]*big.Int, 1)
+	return func(addr sdk.AccAddress, denom string) *big.Int {
+		bal, ok := balances[string(addr)]
+		if !ok {
+			bal = evmKeeper.GetBalance(ctx, addr, denom)
+			balances[string(addr)] = bal
+		}
+		return bal
+	}
+}
+
 // VerifyEthAccount validates checks that the sender balance is greater than the total transaction cost.
 // The account will be created in memory if it doesn't exist, i.e cannot be found on store, which will eventually set to
 // store when increasing nonce.
@@ -66,8 +81,9 @@ func NewCachedAccountGetter(ctx sdk.Context, ak evmtypes.AccountKeeper) AccountG
 // - account balance is lower than the transaction cost
 func VerifyEthAccount(
 	ctx sdk.Context, tx sdk.Tx,
-	evmKeeper EVMKeeper, evmDenom string,
+	evmDenom string,
 	accountGetter AccountGetter,
+	balanceGetter BalanceGetter,
 ) error {
 	if !ctx.IsCheckTx() {
 		return nil
@@ -95,7 +111,7 @@ func VerifyEthAccount(
 				"the sender is not EOA: address %s, codeHash <%s>", fromAddr, acct.CodeHash)
 		}
 
-		balance := evmKeeper.GetBalance(ctx, from, evmDenom)
+		balance := balanceGetter(from, evmDenom)
 		if err := keeper.CheckSenderBalance(sdkmath.NewIntFromBigIntMut(balance), ethTx); err != nil {
 			return errorsmod.Wrap(err, "failed to check sender balance")
 		}
@@ -212,11 +228,11 @@ func CheckEthGasConsume(
 // CheckEthCanTransfer creates an EVM from the message and calls the BlockContext CanTransfer function to
 // see if the address can execute the transaction.
 func CheckEthCanTransfer(
-	ctx sdk.Context, tx sdk.Tx,
+	tx sdk.Tx,
 	baseFee *big.Int,
 	rules params.Rules,
-	evmKeeper EVMKeeper,
 	evmParams *evmtypes.Params,
+	balanceGetter BalanceGetter,
 ) error {
 	for _, msg := range tx.GetMsgs() {
 		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
@@ -244,26 +260,23 @@ func CheckEthCanTransfer(
 		if value == nil || value.Sign() == -1 {
 			return fmt.Errorf("value (%s) must be positive", value)
 		}
-		from := common.BytesToAddress(msgEthTx.From)
 		// check that caller has enough balance to cover asset transfer for **topmost** call
 		// NOTE: here the gas consumed is from the context with the infinite gas meter
-		if value.Sign() > 0 && !canTransfer(ctx, evmKeeper, evmParams.EvmDenom, from, value) {
-			return errorsmod.Wrapf(
-				errortypes.ErrInsufficientFunds,
-				"failed to transfer %s from address %s using the EVM block context transfer function",
-				value,
-				from,
-			)
+		if value.Sign() > 0 {
+			balance := balanceGetter(msgEthTx.GetFrom(), evmParams.EvmDenom)
+			if balance.Cmp(value) < 0 {
+				from := common.BytesToAddress(msgEthTx.From)
+				return errorsmod.Wrapf(
+					errortypes.ErrInsufficientFunds,
+					"failed to transfer %s from address %s using the EVM block context transfer function",
+					value,
+					from,
+				)
+			}
 		}
 	}
 
 	return nil
-}
-
-// canTransfer adapted the core.CanTransfer from go-ethereum
-func canTransfer(ctx sdk.Context, evmKeeper EVMKeeper, denom string, from common.Address, amount *big.Int) bool {
-	balance := evmKeeper.GetBalance(ctx, sdk.AccAddress(from.Bytes()), denom)
-	return balance.Cmp(amount) >= 0
 }
 
 // CheckAndSetEthSenderNonce handles incrementing the sequence of the signer (i.e sender). If the transaction is a
