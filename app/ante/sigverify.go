@@ -19,6 +19,7 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/gogoproto/proto"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
@@ -29,16 +30,26 @@ import (
 // Failure in RecheckTx will prevent tx to be included into block, especially when CheckTx succeed, in which case user
 // won't see the error message.
 func VerifyEthSig(tx sdk.Tx, signer ethtypes.Signer) error {
+	errChan := make(chan error, len(tx.GetMsgs()))
 	for _, msg := range tx.GetMsgs() {
-		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
-		if !ok {
-			return errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
-		}
+		go func(msg proto.Message) {
+			msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
+			if !ok {
+				errChan <- errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
+				return
+			}
 
-		if err := msgEthTx.VerifySender(signer); err != nil {
-			return errorsmod.Wrapf(errortypes.ErrorInvalidSigner, "signature verification failed: %s", err.Error())
+			err := msgEthTx.VerifySender(signer)
+			if err != nil {
+				err = errorsmod.Wrapf(errortypes.ErrorInvalidSigner, "signature verification failed: %s", err.Error())
+			}
+			errChan <- err
+		}(msg)
+	}
+	for i := 0; i < cap(errChan); i++ {
+		if err := <-errChan; err != nil {
+			return err
 		}
 	}
-
 	return nil
 }
