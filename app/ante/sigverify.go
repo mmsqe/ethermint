@@ -16,6 +16,9 @@
 package ante
 
 import (
+	"fmt"
+	"time"
+
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
@@ -29,6 +32,7 @@ import (
 // Failure in RecheckTx will prevent tx to be included into block, especially when CheckTx succeed, in which case user
 // won't see the error message.
 func VerifyEthSig(tx sdk.Tx, signer ethtypes.Signer) error {
+	startTime := time.Now()
 	for _, msg := range tx.GetMsgs() {
 		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
 		if !ok {
@@ -39,6 +43,11 @@ func VerifyEthSig(tx sdk.Tx, signer ethtypes.Signer) error {
 			return errorsmod.Wrapf(errortypes.ErrorInvalidSigner, "signature verification failed: %s", err.Error())
 		}
 	}
-
+	endTime := time.Now()
+	duration := endTime.Sub(startTime)
+	if duration > time.Millisecond*10 {
+		fmt.Printf("mm-VerifyEthSig[%s]-bf:%d\n", startTime, len(tx.GetMsgs()))
+		fmt.Printf("mm-VerifyEthSig[%s]-af:%s\n", endTime, duration)
+	}
 	return nil
 }

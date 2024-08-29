@@ -97,7 +97,7 @@ func VerifyEthAccount(
 
 		balance := evmKeeper.GetBalance(ctx, from, evmDenom)
 		if err := keeper.CheckSenderBalance(sdkmath.NewIntFromBigIntMut(balance), ethTx); err != nil {
-			return errorsmod.Wrap(err, "failed to check sender balance")
+			return errorsmod.Wrap(err, fmt.Sprintf("failed to check sender balance for %s", from.String()))
 		}
 	}
 	return nil
@@ -297,7 +297,7 @@ func CheckAndSetEthSenderNonce(
 			if tx.Nonce() != nonce {
 				return errorsmod.Wrapf(
 					errortypes.ErrInvalidSequence,
-					"invalid nonce; got %d, expected %d", tx.Nonce(), nonce,
+					"invalid nonce; got %d, expected %d for %s", tx.Nonce(), nonce, from,
 				)
 			}
 		}
