@@ -24,7 +24,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
 	ibcante "github.com/cosmos/ibc-go/v8/modules/core/ante"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
@@ -112,18 +111,18 @@ func newEthAnteHandler(options HandlerOptions) sdk.AnteHandler {
 			return ctx, err
 		}
 
-		if v, ok := ctx.GetIncarnationCache(EthSigVerificationResultCacheKey); ok {
-			if v != nil {
-				err = v.(error)
-			}
-		} else {
-			ethSigner := ethtypes.MakeSigner(blockCfg.ChainConfig, blockCfg.BlockNumber)
-			err = VerifyEthSig(tx, ethSigner)
-			ctx.SetIncarnationCache(EthSigVerificationResultCacheKey, err)
-		}
-		if err != nil {
-			return ctx, err
-		}
+		// if v, ok := ctx.GetIncarnationCache(EthSigVerificationResultCacheKey); ok {
+		// 	if v != nil {
+		// 		err = v.(error)
+		// 	}
+		// } else {
+		// 	ethSigner := ethtypes.MakeSigner(blockCfg.ChainConfig, blockCfg.BlockNumber)
+		// 	err = VerifyEthSig(tx, ethSigner)
+		// 	ctx.SetIncarnationCache(EthSigVerificationResultCacheKey, err)
+		// }
+		// if err != nil {
+		// 	return ctx, err
+		// }
 
 		// AccountGetter cache the account objects during the ante handler execution,
 		// it's safe because there's no store branching in the ante handlers.
