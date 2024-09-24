@@ -82,10 +82,10 @@ func (suite *StateDBTestSuite) TestAccount() {
 			suite.Require().Equal(common.BytesToHash(emptyCodeHash), db.GetCodeHash(address))
 			suite.Require().Equal(uint64(0), db.GetNonce(address))
 		}},
-		{"suicide", func(db *statedb.StateDB, cms storetypes.MultiStore) {
+		{"selfDestruct", func(db *statedb.StateDB, cms storetypes.MultiStore) {
 			// non-exist account.
-			suite.Require().False(db.Suicide(address))
-			suite.Require().False(db.HasSuicided(address))
+			db.SelfDestruct(address)
+			suite.Require().False(db.HasSelfDestructed(address))
 
 			// create a contract account
 			db.CreateAccount(address)
@@ -100,13 +100,13 @@ func (suite *StateDBTestSuite) TestAccount() {
 
 			suite.Require().NotEmpty(keeper.GetCode(ctx, codeHash))
 
-			// suicide
+			// selfDestructed
 			db = statedb.New(ctx, keeper, txConfig)
-			suite.Require().False(db.HasSuicided(address))
-			suite.Require().True(db.Suicide(address))
+			suite.Require().False(db.HasSelfDestructed(address))
+			db.SelfDestruct(address)
 
 			// check dirty state
-			suite.Require().True(db.HasSuicided(address))
+			suite.Require().True(db.HasSelfDestructed(address))
 			// balance is cleared
 			suite.Require().Equal(big.NewInt(0), db.GetBalance(address))
 			// but code and state are still accessible in dirty state
@@ -123,7 +123,7 @@ func (suite *StateDBTestSuite) TestAccount() {
 
 			// and cleared in keeper too
 			suite.Require().Nil(keeper.GetAccount(ctx, address))
-			// code is not deleted when contract suicided.
+			// code is not deleted when contract selfDestructed.
 			suite.Require().NotEmpty(keeper.GetCode(ctx, codeHash))
 		}},
 	}
@@ -349,7 +349,7 @@ func (suite *StateDBTestSuite) TestRevertSnapshot() {
 		{"suicide", func(db vm.StateDB) {
 			db.SetState(address, v1, v2)
 			db.SetCode(address, []byte("hello world"))
-			suite.Require().True(db.Suicide(address))
+			db.SelfDestruct(address)
 		}},
 		{"add log", func(db vm.StateDB) {
 			db.AddLog(&ethtypes.Log{
