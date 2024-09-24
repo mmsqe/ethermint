@@ -40,9 +40,10 @@ func TestHandlerTestSuite(t *testing.T) {
 }
 
 func (suite *HandlerTestSuite) SetupTest() {
+	coins := sdk.NewCoins(sdk.NewCoin(types.DefaultEVMDenom, sdkmath.NewInt(100000000000000)))
+
 	t := suite.T()
 	suite.SetupTestWithCb(t, func(app *app.EthermintApp, genesis app.GenesisState) app.GenesisState {
-		coins := sdk.NewCoins(sdk.NewCoin(types.DefaultEVMDenom, sdkmath.NewInt(100000000000000)))
 		b32address := sdk.MustBech32ifyAddressBytes(sdk.GetConfig().GetBech32AccountAddrPrefix(), suite.ConsPubKey.Address().Bytes())
 		balances := []banktypes.Balance{
 			{
@@ -72,6 +73,10 @@ func (suite *HandlerTestSuite) SetupTest() {
 		genesis[authtypes.ModuleName] = app.AppCodec().MustMarshalJSON(&authGenesis)
 		return genesis
 	})
+
+	// add some virtual balance to the fee collector for refunding
+	suite.MintFeeCollectorVirtual(coins)
+
 	suite.ethSigner = ethtypes.LatestSignerForChainID(suite.App.EvmKeeper.ChainID())
 }
 
@@ -116,7 +121,7 @@ func (suite *HandlerTestSuite) TestHandleMsgEthereumTx() {
 		{
 			"invalid chain ID",
 			func() {
-				suite.Ctx = suite.Ctx.WithChainID("chainID").WithConsensusParams(*app.DefaultConsensusParams)
+				suite.Ctx = suite.Ctx.WithChainID("chainID").WithConsensusParams(*testutil.DefaultConsensusParams)
 			},
 			false,
 		},
@@ -347,7 +352,7 @@ func (suite *HandlerTestSuite) TestOutOfGasWhenDeployContract() {
 
 	// Deploy contract - Owner.sol
 	gasLimit := uint64(1)
-	suite.Ctx = suite.Ctx.WithGasMeter(storetypes.NewGasMeter(gasLimit)).WithConsensusParams(*app.DefaultConsensusParams)
+	suite.Ctx = suite.Ctx.WithGasMeter(storetypes.NewGasMeter(gasLimit)).WithConsensusParams(*testutil.DefaultConsensusParams)
 	gasPrice := big.NewInt(10000)
 
 	bytecode := common.FromHex("0x608060405234801561001057600080fd5b50336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055506000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16600073ffffffffffffffffffffffffffffffffffffffff167f342827c97908e5e2f71151c08502a66d44b6f758e3ac2f1de95f02eb95f0a73560405160405180910390a36102c4806100dc6000396000f3fe608060405234801561001057600080fd5b5060043610610053576000357c010000000000000000000000000000000000000000000000000000000090048063893d20e814610058578063a6f9dae1146100a2575b600080fd5b6100606100e6565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b6100e4600480360360208110156100b857600080fd5b81019080803573ffffffffffffffffffffffffffffffffffffffff16906020019092919050505061010f565b005b60008060009054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905090565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16146101d1576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004018080602001828103825260138152602001807f43616c6c6572206973206e6f74206f776e65720000000000000000000000000081525060200191505060405180910390fd5b8073ffffffffffffffffffffffffffffffffffffffff166000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff167f342827c97908e5e2f71151c08502a66d44b6f758e3ac2f1de95f02eb95f0a73560405160405180910390a3806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055505056fea265627a7a72315820f397f2733a89198bc7fed0764083694c5b828791f39ebcbc9e414bccef14b48064736f6c63430005100032")
@@ -386,7 +391,7 @@ func (suite *HandlerTestSuite) deployERC20Contract() common.Address {
 	nonce := k.GetNonce(suite.Ctx, suite.Address)
 	ctorArgs, err := types.ERC20Contract.ABI.Pack("", suite.Address, big.NewInt(10000000000))
 	suite.Require().NoError(err)
-	msg := core.Message{
+	msg := &core.Message{
 		From:              suite.Address,
 		To:                nil,
 		Nonce:             nonce,
@@ -473,9 +478,7 @@ func (suite *HandlerTestSuite) TestERC20TransferReverted() {
 			ethCfg := evmParams.GetChainConfig().EthereumConfig(nil)
 			baseFee := suite.App.EvmKeeper.GetBaseFee(suite.Ctx, ethCfg)
 
-			txData, err := types.UnpackTxData(tx.Data)
-			suite.Require().NoError(err)
-			fees, err := keeper.VerifyFee(txData, "aphoton", baseFee, true, true, true, suite.Ctx.IsCheckTx())
+			fees, err := keeper.VerifyFee(tx, "aphoton", baseFee, true, true, true, suite.Ctx.IsCheckTx())
 			suite.Require().NoError(err)
 			err = k.DeductTxCostsFromUserBalance(suite.Ctx, fees, tx.GetSender())
 			suite.Require().NoError(err)
@@ -567,13 +570,13 @@ func (suite *HandlerTestSuite) TestContractDeploymentRevert() {
 // DummyHook implements EvmHooks interface
 type DummyHook struct{}
 
-func (dh *DummyHook) PostTxProcessing(ctx sdk.Context, msg core.Message, receipt *ethtypes.Receipt) error {
+func (dh *DummyHook) PostTxProcessing(ctx sdk.Context, msg *core.Message, receipt *ethtypes.Receipt) error {
 	return nil
 }
 
 // FailureHook implements EvmHooks interface
 type FailureHook struct{}
 
-func (dh *FailureHook) PostTxProcessing(ctx sdk.Context, msg core.Message, receipt *ethtypes.Receipt) error {
+func (dh *FailureHook) PostTxProcessing(ctx sdk.Context, msg *core.Message, receipt *ethtypes.Receipt) error {
 	return errors.New("mock error")
 }

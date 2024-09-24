@@ -23,6 +23,7 @@ import (
 	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
+	evmtypes "github.com/evmos/ethermint/x/evm/types"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -460,7 +461,7 @@ func (suite *GRPCServerTestSuiteSuite) TestQueryTxLogs() {
 			func(vmdb vm.StateDB) {
 				expLogs = []*types.Log{
 					{
-						Address:     suite.Address.String(),
+						Address:     evmtypes.HexAddress(suite.Address.Bytes()),
 						Topics:      []string{common.BytesToHash([]byte("topic")).String()},
 						Data:        []byte("data"),
 						BlockNumber: 1,
@@ -898,6 +899,20 @@ func (suite *GRPCServerTestSuiteSuite) TestTraceTx() {
 				}
 				predecessors = []*types.MsgEthereumTx{}
 			},
+			expPass:         false,
+			enableFeemarket: true,
+		},
+		{
+			msg: "default trace with enableFeemarket and sufficient balance",
+			malleate: func() {
+				suite.App.EvmKeeper.SetBalance(suite.Ctx, suite.Address, big.NewInt(1000000000000000000), types.DefaultEVMDenom)
+				traceConfig = &types.TraceConfig{
+					DisableStack:   true,
+					DisableStorage: true,
+					EnableMemory:   false,
+				}
+				predecessors = []*types.MsgEthereumTx{}
+			},
 			expPass:         true,
 			traceResponse:   "{\"gas\":34828,\"failed\":false,\"returnValue\":\"0000000000000000000000000000000000000000000000000000000000000001\",\"structLogs\":[{\"pc\":0,\"op\":\"PUSH1\",\"gas\":",
 			enableFeemarket: true,
@@ -905,6 +920,18 @@ func (suite *GRPCServerTestSuiteSuite) TestTraceTx() {
 		{
 			msg: "javascript tracer with enableFeemarket",
 			malleate: func() {
+				traceConfig = &types.TraceConfig{
+					Tracer: "{data: [], fault: function(log) {}, step: function(log) { if(log.op.toString() == \"CALL\") this.data.push(log.stack.peek(0)); }, result: function() { return this.data; }}",
+				}
+				predecessors = []*types.MsgEthereumTx{}
+			},
+			expPass:         false,
+			enableFeemarket: true,
+		},
+		{
+			msg: "javascript tracer with enableFeemarket and sufficient balance",
+			malleate: func() {
+				suite.App.EvmKeeper.SetBalance(suite.Ctx, suite.Address, big.NewInt(1000000000000000000), types.DefaultEVMDenom)
 				traceConfig = &types.TraceConfig{
 					Tracer: "{data: [], fault: function(log) {}, step: function(log) { if(log.op.toString() == \"CALL\") this.data.push(log.stack.peek(0)); }, result: function() { return this.data; }}",
 				}

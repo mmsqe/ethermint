@@ -16,6 +16,7 @@
 package ante
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 
@@ -27,36 +28,58 @@ import (
 
 	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/evm/keeper"
+	"github.com/evmos/ethermint/x/evm/statedb"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/params"
 )
 
+type AccountGetter func(sdk.AccAddress) sdk.AccountI
+
+// NewCachedAccountGetter cache the account objects during the ante handler execution,
+// it's safe because there's no store branching in the ante handlers,
+// it also creates new account in memory if it doesn't exist in the store.
+func NewCachedAccountGetter(ctx sdk.Context, ak evmtypes.AccountKeeper) AccountGetter {
+	accounts := make(map[string]sdk.AccountI, 1)
+	return func(addr sdk.AccAddress) sdk.AccountI {
+		acc := accounts[string(addr)]
+		if acc == nil {
+			acc = ak.GetAccount(ctx, addr)
+			if acc == nil {
+				// we create a new account in memory if it doesn't exist,
+				// which is only set to store when updated.
+				acc = ak.NewAccountWithAddress(ctx, addr)
+			}
+			accounts[string(addr)] = acc
+		}
+		return acc
+	}
+}
+
 // VerifyEthAccount validates checks that the sender balance is greater than the total transaction cost.
-// The account will be set to store if it doesn't exis, i.e cannot be found on store.
+// The account will be created in memory if it doesn't exist, i.e cannot be found on store, which will eventually set to
+// store when increasing nonce.
 // This AnteHandler decorator will fail if:
 // - any of the msgs is not a MsgEthereumTx
 // - from address is empty
 // - account balance is lower than the transaction cost
 func VerifyEthAccount(
 	ctx sdk.Context, tx sdk.Tx,
-	evmKeeper EVMKeeper, ak evmtypes.AccountKeeper, evmDenom string,
+	evmKeeper EVMKeeper, evmDenom string,
+	accountGetter AccountGetter,
 ) error {
 	if !ctx.IsCheckTx() {
 		return nil
 	}
 
-	for i, msg := range tx.GetMsgs() {
+	for _, msg := range tx.GetMsgs() {
 		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
 		if !ok {
 			return errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
 		}
 
-		txData, err := evmtypes.UnpackTxData(msgEthTx.Data)
-		if err != nil {
-			return errorsmod.Wrapf(err, "failed to unpack tx data any for tx %d", i)
-		}
+		ethTx := msgEthTx.AsTransaction()
 
 		// sender address should be in the tx cache from the previous AnteHandle call
 		from := msgEthTx.GetFrom()
@@ -65,19 +88,15 @@ func VerifyEthAccount(
 		}
 
 		// check whether the sender address is EOA
-		fromAddr := common.BytesToAddress(from)
-		acct := evmKeeper.GetAccount(ctx, fromAddr)
-
-		if acct == nil {
-			acc := ak.NewAccountWithAddress(ctx, from)
-			ak.SetAccount(ctx, acc)
-		} else if acct.IsContract() {
+		acct := statedb.NewAccountFromSdkAccount(accountGetter(from))
+		if acct.IsContract() {
+			fromAddr := common.BytesToAddress(from)
 			return errorsmod.Wrapf(errortypes.ErrInvalidType,
 				"the sender is not EOA: address %s, codeHash <%s>", fromAddr, acct.CodeHash)
 		}
 
-		balance := evmKeeper.GetBalance(ctx, sdk.AccAddress(fromAddr.Bytes()), evmDenom)
-		if err := keeper.CheckSenderBalance(sdkmath.NewIntFromBigInt(balance), txData); err != nil {
+		balance := evmKeeper.GetBalance(ctx, from, evmDenom)
+		if err := keeper.CheckSenderBalance(sdkmath.NewIntFromBigIntMut(balance), ethTx); err != nil {
 			return errorsmod.Wrap(err, "failed to check sender balance")
 		}
 	}
@@ -101,18 +120,13 @@ func VerifyEthAccount(
 // - gas limit is greater than the block gas meter limit
 func CheckEthGasConsume(
 	ctx sdk.Context, tx sdk.Tx,
-	ethCfg *params.ChainConfig,
+	rules params.Rules,
 	evmKeeper EVMKeeper,
 	baseFee *big.Int,
 	maxGasWanted uint64,
 	evmDenom string,
 ) (sdk.Context, error) {
 	gasWanted := uint64(0)
-
-	blockHeight := big.NewInt(ctx.BlockHeight())
-	homestead := ethCfg.IsHomestead(blockHeight)
-	istanbul := ethCfg.IsIstanbul(blockHeight)
-	shanghai := ethCfg.IsShanghai(blockHeight, uint64(ctx.BlockHeader().Time.Unix()))
 	var events sdk.Events
 
 	// Use the lowest priority of all the messages as the final one.
@@ -124,35 +138,28 @@ func CheckEthGasConsume(
 			return ctx, errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
 		}
 
-		txData, err := evmtypes.UnpackTxData(msgEthTx.Data)
-		if err != nil {
-			return ctx, errorsmod.Wrap(err, "failed to unpack tx data")
-		}
-
-		priority := evmtypes.GetTxPriority(txData, baseFee)
+		priority := evmtypes.GetTxPriority(msgEthTx, baseFee)
 
 		if priority < minPriority {
 			minPriority = priority
 		}
 
-		if ctx.IsCheckTx() && maxGasWanted != 0 {
-			// We can't trust the tx gas limit, because we'll refund the unused gas.
-			if txData.GetGas() > maxGasWanted {
-				gasWanted += maxGasWanted
-			} else {
-				gasWanted += txData.GetGas()
-			}
-		} else {
-			gasWanted += txData.GetGas()
+		// We can't trust the tx gas limit, because we'll refund the unused gas.
+		gasLimit := msgEthTx.GetGas()
+		if maxGasWanted != 0 {
+			gasLimit = min(gasLimit, maxGasWanted)
 		}
-
+		if gasWanted > math.MaxInt64-gasLimit {
+			return ctx, fmt.Errorf("gasWanted(%d) + gasLimit(%d) overflow", gasWanted, gasLimit)
+		}
+		gasWanted += gasLimit
 		// user balance is already checked during CheckTx so there's no need to
 		// verify it again during ReCheckTx
 		if ctx.IsReCheckTx() {
 			continue
 		}
 
-		fees, err := keeper.VerifyFee(txData, evmDenom, baseFee, homestead, istanbul, shanghai, ctx.IsCheckTx())
+		fees, err := keeper.VerifyFee(msgEthTx, evmDenom, baseFee, rules.IsHomestead, rules.IsIstanbul, rules.IsShanghai, ctx.IsCheckTx())
 		if err != nil {
 			return ctx, errorsmod.Wrapf(err, "failed to verify the fees")
 		}
@@ -207,7 +214,7 @@ func CheckEthGasConsume(
 func CheckEthCanTransfer(
 	ctx sdk.Context, tx sdk.Tx,
 	baseFee *big.Int,
-	ethCfg *params.ChainConfig,
+	rules params.Rules,
 	evmKeeper EVMKeeper,
 	evmParams *evmtypes.Params,
 ) error {
@@ -217,38 +224,35 @@ func CheckEthCanTransfer(
 			return errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
 		}
 
-		coreMsg, err := msgEthTx.AsMessage(baseFee)
-		if err != nil {
-			return errorsmod.Wrapf(
-				err,
-				"failed to create an ethereum core.Message",
-			)
-		}
-
-		if evmtypes.IsLondon(ethCfg, ctx.BlockHeight()) {
+		tx := msgEthTx.AsTransaction()
+		if rules.IsLondon {
 			if baseFee == nil {
 				return errorsmod.Wrap(
 					evmtypes.ErrInvalidBaseFee,
 					"base fee is supported but evm block context value is nil",
 				)
 			}
-			if coreMsg.GasFeeCap.Cmp(baseFee) < 0 {
+			if tx.GasFeeCap().Cmp(baseFee) < 0 {
 				return errorsmod.Wrapf(
 					errortypes.ErrInsufficientFee,
 					"max fee per gas less than block base fee (%s < %s)",
-					coreMsg.GasFeeCap, baseFee,
+					tx.GasFeeCap(), baseFee,
 				)
 			}
 		}
-
+		value := tx.Value()
+		if value == nil || value.Sign() == -1 {
+			return fmt.Errorf("value (%s) must be positive", value)
+		}
+		from := common.BytesToAddress(msgEthTx.From)
 		// check that caller has enough balance to cover asset transfer for **topmost** call
 		// NOTE: here the gas consumed is from the context with the infinite gas meter
-		if coreMsg.Value.Sign() > 0 && !canTransfer(ctx, evmKeeper, evmParams.EvmDenom, coreMsg.From, coreMsg.Value) {
+		if value.Sign() > 0 && !canTransfer(ctx, evmKeeper, evmParams.EvmDenom, from, value) {
 			return errorsmod.Wrapf(
 				errortypes.ErrInsufficientFunds,
 				"failed to transfer %s from address %s using the EVM block context transfer function",
-				coreMsg.Value,
-				coreMsg.From,
+				value,
+				from,
 			)
 		}
 	}
@@ -262,11 +266,11 @@ func canTransfer(ctx sdk.Context, evmKeeper EVMKeeper, denom string, from common
 	return balance.Cmp(amount) >= 0
 }
 
-// CheckEthSenderNonce handles incrementing the sequence of the signer (i.e sender). If the transaction is a
+// CheckAndSetEthSenderNonce handles incrementing the sequence of the signer (i.e sender). If the transaction is a
 // contract creation, the nonce will be incremented during the transaction execution and not within
 // this AnteHandler decorator.
-func CheckEthSenderNonce(
-	ctx sdk.Context, tx sdk.Tx, ak evmtypes.AccountKeeper,
+func CheckAndSetEthSenderNonce(
+	ctx sdk.Context, tx sdk.Tx, ak evmtypes.AccountKeeper, unsafeUnOrderedTx bool, accountGetter AccountGetter,
 ) error {
 	for _, msg := range tx.GetMsgs() {
 		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
@@ -274,28 +278,28 @@ func CheckEthSenderNonce(
 			return errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
 		}
 
-		txData, err := evmtypes.UnpackTxData(msgEthTx.Data)
-		if err != nil {
-			return errorsmod.Wrap(err, "failed to unpack tx data")
-		}
+		tx := msgEthTx.AsTransaction()
 
 		// increase sequence of sender
-		acc := ak.GetAccount(ctx, msgEthTx.GetFrom())
+		from := msgEthTx.GetFrom()
+		acc := accountGetter(from)
 		if acc == nil {
 			return errorsmod.Wrapf(
 				errortypes.ErrUnknownAddress,
-				"account %s is nil", common.BytesToAddress(msgEthTx.GetFrom().Bytes()),
+				"account %s is nil", common.BytesToAddress(from.Bytes()),
 			)
 		}
 		nonce := acc.GetSequence()
 
-		// we merged the nonce verification to nonce increment, so when tx includes multiple messages
-		// with same sender, they'll be accepted.
-		if txData.GetNonce() != nonce {
-			return errorsmod.Wrapf(
-				errortypes.ErrInvalidSequence,
-				"invalid nonce; got %d, expected %d", txData.GetNonce(), nonce,
-			)
+		if !unsafeUnOrderedTx {
+			// we merged the nonce verification to nonce increment, so when tx includes multiple messages
+			// with same sender, they'll be accepted.
+			if tx.Nonce() != nonce {
+				return errorsmod.Wrapf(
+					errortypes.ErrInvalidSequence,
+					"invalid nonce; got %d, expected %d", tx.Nonce(), nonce,
+				)
+			}
 		}
 
 		if err := acc.SetSequence(nonce + 1); err != nil {

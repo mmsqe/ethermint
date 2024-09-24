@@ -140,6 +140,14 @@ func RegisterBlockNotFound(
 	return &tmrpctypes.ResultBlock{Block: nil}, nil
 }
 
+// Block panic
+func RegisterBlockPanic(client *mocks.Client, height int64) {
+	client.On("Block", rpc.ContextWithHeight(height), mock.AnythingOfType("*int64")).
+		Return(func(context.Context, *int64) *tmrpctypes.ResultBlock {
+			panic("Block call panic")
+		}, nil)
+}
+
 func TestRegisterBlock(t *testing.T) {
 	client := mocks.NewClient(t)
 	height := rpc.BlockNumber(1).Int64()
@@ -260,6 +268,25 @@ func RegisterBlockByHashError(client *mocks.Client, hash common.Hash, tx []byte)
 func RegisterBlockByHashNotFound(client *mocks.Client, hash common.Hash, tx []byte) {
 	client.On("BlockByHash", rpc.ContextWithHeight(1), []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}).
 		Return(nil, nil)
+}
+
+// HeaderByHash
+func RegisterHeaderByHash(
+	client *mocks.Client,
+	hash common.Hash,
+	tx []byte,
+) (*tmrpctypes.ResultHeader, error) {
+	block := types.MakeBlock(1, []types.Tx{tx}, nil, nil)
+	resHeader := &tmrpctypes.ResultHeader{Header: &block.Header}
+
+	client.On("HeaderByHash", rpc.ContextWithHeight(1), bytes.HexBytes(hash.Bytes())).
+		Return(resHeader, nil)
+	return resHeader, nil
+}
+
+func RegisterHeaderByHashError(client *mocks.Client, hash common.Hash, tx []byte) {
+	client.On("HeaderByHash", rpc.ContextWithHeight(1), bytes.HexBytes(hash.Bytes())).
+		Return(nil, errortypes.ErrInvalidRequest)
 }
 
 func RegisterABCIQueryWithOptions(client *mocks.Client, height int64, path string, data bytes.HexBytes, opts tmrpcclient.ABCIQueryOptions) {

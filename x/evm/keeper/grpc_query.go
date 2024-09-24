@@ -235,6 +235,7 @@ func (k Keeper) EthCall(c context.Context, req *types.EthCallRequest) (*types.Ms
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
+	ctx = ctx.WithProposer(GetProposerAddress(ctx, req.ProposerAddress))
 
 	var args types.TransactionArgs
 	err := json.Unmarshal(req.Args, &args)
@@ -245,7 +246,7 @@ func (k Keeper) EthCall(c context.Context, req *types.EthCallRequest) (*types.Ms
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	cfg, err := k.EVMConfig(ctx, GetProposerAddress(ctx, req.ProposerAddress), chainID, common.Hash{})
+	cfg, err := k.EVMConfig(ctx, chainID, common.Hash{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -284,6 +285,7 @@ func (k Keeper) EstimateGas(c context.Context, req *types.EthCallRequest) (*type
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
+	ctx = ctx.WithProposer(GetProposerAddress(ctx, req.ProposerAddress))
 	chainID, err := getChainID(ctx, req.ChainId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -313,7 +315,10 @@ func (k Keeper) EstimateGas(c context.Context, req *types.EthCallRequest) (*type
 		// Query block gas limit
 		params := ctx.ConsensusParams()
 		if params.Block != nil && params.Block.MaxGas > 0 {
-			hi = uint64(params.Block.MaxGas)
+			hi, err = ethermint.SafeUint64(params.Block.MaxGas)
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			hi = req.GasCap
 		}
@@ -326,7 +331,7 @@ func (k Keeper) EstimateGas(c context.Context, req *types.EthCallRequest) (*type
 		hi = req.GasCap
 	}
 	gasCap = hi
-	cfg, err := k.EVMConfig(ctx, GetProposerAddress(ctx, req.ProposerAddress), chainID, common.Hash{})
+	cfg, err := k.EVMConfig(ctx, chainID, common.Hash{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to load evm config")
 	}
@@ -347,7 +352,7 @@ func (k Keeper) EstimateGas(c context.Context, req *types.EthCallRequest) (*type
 	// Create a helper to check if a gas allowance results in an executable transaction
 	executable := func(gas uint64) (vmError bool, rsp *types.MsgEthereumTxResponse, err error) {
 		// update the message with the new gas value
-		msg = core.Message{
+		msg = &core.Message{
 			From:              msg.From,
 			To:                msg.To,
 			Nonce:             msg.Nonce,
@@ -441,12 +446,13 @@ func execTrace[T traceRequest](
 	ctx = ctx.WithBlockHeight(contextHeight)
 	ctx = ctx.WithBlockTime(req.GetBlockTime())
 	ctx = ctx.WithHeaderHash(common.Hex2Bytes(req.GetBlockHash()))
+	ctx = ctx.WithProposer(GetProposerAddress(ctx, req.GetProposerAddress()))
 
 	chainID, err := getChainID(ctx, req.GetChainId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	cfg, err := k.EVMConfig(ctx, GetProposerAddress(ctx, req.GetProposerAddress()), chainID, common.Hash{})
+	cfg, err := k.EVMConfig(ctx, chainID, common.Hash{})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to load evm config: %s", err.Error())
 	}
@@ -455,7 +461,7 @@ func execTrace[T traceRequest](
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	result, _, err := k.prepareTrace(ctx, cfg, *msg, req.GetTraceConfig(), false)
+	result, _, err := k.prepareTrace(ctx, cfg, msg, req.GetTraceConfig(), false)
 	if err != nil {
 		// error will be returned with detail status from traceTx
 		return nil, err
@@ -487,8 +493,11 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 					continue
 				}
 				cfg.TxConfig.TxHash = ethTx.Hash()
-				cfg.TxConfig.TxIndex = uint(i)
-				rsp, err := k.ApplyMessageWithConfig(ctx, *msg, cfg, true)
+				cfg.TxConfig.TxIndex, err = ethermint.SafeUint(i)
+				if err != nil {
+					continue
+				}
+				rsp, err := k.ApplyMessageWithConfig(ctx, msg, cfg, true)
 				if err != nil {
 					continue
 				}
@@ -536,12 +545,13 @@ func (k Keeper) TraceBlock(c context.Context, req *types.QueryTraceBlockRequest)
 	ctx = ctx.WithBlockHeight(contextHeight)
 	ctx = ctx.WithBlockTime(req.BlockTime)
 	ctx = ctx.WithHeaderHash(common.Hex2Bytes(req.BlockHash))
+	ctx = ctx.WithProposer(GetProposerAddress(ctx, req.ProposerAddress))
 	chainID, err := getChainID(ctx, req.ChainId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	cfg, err := k.EVMConfig(ctx, GetProposerAddress(ctx, req.ProposerAddress), chainID, common.Hash{})
+	cfg, err := k.EVMConfig(ctx, chainID, common.Hash{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to load evm config")
 	}
@@ -553,12 +563,15 @@ func (k Keeper) TraceBlock(c context.Context, req *types.QueryTraceBlockRequest)
 		result := types.TxTraceResult{}
 		ethTx := tx.AsTransaction()
 		cfg.TxConfig.TxHash = ethTx.Hash()
-		cfg.TxConfig.TxIndex = uint(i)
+		cfg.TxConfig.TxIndex, err = ethermint.SafeUint(i)
+		if err != nil {
+			return nil, err
+		}
 		msg, err := core.TransactionToMessage(ethTx, signer, cfg.BaseFee)
 		if err != nil {
 			result.Error = status.Error(codes.Internal, err.Error()).Error()
 		} else {
-			traceResult, logIndex, err := k.prepareTrace(ctx, cfg, *msg, req.TraceConfig, true)
+			traceResult, logIndex, err := k.prepareTrace(ctx, cfg, msg, req.TraceConfig, true)
 			if err != nil {
 				result.Error = err.Error()
 			} else {
@@ -602,7 +615,7 @@ func (k Keeper) TraceCall(c context.Context, req *types.QueryTraceCallRequest) (
 			if err != nil {
 				return nil, err
 			}
-			return &msg, nil
+			return msg, nil
 		},
 	)
 	if err != nil {
@@ -618,7 +631,7 @@ func (k Keeper) TraceCall(c context.Context, req *types.QueryTraceCallRequest) (
 func (k *Keeper) prepareTrace(
 	ctx sdk.Context,
 	cfg *EVMConfig,
-	msg core.Message,
+	msg *core.Message,
 	traceConfig *types.TraceConfig,
 	commitMessage bool,
 ) (*interface{}, uint, error) {
@@ -715,7 +728,7 @@ func (k *Keeper) prepareTrace(
 	}
 
 	if res.VmError != "" {
-		if res.VmError != vm.ErrExecutionReverted.Error() {
+		if res.VmError == vm.ErrInsufficientBalance.Error() {
 			return nil, 0, status.Error(codes.Internal, res.VmError)
 		}
 	}

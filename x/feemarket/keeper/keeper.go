@@ -18,12 +18,11 @@ package keeper
 import (
 	"math/big"
 
-	corestoretypes "cosmossdk.io/core/store"
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/evmos/ethermint/x/feemarket/types"
 )
 
@@ -33,21 +32,21 @@ var KeyPrefixBaseFeeV1 = []byte{2}
 // Keeper grants access to the Fee Market module state.
 type Keeper struct {
 	// Protobuf codec
-	cdc          codec.BinaryCodec
-	storeService corestoretypes.KVStoreService
+	cdc codec.BinaryCodec
 	// Store key required for the Fee Market Prefix KVStore.
-	storeKey     storetypes.StoreKey
-	transientKey storetypes.StoreKey
+	storeKey storetypes.StoreKey
 	// the address capable of executing a MsgUpdateParams message. Typically, this should be the x/gov module account.
 	authority sdk.AccAddress
+	// Legacy subspace
+	ss paramstypes.Subspace
 }
 
 // NewKeeper generates new fee market module keeper
 func NewKeeper(
 	cdc codec.BinaryCodec,
-	storeService corestoretypes.KVStoreService,
 	authority sdk.AccAddress,
-	storeKey, transientKey storetypes.StoreKey,
+	storeKey storetypes.StoreKey,
+	ss paramstypes.Subspace,
 ) Keeper {
 	// ensure authority account is correctly formatted
 	if err := sdk.VerifyAddressFormat(authority); err != nil {
@@ -55,11 +54,10 @@ func NewKeeper(
 	}
 
 	return Keeper{
-		cdc:          cdc,
-		storeService: storeService,
-		storeKey:     storeKey,
-		authority:    authority,
-		transientKey: transientKey,
+		cdc:       cdc,
+		storeKey:  storeKey,
+		authority: authority,
+		ss:        ss,
 	}
 }
 
@@ -91,30 +89,6 @@ func (k Keeper) GetBlockGasWanted(ctx sdk.Context) uint64 {
 	}
 
 	return sdk.BigEndianToUint64(bz)
-}
-
-// GetTransientGasWanted returns the gas wanted in the current block from transient store.
-func (k Keeper) GetTransientGasWanted(ctx sdk.Context) uint64 {
-	store := ctx.TransientStore(k.transientKey)
-	bz := store.Get(types.KeyPrefixTransientBlockGasWanted)
-	if len(bz) == 0 {
-		return 0
-	}
-	return sdk.BigEndianToUint64(bz)
-}
-
-// SetTransientBlockGasWanted sets the block gas wanted to the transient store.
-func (k Keeper) SetTransientBlockGasWanted(ctx sdk.Context, gasWanted uint64) {
-	store := ctx.TransientStore(k.transientKey)
-	gasBz := sdk.Uint64ToBigEndian(gasWanted)
-	store.Set(types.KeyPrefixTransientBlockGasWanted, gasBz)
-}
-
-// AddTransientGasWanted adds the cumulative gas wanted in the transient store
-func (k Keeper) AddTransientGasWanted(ctx sdk.Context, gasWanted uint64) (uint64, error) {
-	result := k.GetTransientGasWanted(ctx) + gasWanted
-	k.SetTransientBlockGasWanted(ctx, result)
-	return result, nil
 }
 
 // GetBaseFeeV1 get the base fee from v1 version of states.

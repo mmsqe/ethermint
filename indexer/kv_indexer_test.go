@@ -11,10 +11,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/evmos/ethermint/app"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 	"github.com/evmos/ethermint/indexer"
 	"github.com/evmos/ethermint/tests"
+	"github.com/evmos/ethermint/testutil/config"
 	"github.com/evmos/ethermint/x/evm/types"
 	"github.com/stretchr/testify/require"
 )
@@ -34,7 +34,7 @@ func TestKVIndexer(t *testing.T) {
 	require.NoError(t, tx.Sign(ethSigner, signer))
 	txHash := tx.AsTransaction().Hash()
 
-	encodingConfig := app.MakeConfigForTest()
+	encodingConfig := config.MakeConfigForTest(nil)
 	clientCtx := client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithCodec(encodingConfig.Codec)
 
 	// build cosmos-sdk wrapper tx
@@ -88,6 +88,7 @@ func TestKVIndexer(t *testing.T) {
 							{Key: "txIndex", Value: "0"},
 						}},
 						{Type: types.EventTypeEthereumTx, Attributes: []abci.EventAttribute{
+							{Key: "ethereumTxHash", Value: txHash.Hex()},
 							{Key: "amount", Value: "1000"},
 							{Key: "txGasUsed", Value: "21000"},
 							{Key: "txHash", Value: "14A84ED06282645EFBF080E0B7ED80D8D8D6A36337668A12B5F229F81CDD3F57"},

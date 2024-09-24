@@ -149,13 +149,16 @@ which accepts a path for the resulting pprof file.
 			serverCtx.Logger.Info("Unlocking keyring")
 
 			// fire unlock precess for keyring
-			keyringBackend, _ := cmd.Flags().GetString(flags.FlagKeyringBackend)
-			if keyringBackend == keyring.BackendFile {
+			krBackend := clientCtx.Keyring.Backend()
+			if krBackend == keyring.BackendFile {
 				_, err = clientCtx.Keyring.List()
 				if err != nil {
 					return err
 				}
 			}
+
+			// set keyring backend type to the server context
+			serverCtx.Viper.Set(flags.FlagKeyringBackend, krBackend)
 
 			serverCtx.Logger.Info("starting ABCI with CometBFT")
 
@@ -224,6 +227,7 @@ which accepts a path for the resulting pprof file.
 
 	cmd.Flags().Uint64(server.FlagStateSyncSnapshotInterval, 0, "State sync snapshot interval")
 	cmd.Flags().Uint32(server.FlagStateSyncSnapshotKeepRecent, 2, "State sync snapshot to keep")
+	cmd.Flags().Int(server.FlagMempoolMaxTxs, config.DefaultMaxTxs, "Sets MaxTx value for the app-side mempool")
 
 	// add support for all CometBFT-specific command line options
 	tcmd.AddNodeFlags(cmd)
@@ -460,7 +464,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, opts Start
 		defer apiSrv.Close()
 	}
 
-	clientCtx, httpSrv, httpSrvDone, err := startJSONRPCServer(svrCtx, clientCtx, g, config, genDocProvider, idxer)
+	clientCtx, httpSrv, httpSrvDone, err := startJSONRPCServer(svrCtx, clientCtx, g, config, genDocProvider, idxer, app)
 	if httpSrv != nil {
 		defer func() {
 			shutdownCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
@@ -652,10 +656,16 @@ func startJSONRPCServer(
 	config config.Config,
 	genDocProvider node.GenesisDocProvider,
 	idxer ethermint.EVMTxIndexer,
+	app types.Application,
 ) (ctx client.Context, httpSrv *http.Server, httpSrvDone chan struct{}, err error) {
 	ctx = clientCtx
 	if !config.JSONRPC.Enable {
 		return
+	}
+
+	txApp, ok := app.(AppWithPendingTxStream)
+	if !ok {
+		return ctx, httpSrv, httpSrvDone, fmt.Errorf("json-rpc server requires AppWithPendingTxStream")
 	}
 
 	genDoc, err := genDocProvider()
@@ -665,7 +675,7 @@ func startJSONRPCServer(
 
 	ctx = clientCtx.WithChainID(genDoc.ChainID)
 	g.Go(func() error {
-		httpSrv, httpSrvDone, err = StartJSONRPC(svrCtx, clientCtx, g, &config, idxer)
+		httpSrv, httpSrvDone, err = StartJSONRPC(svrCtx, clientCtx, g, &config, idxer, txApp)
 		return err
 	})
 	return

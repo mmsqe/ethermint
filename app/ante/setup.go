@@ -30,15 +30,11 @@ import (
 
 // SetupEthContext is adapted from SetUpContextDecorator from cosmos-sdk, it ignores gas consumption
 // by setting the gas meter to infinite
-func SetupEthContext(ctx sdk.Context, evmKeeper EVMKeeper) (newCtx sdk.Context, err error) {
+func SetupEthContext(ctx sdk.Context) (newCtx sdk.Context, err error) {
 	// We need to setup an empty gas config so that the gas is consistent with Ethereum.
 	newCtx = ctx.WithGasMeter(storetypes.NewInfiniteGasMeter()).
 		WithKVGasConfig(storetypes.GasConfig{}).
 		WithTransientKVGasConfig(storetypes.GasConfig{})
-
-	// Reset transient gas used to prepare the execution of current cosmos tx.
-	// Transient gas-used is necessary to sum the gas-used of cosmos tx, when it contains multiple eth msgs.
-	evmKeeper.ResetTransientGasUsed(ctx)
 
 	return newCtx, nil
 }
@@ -111,30 +107,25 @@ func ValidateEthBasic(ctx sdk.Context, tx sdk.Tx, evmParams *evmtypes.Params, ba
 
 		txGasLimit += msgEthTx.GetGas()
 
-		txData, err := evmtypes.UnpackTxData(msgEthTx.Data)
-		if err != nil {
-			return errorsmod.Wrap(err, "failed to unpack MsgEthereumTx Data")
-		}
-
+		tx := msgEthTx.AsTransaction()
 		// return error if contract creation or call are disabled through governance
-		if !enableCreate && txData.GetTo() == nil {
+		if !enableCreate && tx.To() == nil {
 			return errorsmod.Wrap(evmtypes.ErrCreateDisabled, "failed to create new contract")
-		} else if !enableCall && txData.GetTo() != nil {
+		} else if !enableCall && tx.To() != nil {
 			return errorsmod.Wrap(evmtypes.ErrCallDisabled, "failed to call contract")
 		}
 
-		if baseFee == nil && txData.TxType() == ethtypes.DynamicFeeTxType {
+		if baseFee == nil && tx.Type() == ethtypes.DynamicFeeTxType {
 			return errorsmod.Wrap(ethtypes.ErrTxTypeNotSupported, "dynamic fee tx not supported")
 		}
 
-		ethTx := ethtypes.NewTx(txData.AsEthereumData())
-		if !allowUnprotectedTxs && !ethTx.Protected() {
+		if !allowUnprotectedTxs && !tx.Protected() {
 			return errorsmod.Wrapf(
 				errortypes.ErrNotSupported,
 				"rejected unprotected Ethereum transaction. Please EIP155 sign your transaction to protect it against replay-attacks")
 		}
 
-		txFee = txFee.Add(sdk.Coin{Denom: evmDenom, Amount: sdkmath.NewIntFromBigInt(txData.Fee())})
+		txFee = txFee.Add(sdk.Coin{Denom: evmDenom, Amount: sdkmath.NewIntFromBigInt(msgEthTx.GetFee())})
 	}
 
 	if !authInfo.Fee.Amount.Equal(txFee) {

@@ -72,6 +72,10 @@ func (k *Keeper) ForEachStorage(ctx sdk.Context, addr common.Address, cb func(ke
 	}
 }
 
+func (k *Keeper) Transfer(ctx sdk.Context, sender, recipient sdk.AccAddress, coins sdk.Coins) error {
+	return k.bankKeeper.SendCoins(ctx, sender, recipient, coins)
+}
+
 func (k *Keeper) AddBalance(ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins) error {
 	if err := k.bankKeeper.MintCoins(ctx, types.ModuleName, coins); err != nil {
 		return err
@@ -131,6 +135,20 @@ func (k *Keeper) SetAccount(ctx sdk.Context, addr common.Address, account stated
 		"nonce", account.Nonce,
 		"codeHash", codeHash,
 	)
+	return nil
+}
+
+func (k *Keeper) incrNonce(ctx sdk.Context, addr sdk.AccAddress) error {
+	acct := k.accountKeeper.GetAccount(ctx, addr)
+	if acct == nil {
+		acct = k.accountKeeper.NewAccountWithAddress(ctx, addr)
+	}
+
+	if err := acct.SetSequence(acct.GetSequence() + 1); err != nil {
+		return err
+	}
+
+	k.accountKeeper.SetAccount(ctx, acct)
 	return nil
 }
 

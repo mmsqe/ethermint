@@ -27,10 +27,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/core/types"
 	ethparams "github.com/ethereum/go-ethereum/params"
-	"github.com/evmos/ethermint/app"
 	"github.com/evmos/ethermint/app/ante"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 	"github.com/evmos/ethermint/tests"
+	"github.com/evmos/ethermint/testutil"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 
 	amino "github.com/cosmos/cosmos-sdk/codec"
@@ -315,10 +315,10 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 
 				txBuilder := suite.CreateTestTxBuilder(signedTx, privKey, 1, false)
 
-				txData, err := evmtypes.UnpackTxData(signedTx.Data)
-				suite.Require().NoError(err)
+				txData := signedTx.AsTransaction()
+				suite.Require().NotNil(txData)
 
-				expFee := txData.Fee()
+				expFee := signedTx.GetFee()
 				invalidFee := new(big.Int).Add(expFee, big.NewInt(1))
 				invalidFeeAmount := sdk.Coins{sdk.NewCoin(evmtypes.DefaultEVMDenom, sdkmath.NewIntFromBigInt(invalidFee))}
 				txBuilder.SetFeeAmount(invalidFeeAmount)
@@ -937,7 +937,8 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 		suite.Run(tc.name, func() {
 			setup()
 
-			suite.ctx = suite.ctx.WithIsCheckTx(tc.checkTx).WithIsReCheckTx(tc.reCheckTx).WithConsensusParams(*app.DefaultConsensusParams)
+			suite.ctx = suite.ctx.WithIsCheckTx(tc.checkTx).WithIsReCheckTx(tc.reCheckTx).WithConsensusParams(*testutil.DefaultConsensusParams)
+			suite.app.EvmKeeper.RemoveParamsCache(suite.ctx)
 
 			// expConsumed := params.TxGasContractCreation + params.TxGas
 			_, err := suite.anteHandler(suite.ctx, tc.txFn(), false)
@@ -1207,7 +1208,7 @@ func (suite *AnteTestSuite) TestAnteHandlerWithDynamicTxFee() {
 			suite.Require().NoError(acc.SetSequence(1))
 			suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
 
-			suite.ctx = suite.ctx.WithIsCheckTx(tc.checkTx).WithIsReCheckTx(tc.reCheckTx).WithConsensusParams(*app.DefaultConsensusParams)
+			suite.ctx = suite.ctx.WithIsCheckTx(tc.checkTx).WithIsReCheckTx(tc.reCheckTx).WithConsensusParams(*testutil.DefaultConsensusParams)
 			suite.app.EvmKeeper.SetBalance(suite.ctx, addr, big.NewInt((ethparams.InitialBaseFee+10)*100000), evmtypes.DefaultEVMDenom)
 			_, err := suite.anteHandler(suite.ctx, tc.txFn(), false)
 			if tc.expPass {
@@ -1336,7 +1337,7 @@ func (suite *AnteTestSuite) TestAnteHandlerWithParams() {
 			suite.Require().NoError(acc.SetSequence(1))
 			suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
 
-			suite.ctx = suite.ctx.WithIsCheckTx(true).WithConsensusParams(*app.DefaultConsensusParams)
+			suite.ctx = suite.ctx.WithIsCheckTx(true).WithConsensusParams(*testutil.DefaultConsensusParams)
 			suite.app.EvmKeeper.SetBalance(suite.ctx, addr, big.NewInt((ethparams.InitialBaseFee+10)*100000), evmtypes.DefaultEVMDenom)
 			_, err := suite.anteHandler(suite.ctx, tc.txFn(), false)
 			if tc.expErr == nil {

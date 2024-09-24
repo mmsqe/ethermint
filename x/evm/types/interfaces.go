@@ -47,6 +47,8 @@ type BankKeeper interface {
 	authtypes.BankKeeper
 	GetBalance(ctx context.Context, addr sdk.AccAddress, denom string) sdk.Coin
 	SendCoinsFromModuleToAccount(ctx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
+	SendCoinsFromModuleToAccountVirtual(ctx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
+	SendCoinsFromAccountToModuleVirtual(ctx context.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 	MintCoins(ctx context.Context, moduleName string, amt sdk.Coins) error
 	BurnCoins(ctx context.Context, moduleName string, amt sdk.Coins) error
 	BlockedAddr(addr sdk.AccAddress) bool
@@ -62,7 +64,6 @@ type StakingKeeper interface {
 type FeeMarketKeeper interface {
 	GetBaseFee(ctx sdk.Context) *big.Int
 	GetParams(ctx sdk.Context) feemarkettypes.Params
-	AddTransientGasWanted(ctx sdk.Context, gasWanted uint64) (uint64, error)
 }
 
 // Event Hooks
@@ -71,7 +72,7 @@ type FeeMarketKeeper interface {
 // EvmHooks event hooks for evm tx processing
 type EvmHooks interface {
 	// Must be called after tx is processed successfully, if return an error, the whole transaction is reverted.
-	PostTxProcessing(ctx sdk.Context, msg core.Message, receipt *ethtypes.Receipt) error
+	PostTxProcessing(ctx sdk.Context, msg *core.Message, receipt *ethtypes.Receipt) error
 }
 
 type (

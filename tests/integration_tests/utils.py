@@ -10,6 +10,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import bech32
+import eth_utils
+import rlp
 from dateutil.parser import isoparse
 from dotenv import load_dotenv
 from eth_account import Account
@@ -40,6 +42,7 @@ TEST_CONTRACTS = {
     "TestMessageCall": "TestMessageCall.sol",
     "Calculator": "Calculator.sol",
     "Caller": "Caller.sol",
+    "Random": "Random.sol",
 }
 
 
@@ -327,7 +330,7 @@ def find_log_event_attrs(events, ev_type, cond=None):
     return None
 
 
-def approve_proposal(n, rsp, status="PROPOSAL_STATUS_PASSED"):
+def approve_proposal(n, rsp):
     cli = n.cosmos_cli()
     rsp = cli.event_query_tx_for(rsp["txhash"])
     # get proposal_id
@@ -350,4 +353,21 @@ def approve_proposal(n, rsp, status="PROPOSAL_STATUS_PASSED"):
     proposal = cli.query_proposal(proposal_id)
     wait_for_block_time(cli, isoparse(proposal["voting_end_time"]))
     proposal = cli.query_proposal(proposal_id)
-    assert proposal["status"] == status, proposal
+    assert proposal["status"] == "PROPOSAL_STATUS_PASSED", proposal
+
+
+class ContractAddress(rlp.Serializable):
+    fields = [
+        ("from", rlp.sedes.Binary()),
+        ("nonce", rlp.sedes.big_endian_int),
+    ]
+
+
+def contract_address(addr, nonce):
+    return eth_utils.to_checksum_address(
+        eth_utils.to_hex(
+            eth_utils.keccak(
+                rlp.encode(ContractAddress(eth_utils.to_bytes(hexstr=addr), nonce))
+            )[12:]
+        )
+    )

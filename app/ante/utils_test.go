@@ -18,6 +18,7 @@ import (
 	"github.com/evmos/ethermint/app"
 	"github.com/evmos/ethermint/ethereum/eip712"
 	"github.com/evmos/ethermint/testutil"
+	"github.com/evmos/ethermint/testutil/config"
 	utiltx "github.com/evmos/ethermint/testutil/tx"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -82,7 +83,7 @@ func (suite *AnteTestSuite) SetupTest() {
 	suite.Require().NoError(err)
 	suite.priv = priv
 
-	suite.app = app.Setup(checkTx, func(app *app.EthermintApp, genesis app.GenesisState) app.GenesisState {
+	suite.app = testutil.Setup(checkTx, func(app *app.EthermintApp, genesis app.GenesisState) app.GenesisState {
 		if suite.enableFeemarket {
 			// setup feemarketGenesis params
 			feemarketGenesis := feemarkettypes.DefaultGenesisState()
@@ -111,7 +112,7 @@ func (suite *AnteTestSuite) SetupTest() {
 	})
 	header := tmproto.Header{Height: 2, ChainID: testutil.TestnetChainID + "-1", Time: time.Now().UTC()}
 	suite.ctx = suite.app.BaseApp.NewUncachedContext(checkTx, header).
-		WithConsensusParams(*app.DefaultConsensusParams).
+		WithConsensusParams(*testutil.DefaultConsensusParams).
 		WithMinGasPrices(sdk.NewDecCoins(sdk.NewDecCoin(evmtypes.DefaultEVMDenom, sdkmath.OneInt()))).
 		WithBlockGasMeter(storetypes.NewGasMeter(1000000000000000000))
 	suite.app.EvmKeeper.WithChainID(suite.ctx)
@@ -123,7 +124,7 @@ func (suite *AnteTestSuite) SetupTest() {
 	acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr)
 	suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
 
-	encodingConfig := app.MakeConfigForTest()
+	encodingConfig := config.MakeConfigForTest(suite.app.BasicModuleManager)
 	// We're using TestMsg amino encoding in some tests, so register it here.
 	encodingConfig.Amino.RegisterConcrete(&testdata.TestMsg{}, "testdata.TestMsg", nil)
 	eip712.SetEncodingConfig(encodingConfig)
@@ -230,10 +231,10 @@ func (suite *AnteTestSuite) CreateTestTxBuilder(
 	err = builder.SetMsgs(msg)
 	suite.Require().NoError(err)
 
-	txData, err := evmtypes.UnpackTxData(msg.Data)
-	suite.Require().NoError(err)
+	txData := msg.AsTransaction()
+	suite.Require().NotNil(txData)
 
-	fees := sdk.NewCoins(sdk.NewCoin(evmtypes.DefaultEVMDenom, sdkmath.NewIntFromBigInt(txData.Fee())))
+	fees := sdk.NewCoins(sdk.NewCoin(evmtypes.DefaultEVMDenom, sdkmath.NewIntFromBigInt(msg.GetFee())))
 	builder.SetFeeAmount(fees)
 	builder.SetGasLimit(msg.GetGas())
 
@@ -249,7 +250,7 @@ func (suite *AnteTestSuite) CreateTestTxBuilder(
 				SignMode:  defaultSignMode,
 				Signature: nil,
 			},
-			Sequence: txData.GetNonce(),
+			Sequence: txData.Nonce(),
 		}
 
 		sigsV2 := []signing.SignatureV2{sigV2}
@@ -262,12 +263,12 @@ func (suite *AnteTestSuite) CreateTestTxBuilder(
 		signerData := authsigning.SignerData{
 			ChainID:       suite.ctx.ChainID(),
 			AccountNumber: accNum,
-			Sequence:      txData.GetNonce(),
+			Sequence:      txData.Nonce(),
 		}
 		sigV2, err = tx.SignWithPrivKey(
 			suite.ctx,
 			defaultSignMode, signerData,
-			txBuilder, priv, suite.clientCtx.TxConfig, txData.GetNonce(),
+			txBuilder, priv, suite.clientCtx.TxConfig, txData.Nonce(),
 		)
 		suite.Require().NoError(err)
 

@@ -31,6 +31,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/hashicorp/go-metrics"
 
+	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/evm/types"
 )
 
@@ -44,7 +45,6 @@ func (k *Keeper) EthereumTx(goCtx context.Context, msg *types.MsgEthereumTx) (*t
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	tx := msg.AsTransaction()
-	txIndex := k.GetTxIndexTransient(ctx)
 
 	labels := []metrics.Label{
 		telemetry.NewLabel("tx_type", fmt.Sprintf("%d", tx.Type())),
@@ -76,8 +76,15 @@ func (k *Keeper) EthereumTx(goCtx context.Context, msg *types.MsgEthereumTx) (*t
 
 			// Observe which users define a gas limit >> gas used. Note, that
 			// gas_limit and gas_used are always > 0
-			gasLimit := sdkmath.LegacyNewDec(int64(tx.Gas()))
-			gasRatio, err := gasLimit.QuoInt64(int64(response.GasUsed)).Float64()
+			gasLimit, err := ethermint.SafeInt64(tx.Gas())
+			if err != nil {
+				k.Logger(ctx).Error("failed to cast gas to int64", "error", err)
+			}
+			gasUsed, err := ethermint.SafeInt64(response.GasUsed)
+			if err != nil {
+				k.Logger(ctx).Error("failed to cast gasUsed to int64", "error", err)
+			}
+			gasRatio, err := sdkmath.LegacyNewDec(gasLimit).QuoInt64(gasUsed).Float64()
 			if err == nil {
 				telemetry.SetGaugeWithLabels(
 					[]string{"tx", "msg", "ethereum_tx", "gas_limit", "per", "gas_used"},
@@ -92,8 +99,6 @@ func (k *Keeper) EthereumTx(goCtx context.Context, msg *types.MsgEthereumTx) (*t
 		sdk.NewAttribute(sdk.AttributeKeyAmount, tx.Value().String()),
 		// add event for ethereum transaction hash format
 		sdk.NewAttribute(types.AttributeKeyEthereumTxHash, response.Hash),
-		// add event for index of valid ethereum tx
-		sdk.NewAttribute(types.AttributeKeyTxIndex, strconv.FormatUint(txIndex, 10)),
 		// add event for eth tx gas used, we can't get it from cosmos tx result when it contains multiple eth tx msgs.
 		sdk.NewAttribute(types.AttributeKeyTxGasUsed, strconv.FormatUint(response.GasUsed, 10)),
 	}

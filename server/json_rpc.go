@@ -29,9 +29,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	ethlog "github.com/ethereum/go-ethereum/log"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
+	"github.com/evmos/ethermint/app/ante"
 	"github.com/evmos/ethermint/rpc"
 	"github.com/evmos/ethermint/rpc/stream"
-
+	rpctypes "github.com/evmos/ethermint/rpc/types"
 	"github.com/evmos/ethermint/server/config"
 	ethermint "github.com/evmos/ethermint/types"
 )
@@ -41,12 +42,17 @@ const (
 	MaxRetry        = 6
 )
 
+type AppWithPendingTxStream interface {
+	RegisterPendingTxListener(listener ante.PendingTxListener)
+}
+
 // StartJSONRPC starts the JSON-RPC server
 func StartJSONRPC(srvCtx *server.Context,
 	clientCtx client.Context,
 	g *errgroup.Group,
 	config *config.Config,
 	indexer ethermint.EVMTxIndexer,
+	app AppWithPendingTxStream,
 ) (*http.Server, chan struct{}, error) {
 	logger := srvCtx.Logger.With("module", "geth")
 
@@ -57,8 +63,9 @@ func StartJSONRPC(srvCtx *server.Context,
 
 	var rpcStream *stream.RPCStream
 	var err error
+	queryClient := rpctypes.NewQueryClient(clientCtx)
 	for i := 0; i < MaxRetry; i++ {
-		rpcStream, err = stream.NewRPCStreams(evtClient, logger, clientCtx.TxConfig.TxDecoder())
+		rpcStream, err = stream.NewRPCStreams(evtClient, logger, clientCtx.TxConfig.TxDecoder(), queryClient.ValidatorAccount)
 		if err == nil {
 			break
 		}
@@ -68,6 +75,8 @@ func StartJSONRPC(srvCtx *server.Context,
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create rpc streams after %d attempts: %w", MaxRetry, err)
 	}
+
+	app.RegisterPendingTxListener(rpcStream.ListenPendingTx)
 
 	ethlog.Root().SetHandler(ethlog.FuncHandler(func(r *ethlog.Record) error {
 		switch r.Lvl {

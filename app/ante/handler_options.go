@@ -24,12 +24,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
 	ibcante "github.com/cosmos/ibc-go/v8/modules/core/ante"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
+
+const EthSigVerificationResultCacheKey = "ante:EthSigVerificationResult"
 
 // HandlerOptions extend the SDK's AnteHandler options by requiring the IBC
 // channel keeper, EVM Keeper and Fee Market Keeper.
@@ -48,6 +51,10 @@ type HandlerOptions struct {
 	DynamicFeeChecker bool
 	DisabledAuthzMsgs []string
 	ExtraDecorators   []sdk.AnteDecorator
+	PendingTxListener PendingTxListener
+
+	// see #494, just for benchmark, don't turn on on production
+	UnsafeUnorderedTx bool
 }
 
 func (options HandlerOptions) validate() error {
@@ -71,23 +78,24 @@ func (options HandlerOptions) validate() error {
 
 func newEthAnteHandler(options HandlerOptions) sdk.AnteHandler {
 	return func(ctx sdk.Context, tx sdk.Tx, simulate bool) (sdk.Context, error) {
-		var err error
-		evmParams := options.EvmKeeper.GetParams(ctx)
+		blockCfg, err := options.EvmKeeper.EVMBlockConfig(ctx, options.EvmKeeper.ChainID())
+		if err != nil {
+			return ctx, errorsmod.Wrap(errortypes.ErrLogic, err.Error())
+		}
+		evmParams := &blockCfg.Params
 		evmDenom := evmParams.EvmDenom
-		feemarketParams := options.FeeMarketKeeper.GetParams(ctx)
-		chainID := options.EvmKeeper.ChainID()
-		chainCfg := evmParams.GetChainConfig()
-		ethCfg := chainCfg.EthereumConfig(chainID)
-		baseFee := evmtypes.GetBaseFee(ctx.BlockHeight(), ethCfg, &feemarketParams)
+		feemarketParams := &blockCfg.FeeMarketParams
+		baseFee := blockCfg.BaseFee
+		rules := blockCfg.Rules
 
 		// all transactions must implement FeeTx
-		feeTx, ok := tx.(sdk.FeeTx)
+		_, ok := tx.(sdk.FeeTx)
 		if !ok {
 			return ctx, errorsmod.Wrapf(errortypes.ErrInvalidType, "invalid transaction type %T, expected sdk.FeeTx", tx)
 		}
 
 		// We need to setup an empty gas config so that the gas is consistent with Ethereum.
-		ctx, err = SetupEthContext(ctx, options.EvmKeeper)
+		ctx, err = SetupEthContext(ctx)
 		if err != nil {
 			return ctx, err
 		}
@@ -100,42 +108,54 @@ func newEthAnteHandler(options HandlerOptions) sdk.AnteHandler {
 			return ctx, err
 		}
 
-		if err := ValidateEthBasic(ctx, tx, &evmParams, baseFee); err != nil {
+		if err := ValidateEthBasic(ctx, tx, evmParams, baseFee); err != nil {
 			return ctx, err
 		}
 
-		if err := VerifyEthSig(tx, chainID); err != nil {
+		if v, ok := ctx.GetIncarnationCache(EthSigVerificationResultCacheKey); ok {
+			if v != nil {
+				err = v.(error)
+			}
+		} else {
+			ethSigner := ethtypes.MakeSigner(blockCfg.ChainConfig, blockCfg.BlockNumber, blockCfg.BlockTime)
+			err = VerifyEthSig(tx, ethSigner)
+			ctx.SetIncarnationCache(EthSigVerificationResultCacheKey, err)
+		}
+		if err != nil {
 			return ctx, err
 		}
 
-		if err := VerifyEthAccount(ctx, tx, options.EvmKeeper, options.AccountKeeper, evmDenom); err != nil {
+		// AccountGetter cache the account objects during the ante handler execution,
+		// it's safe because there's no store branching in the ante handlers.
+		accountGetter := NewCachedAccountGetter(ctx, options.AccountKeeper)
+
+		if err := VerifyEthAccount(ctx, tx, options.EvmKeeper, evmDenom, accountGetter); err != nil {
 			return ctx, err
 		}
 
-		if err := CheckEthCanTransfer(ctx, tx, baseFee, ethCfg, options.EvmKeeper, &evmParams); err != nil {
+		if err := CheckEthCanTransfer(ctx, tx, baseFee, rules, options.EvmKeeper, evmParams); err != nil {
 			return ctx, err
 		}
 
 		ctx, err = CheckEthGasConsume(
-			ctx, tx, ethCfg, options.EvmKeeper,
+			ctx, tx, rules, options.EvmKeeper,
 			baseFee, options.MaxTxGasWanted, evmDenom,
 		)
 		if err != nil {
 			return ctx, err
 		}
 
-		if err := CheckEthSenderNonce(ctx, tx, options.AccountKeeper); err != nil {
+		if err := CheckAndSetEthSenderNonce(ctx, tx, options.AccountKeeper, options.UnsafeUnorderedTx, accountGetter); err != nil {
 			return ctx, err
 		}
 
-		if err := CheckGasWanted(ctx, feeTx, ethCfg, options.FeeMarketKeeper, &feemarketParams); err != nil {
-			return ctx, err
+		extraDecorators := options.ExtraDecorators
+		if options.PendingTxListener != nil {
+			extraDecorators = append(extraDecorators, newTxListenerDecorator(options.PendingTxListener))
 		}
-
-		if len(options.ExtraDecorators) > 0 {
-			return sdk.ChainAnteDecorators(options.ExtraDecorators...)(ctx, tx, simulate)
+		if len(extraDecorators) > 0 {
+			return sdk.ChainAnteDecorators(extraDecorators...)(ctx, tx, simulate)
 		}
-
 		return ctx, nil
 	}
 }
@@ -170,7 +190,6 @@ func newCosmosAnteHandler(ctx sdk.Context, options HandlerOptions, extra ...sdk.
 		ante.NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler),
 		ante.NewIncrementSequenceDecorator(options.AccountKeeper),
 		ibcante.NewRedundantRelayDecorator(options.IBCKeeper),
-		NewGasWantedDecorator(options.FeeMarketKeeper, ethCfg, &feemarketParams),
 	}
 	decorators = append(decorators, extra...)
 	return sdk.ChainAnteDecorators(decorators...)

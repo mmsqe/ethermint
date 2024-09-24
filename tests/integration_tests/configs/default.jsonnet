@@ -19,11 +19,24 @@
     validators: [{
       coins: '1000000000000000000stake,10000000000000000000000aphoton',
       staked: '1000000000000000000stake',
-      mnemonic: mnemonic,
+      mnemonic: '${VALIDATOR1_MNEMONIC}',
       client_config: {
         'broadcast-mode': 'sync',
       },
-    } for mnemonic in ['${VALIDATOR1_MNEMONIC}', '${VALIDATOR2_MNEMONIC}']],
+      'app-config': {
+        evm: {
+          'block-executor': 'block-stm',
+          'block-stm-workers': 32,
+        },
+      },
+    }, {
+      coins: '1000000000000000000stake,10000000000000000000000aphoton',
+      staked: '1000000000000000000stake',
+      mnemonic: '${VALIDATOR2_MNEMONIC}',
+      client_config: {
+        'broadcast-mode': 'sync',
+      },
+    }],
     accounts: [{
       name: 'community',
       coins: '10000000000000000000000aphoton',
@@ -43,9 +56,6 @@
           block: {
             max_bytes: '1048576',
             max_gas: '81500000',
-          },
-          abci: {
-            vote_extensions_enable_height: '1',
           },
         },
       },

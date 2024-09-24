@@ -15,6 +15,7 @@ from .expected_constants import (
 from .utils import (
     ADDRS,
     CONTRACTS,
+    create_contract_transaction,
     deploy_contract,
     derive_new_account,
     derive_random_account,
@@ -22,6 +23,60 @@ from .utils import (
     send_txs,
     w3_wait_for_new_blocks,
 )
+
+
+def test_out_of_gas_error(ethermint, geth):
+    method = "debug_traceTransaction"
+    tracer = {"tracer": "callTracer"}
+    iterations = 1
+    acc = derive_random_account()
+
+    def process(w3):
+        # fund new sender to deploy contract with same address
+        fund_acc(w3, acc)
+        contract, _ = deploy_contract(w3, CONTRACTS["TestMessageCall"], key=acc.key)
+        tx = contract.functions.test(iterations).build_transaction({"gas": 21204})
+        tx_hash = send_transaction(w3, tx)["transactionHash"].hex()
+        res = []
+        call = w3.provider.make_request
+        resp = call(method, [tx_hash, tracer])
+        assert "out of gas" in resp["result"]["error"], resp
+        res = [json.dumps(resp["result"], sort_keys=True)]
+        return res
+
+    providers = [ethermint.w3, geth.w3]
+    with ThreadPoolExecutor(len(providers)) as exec:
+        tasks = [exec.submit(process, w3) for w3 in providers]
+        res = [future.result() for future in as_completed(tasks)]
+        assert len(res) == len(providers)
+        assert res[0] == res[-1], res
+
+
+def test_storage_out_of_gas_error(ethermint, geth):
+    method = "debug_traceTransaction"
+    tracer = {"tracer": "callTracer"}
+    acc = derive_new_account(8)
+
+    def process(w3):
+        # fund new sender to deploy contract with same address
+        fund_acc(w3, acc)
+        tx = create_contract_transaction(w3, CONTRACTS["TestMessageCall"], key=acc.key)
+        tx["gas"] = 210000
+        tx_hash = send_transaction(w3, tx, key=acc.key)["transactionHash"].hex()
+        res = []
+        call = w3.provider.make_request
+        resp = call(method, [tx_hash, tracer])
+        msg = "contract creation code storage out of gas"
+        assert msg in resp["result"]["error"], resp
+        res = [json.dumps(resp["result"], sort_keys=True)]
+        return res
+
+    providers = [ethermint.w3, geth.w3]
+    with ThreadPoolExecutor(len(providers)) as exec:
+        tasks = [exec.submit(process, w3) for w3 in providers]
+        res = [future.result() for future in as_completed(tasks)]
+        assert len(res) == len(providers)
+        assert res[0] == res[-1], res
 
 
 def test_trace_transactions_tracers(ethermint, geth):
