@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 const StateDBContextKey = "statedb"
@@ -43,7 +44,7 @@ type revision struct {
 	journalIndex int
 }
 
-func Transfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
+func Transfer(db vm.StateDB, sender, recipient common.Address, amount *uint256.Int) {
 	db.(*StateDB).Transfer(sender, recipient, amount)
 }
 
@@ -193,8 +194,10 @@ func (s *StateDB) Empty(addr common.Address) bool {
 }
 
 // GetBalance retrieves the balance from the given address or 0 if object not found
-func (s *StateDB) GetBalance(addr common.Address) *big.Int {
-	return s.keeper.GetBalance(s.ctx, sdk.AccAddress(addr.Bytes()), s.evmDenom)
+func (s *StateDB) GetBalance(addr common.Address) *uint256.Int {
+	value := s.keeper.GetBalance(s.ctx, sdk.AccAddress(addr.Bytes()), s.evmDenom)
+	balance, _ := uint256.FromBig(value)
+	return balance
 }
 
 // GetNonce returns the nonce of account, 0 if not exists.
@@ -388,7 +391,7 @@ func (s *StateDB) Context() sdk.Context {
  */
 
 // Transfer from one account to another
-func (s *StateDB) Transfer(sender, recipient common.Address, amount *big.Int) {
+func (s *StateDB) Transfer(sender, recipient common.Address, amount *uint256.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
@@ -396,7 +399,7 @@ func (s *StateDB) Transfer(sender, recipient common.Address, amount *big.Int) {
 		panic("negative amount")
 	}
 
-	coins := sdk.NewCoins(sdk.NewCoin(s.evmDenom, sdkmath.NewIntFromBigIntMut(amount)))
+	coins := sdk.NewCoins(sdk.NewCoin(s.evmDenom, sdkmath.NewIntFromBigIntMut(amount.ToBig())))
 	senderAddr := sdk.AccAddress(sender.Bytes())
 	recipientAddr := sdk.AccAddress(recipient.Bytes())
 	if err := s.ExecuteNativeAction(common.Address{}, nil, func(ctx sdk.Context) error {
@@ -407,14 +410,14 @@ func (s *StateDB) Transfer(sender, recipient common.Address, amount *big.Int) {
 }
 
 // AddBalance adds amount to the account associated with addr.
-func (s *StateDB) AddBalance(addr common.Address, amount *big.Int) {
+func (s *StateDB) AddBalance(addr common.Address, amount *uint256.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
 	if amount.Sign() < 0 {
 		panic("negative amount")
 	}
-	coins := sdk.Coins{sdk.NewCoin(s.evmDenom, sdkmath.NewIntFromBigInt(amount))}
+	coins := sdk.Coins{sdk.NewCoin(s.evmDenom, sdkmath.NewIntFromBigInt(amount.ToBig()))}
 	if err := s.ExecuteNativeAction(common.Address{}, nil, func(ctx sdk.Context) error {
 		return s.keeper.AddBalance(ctx, sdk.AccAddress(addr.Bytes()), coins)
 	}); err != nil {
@@ -423,14 +426,14 @@ func (s *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 }
 
 // SubBalance subtracts amount from the account associated with addr.
-func (s *StateDB) SubBalance(addr common.Address, amount *big.Int) {
+func (s *StateDB) SubBalance(addr common.Address, amount *uint256.Int) {
 	if amount.Sign() == 0 {
 		return
 	}
 	if amount.Sign() < 0 {
 		panic("negative amount")
 	}
-	coins := sdk.Coins{sdk.NewCoin(s.evmDenom, sdkmath.NewIntFromBigInt(amount))}
+	coins := sdk.Coins{sdk.NewCoin(s.evmDenom, sdkmath.NewIntFromBigInt(amount.ToBig()))}
 	if err := s.ExecuteNativeAction(common.Address{}, nil, func(ctx sdk.Context) error {
 		return s.keeper.SubBalance(ctx, sdk.AccAddress(addr.Bytes()), coins)
 	}); err != nil {

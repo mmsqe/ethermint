@@ -25,6 +25,7 @@ import (
 	"github.com/evmos/ethermint/testutil"
 	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
+	"github.com/holiman/uint256"
 )
 
 type StateDBTestSuite struct {
@@ -56,11 +57,11 @@ func (suite *StateDBTestSuite) TestCreateAccount() {
 			"reset account (keep balance)",
 			suite.Address,
 			func(vmdb vm.StateDB, addr common.Address) {
-				vmdb.AddBalance(addr, big.NewInt(100))
-				suite.Require().NotZero(vmdb.GetBalance(addr).Int64())
+				vmdb.AddBalance(addr, uint256.NewInt(100))
+				suite.Require().NotZero(vmdb.GetBalance(addr).ToBig().Int64())
 			},
 			func(vmdb vm.StateDB, addr common.Address) {
-				suite.Require().Equal(vmdb.GetBalance(addr).Int64(), int64(100))
+				suite.Require().Equal(vmdb.GetBalance(addr).ToBig().Int64(), int64(100))
 			},
 		},
 		{
@@ -88,17 +89,17 @@ func (suite *StateDBTestSuite) TestCreateAccount() {
 func (suite *StateDBTestSuite) TestAddBalance() {
 	testCases := []struct {
 		name   string
-		amount *big.Int
+		amount *uint256.Int
 		isNoOp bool
 	}{
 		{
 			"positive amount",
-			big.NewInt(100),
+			uint256.NewInt(100),
 			false,
 		},
 		{
 			"zero amount",
-			big.NewInt(0),
+			uint256.NewInt(0),
 			true,
 		},
 	}
@@ -111,9 +112,9 @@ func (suite *StateDBTestSuite) TestAddBalance() {
 			post := vmdb.GetBalance(suite.Address)
 
 			if tc.isNoOp {
-				suite.Require().Equal(prev.Int64(), post.Int64())
+				suite.Require().Equal(prev.ToBig().Int64(), post.ToBig().Int64())
 			} else {
-				suite.Require().Equal(new(big.Int).Add(prev, tc.amount).Int64(), post.Int64())
+				suite.Require().Equal(new(big.Int).Add(prev.ToBig(), tc.amount.ToBig()).Int64(), post.ToBig().Int64())
 			}
 		})
 	}
@@ -122,27 +123,27 @@ func (suite *StateDBTestSuite) TestAddBalance() {
 func (suite *StateDBTestSuite) TestSubBalance() {
 	testCases := []struct {
 		name     string
-		amount   *big.Int
+		amount   *uint256.Int
 		malleate func(vm.StateDB)
 		isNoOp   bool
 	}{
 		{
 			"positive amount, below zero",
-			big.NewInt(100),
+			uint256.NewInt(100),
 			func(vm.StateDB) {},
 			true,
 		},
 		{
 			"positive amount, above zero",
-			big.NewInt(50),
+			uint256.NewInt(50),
 			func(vmdb vm.StateDB) {
-				vmdb.AddBalance(suite.Address, big.NewInt(100))
+				vmdb.AddBalance(suite.Address, uint256.NewInt(100))
 			},
 			false,
 		},
 		{
 			"zero amount",
-			big.NewInt(0),
+			uint256.NewInt(0),
 			func(vm.StateDB) {},
 			true,
 		},
@@ -158,9 +159,9 @@ func (suite *StateDBTestSuite) TestSubBalance() {
 			post := vmdb.GetBalance(suite.Address)
 
 			if tc.isNoOp {
-				suite.Require().Equal(prev.Int64(), post.Int64())
+				suite.Require().Equal(prev.ToBig().Int64(), post.ToBig().Int64())
 			} else {
-				suite.Require().Equal(new(big.Int).Sub(prev, tc.amount).Int64(), post.Int64())
+				suite.Require().Equal(new(big.Int).Sub(prev.ToBig(), tc.amount.ToBig()).Int64(), post.ToBig().Int64())
 			}
 		})
 	}
@@ -545,7 +546,7 @@ func (suite *StateDBTestSuite) TestEmpty() {
 		{
 			"not empty, positive balance",
 			suite.Address,
-			func(vmdb vm.StateDB) { vmdb.AddBalance(suite.Address, big.NewInt(100)) },
+			func(vmdb vm.StateDB) { vmdb.AddBalance(suite.Address, uint256.NewInt(100)) },
 			false,
 		},
 		{"empty, account doesn't exist", tests.GenerateAddress(), func(vm.StateDB) {}, true},
