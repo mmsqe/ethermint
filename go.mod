@@ -268,8 +268,8 @@ replace (
 	github.com/tidwall/btree => github.com/crypto-org-chain/btree v0.0.0-20240406140148-2687063b042c
 )
 
-// v1.13.15
+// v1.14.0
 replace (
-	github.com/cockroachdb/pebble => github.com/cockroachdb/pebble v0.0.0-20230928194634-aa077af62593
-	github.com/ethereum/go-ethereum => github.com/mmsqe/go-ethereum v1.10.24-0.20240924082006-22e7cf66a86c
+	github.com/cockroachdb/pebble => github.com/cockroachdb/pebble v1.1.0
+	github.com/ethereum/go-ethereum => github.com/mmsqe/go-ethereum v1.10.24-0.20240924082736-acfee86546a9
 )
