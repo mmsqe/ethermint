@@ -271,5 +271,5 @@ replace (
 // v1.14.0
 replace (
 	github.com/cockroachdb/pebble => github.com/cockroachdb/pebble v1.1.0
-	github.com/ethereum/go-ethereum => github.com/mmsqe/go-ethereum v1.10.24-0.20240924082736-acfee86546a9
+	github.com/ethereum/go-ethereum => github.com/mmsqe/go-ethereum v1.10.24-0.20240925073129-3e9742fa9d02
 )
