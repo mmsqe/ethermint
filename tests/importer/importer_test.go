@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -36,13 +35,14 @@ import (
 	tmversion "github.com/cometbft/cometbft/proto/tendermint/version"
 	"github.com/cometbft/cometbft/version"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
+	"github.com/holiman/uint256"
 )
 
 var (
 	flagBlockchain string
 
-	rewardBig8  = big.NewInt(8)
-	rewardBig32 = big.NewInt(32)
+	rewardBig8  = uint256.NewInt(8)
+	rewardBig32 = uint256.NewInt(32)
 )
 
 func init() {
@@ -187,12 +187,13 @@ func accumulateRewards(
 	}
 
 	// accumulate the rewards for the miner and any included uncles
-	reward := new(big.Int).Set(blockReward)
-	r := new(big.Int)
-
+	reward := blockReward
+	r := new(uint256.Int)
 	for _, uncle := range uncles {
-		r.Add(uncle.Number, rewardBig8)
-		r.Sub(r, header.Number)
+		n, _ := uint256.FromBig(uncle.Number)
+		r.Add(n, rewardBig8)
+		h, _ := uint256.FromBig(header.Number)
+		r.Sub(r, h)
 		r.Mul(r, blockReward)
 		r.Div(r, rewardBig8)
 		vmdb.AddBalance(uncle.Coinbase, r)
