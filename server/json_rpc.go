@@ -70,7 +70,7 @@ func (l *logHandler) WithGroup(name string) slog.Handler {
 	}
 }
 
-func (l *logHandler) Handle(ctx context.Context, r slog.Record) error {
+func (l *logHandler) Handle(_ context.Context, r slog.Record) error {
 	keyVals := make([]any, 0)
 	r.Attrs(func(a slog.Attr) bool {
 		keyVals = append(keyVals, a.Key, a.Value.Any())
@@ -91,7 +91,7 @@ func (l *logHandler) Handle(ctx context.Context, r slog.Record) error {
 }
 
 // Enabled reports whether l emits log records at the given context and level.
-func (l *logHandler) Enabled(ctx context.Context, level slog.Level) bool {
+func (l *logHandler) Enabled(_ context.Context, _ slog.Level) bool {
 	return true
 }
 
