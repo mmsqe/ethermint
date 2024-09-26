@@ -185,22 +185,23 @@ func accumulateRewards(
 	if config.IsByzantium(header.Number) {
 		blockReward = ethash.ByzantiumBlockReward
 	}
-
+	if config.IsConstantinople(header.Number) {
+		blockReward = ethash.ConstantinopleBlockReward
+	}
 	// accumulate the rewards for the miner and any included uncles
-	reward := blockReward
+	reward := new(uint256.Int).Set(blockReward)
 	r := new(uint256.Int)
+	hNum, _ := uint256.FromBig(header.Number)
 	for _, uncle := range uncles {
-		n, _ := uint256.FromBig(uncle.Number)
-		r.Add(n, rewardBig8)
-		h, _ := uint256.FromBig(header.Number)
-		r.Sub(r, h)
+		uNum, _ := uint256.FromBig(uncle.Number)
+		r.AddUint64(uNum, 8)
+		r.Sub(r, hNum)
 		r.Mul(r, blockReward)
 		r.Div(r, rewardBig8)
 		vmdb.AddBalance(uncle.Coinbase, r)
 		r.Div(blockReward, rewardBig32)
 		reward.Add(reward, r)
 	}
-
 	vmdb.AddBalance(header.Coinbase, reward)
 }
 
