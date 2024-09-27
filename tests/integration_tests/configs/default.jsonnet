@@ -43,7 +43,7 @@
       mnemonic: '${COMMUNITY_MNEMONIC}',
     }, {
       name: 'signer1',
-      coins: '100multi,20000000000000000000000aphoton',
+      coins: '20000000000000000000000aphoton',
       mnemonic: '${SIGNER1_MNEMONIC}',
     }, {
       name: 'signer2',

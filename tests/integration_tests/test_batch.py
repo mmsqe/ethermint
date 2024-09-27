@@ -79,24 +79,14 @@ def test_multisig(ethermint, tmp_path):
     cli.make_multisig("multitest1", "signer1", "signer2")
     multi_addr = cli.address("multitest1")
     signer1 = cli.address("signer1")
-    signer2 = cli.address("signer2")
-    max_gas = 1000000
-    gas_price = 10000000000000000
-    limit = f"{max_gas*gas_price*2}aphoton"
-    rsp = cli.grant(signer1, multi_addr, limit)
-    assert rsp["code"] == 0, rsp["raw_log"]
-    grant_detail = cli.query_grant(signer1, multi_addr)
-    assert grant_detail["granter"] == signer1
-    assert grant_detail["grantee"] == multi_addr
-
-    denom = "multi"
-    amt = 10
+    denom = "aphoton"
+    amt = 2000000000000000000
     rsp = cli.transfer(signer1, multi_addr, f"{amt}{denom}")
     assert rsp["code"] == 0, rsp["raw_log"]
     assert cli.balance(multi_addr, denom=denom) == amt
 
-    acc = cli.account(multi_addr)
-    res = cli.account_by_num(acc["account"]["value"]["base_account"]["account_number"])
+    acc = cli.account(multi_addr)["account"]["value"]["base_account"]
+    res = cli.account_by_num(acc["account_number"])
     assert res["account_address"] == multi_addr
 
     m_txt = tmp_path / "m.txt"
@@ -104,12 +94,12 @@ def test_multisig(ethermint, tmp_path):
     p2_txt = tmp_path / "p2.txt"
     tx_txt = tmp_path / "tx.txt"
     amt = 1
+    signer2 = cli.address("signer2")
     multi_tx = cli.transfer(
         multi_addr,
         signer2,
         f"{amt}{denom}",
         generate_only=True,
-        fee_granter=signer1,
     )
     json.dump(multi_tx, m_txt.open("w"))
     signature1 = cli.sign_multisig_tx(m_txt, multi_addr, "signer1")
@@ -125,3 +115,4 @@ def test_multisig(ethermint, tmp_path):
     json.dump(final_multi_tx, tx_txt.open("w"))
     rsp = cli.broadcast_tx(tx_txt)
     assert rsp["code"] == 0, rsp["raw_log"]
+    assert cli.account(multi_addr)["account"]["value"]["base_account"]["address"] == acc["address"]

@@ -513,9 +513,12 @@ class CosmosCLI:
     def broadcast_tx(self, tx_file, **kwargs):
         kwargs.setdefault("broadcast_mode", "sync")
         kwargs.setdefault("output", "json")
-        return json.loads(
+        rsp = json.loads(
             self.raw("tx", "broadcast", tx_file, node=self.node_rpc, **kwargs)
         )
+        if rsp["code"] == 0:
+            rsp = self.event_query_tx_for(rsp["txhash"])
+        return rsp
 
     def broadcast_tx_json(self, tx, **kwargs):
         with tempfile.NamedTemporaryFile("w") as fp:

@@ -20,7 +20,7 @@ schema = 3
     version = "v0.7.5"
     hash = "sha256-Nuw697sJr56kU3EU7DV1eYNkyI76psznIVqYAV6RfbQ="
   [mod."cosmossdk.io/client/v2"]
-    version = "v2.0.0-20240926072432-2a329c06bee2"
+    version = "v2.0.0-20240927050756-4d8162ae3f7a"
     hash = "sha256-60hmufv3Ml4Pv3zNwgn8eeqlEINOR6n9MKr2QHddoxo="
     replaced = "github.com/mmsqe/cosmos-sdk/client/v2"
   [mod."cosmossdk.io/collections"]
@@ -42,7 +42,7 @@ schema = 3
     version = "v1.3.0"
     hash = "sha256-EEFK43Cr0g0ndhQhkIKher0FqV3mvkmE9z0sP7uVSHg="
   [mod."cosmossdk.io/store"]
-    version = "v0.0.0-20240926072432-2a329c06bee2"
+    version = "v0.0.0-20240927050756-4d8162ae3f7a"
     hash = "sha256-Dm3sSZNJBcnBF33PULoTpK4rkNQbsZl0DfTqH1GPCQM="
     replaced = "github.com/mmsqe/cosmos-sdk/store"
   [mod."cosmossdk.io/tools/confix"]
@@ -55,8 +55,8 @@ schema = 3
     version = "v0.1.0"
     hash = "sha256-/gWvrqvy6bW90+NU66T+9QysYgvG1VbwfYJZ8tkqpeA="
   [mod."cosmossdk.io/x/tx"]
-    version = "v0.0.0-20240926072432-2a329c06bee2"
-    hash = "sha256-/KS4Tw8nlY9TeQRInICFs0LkjAIjyMflHvp7LztrJxs="
+    version = "v0.0.0-20240927050756-4d8162ae3f7a"
+    hash = "sha256-5HPcm3oCWAC9oKOGMP+PVMdCPF7ELVHmxpN1FasUgAY="
     replaced = "github.com/mmsqe/cosmos-sdk/x/tx"
   [mod."cosmossdk.io/x/upgrade"]
     version = "v0.1.1"
@@ -163,7 +163,7 @@ schema = 3
     version = "v1.0.0-beta.5"
     hash = "sha256-Fy/PbsOsd6iq0Njy3DVWK6HqWsogI+MkE8QslHGWyVg="
   [mod."github.com/cosmos/cosmos-sdk"]
-    version = "v0.46.0-beta2.0.20240926072432-2a329c06bee2"
+    version = "v0.46.0-beta2.0.20240927050756-4d8162ae3f7a"
     hash = "sha256-/5W/4n6getoWtj/MIotvel86dcJUD7jm9a4aDdDD95w="
     replaced = "github.com/mmsqe/cosmos-sdk"
   [mod."github.com/cosmos/go-bip39"]
