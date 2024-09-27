@@ -115,4 +115,7 @@ def test_multisig(ethermint, tmp_path):
     json.dump(final_multi_tx, tx_txt.open("w"))
     rsp = cli.broadcast_tx(tx_txt)
     assert rsp["code"] == 0, rsp["raw_log"]
-    assert cli.account(multi_addr)["account"]["value"]["base_account"]["address"] == acc["address"]
+    assert (
+        cli.account(multi_addr)["account"]["value"]["base_account"]["address"]
+        == acc["address"]
+    )
