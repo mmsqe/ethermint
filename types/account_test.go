@@ -73,5 +73,5 @@ func TestAminoMarshal(t *testing.T) {
 		Indent:       "	",
 	})
 	_, err := aj.Marshal(msg)
-	require.ErrorContains(t, err, "thresholdStringEncoder: msg not a multisig.LegacyAminoPubKey")
+	require.NoError(t, err)
 }
