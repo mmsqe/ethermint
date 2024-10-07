@@ -1,4 +1,5 @@
 import configparser
+import hashlib
 import json
 import re
 import subprocess
@@ -14,7 +15,10 @@ from .utils import (
     CONTRACTS,
     approve_proposal,
     deploy_contract,
+    eth_to_bech32,
     send_transaction,
+    submit_gov_proposal,
+    w3_wait_for_new_blocks,
     wait_for_block,
     wait_for_port,
 )
@@ -84,7 +88,7 @@ def custom_ethermint(tmp_path_factory):
     )
 
 
-def test_cosmovisor_upgrade(custom_ethermint: Ethermint):
+def test_cosmovisor_upgrade(custom_ethermint: Ethermint, tmp_path):
     """
     - propose an upgrade and pass it
     - wait for it to happen
@@ -100,7 +104,8 @@ def test_cosmovisor_upgrade(custom_ethermint: Ethermint):
     old_erc20_balance = contract.caller.balanceOf(ADDRS["validator"])
     print("old values", old_height, old_balance, old_base_fee)
 
-    target_height = w3.eth.block_number + 10
+    height_before = w3.eth.block_number
+    target_height = height_before + 10
     print("upgrade height", target_height)
 
     plan_name = "sdk50"
@@ -166,3 +171,28 @@ def test_cosmovisor_upgrade(custom_ethermint: Ethermint):
         )
     )
     assert p == {"allowed_clients": ["06-solomachine", "07-tendermint", "09-localhost"]}
+
+    p = cli.get_params("evm")["params"]
+    header_hash_num = "2"
+    p["header_hash_num"] = header_hash_num
+    # governance module account as signer
+    data = hashlib.sha256("gov".encode()).digest()[:20]
+    authority = eth_to_bech32(data)
+    submit_gov_proposal(
+        custom_ethermint,
+        tmp_path,
+        messages=[
+            {
+                "@type": "/ethermint.evm.v1.MsgUpdateParams",
+                "authority": authority,
+                "params": p,
+            }
+        ],
+    )
+    p = cli.get_params("evm")["params"]
+    assert p["header_hash_num"] == header_hash_num, p
+    contract, _ = deploy_contract(w3, CONTRACTS["TestBlockTxProperties"])
+    w3_wait_for_new_blocks(w3, 1)
+    res = contract.caller.getBlockHash(height_before).hex()
+    blk = w3.eth.get_block(height_before)
+    assert f"0x{res}" == blk.hash.hex(), res
