@@ -18,7 +18,6 @@ from .utils import (
     eth_to_bech32,
     send_transaction,
     submit_gov_proposal,
-    w3_wait_for_new_blocks,
     wait_for_block,
     wait_for_port,
 )
@@ -192,7 +191,6 @@ def test_cosmovisor_upgrade(custom_ethermint: Ethermint, tmp_path):
     p = cli.get_params("evm")["params"]
     assert p["header_hash_num"] == header_hash_num, p
     contract, _ = deploy_contract(w3, CONTRACTS["TestBlockTxProperties"])
-    w3_wait_for_new_blocks(w3, 1)
     res = contract.caller.getBlockHash(height_before).hex()
     blk = w3.eth.get_block(height_before)
     assert f"0x{res}" == blk.hash.hex(), res

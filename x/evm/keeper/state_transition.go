@@ -101,18 +101,26 @@ func (k Keeper) GetHashFn(ctx sdk.Context) vm.GetHashFunc {
 		if err != nil {
 			return common.Hash{}
 		}
-		if ctx.BlockHeight() < h {
+		latestHeight := ctx.BlockHeight()
+		if latestHeight < h {
 			return common.Hash{}
 		}
-		if ctx.BlockHeight() == h {
+		latest, err := ethermint.SafeUint64(latestHeight)
+		if err != nil {
+			return common.Hash{}
+		}
+		if latestHeight == h {
 			headerHash := ctx.HeaderHash()
 			if len(headerHash) != 0 {
 				return common.BytesToHash(headerHash)
 			}
 		}
 		hash := k.GetHeaderHash(ctx, height)
-		if !bytes.Equal(hash, []byte{}) {
+		if len(hash) > 0 {
 			return common.BytesToHash(hash)
+		}
+		if height < latest-k.GetParams(ctx).HeaderHashNum {
+			return common.Hash{}
 		}
 		histInfo, err := k.stakingKeeper.GetHistoricalInfo(ctx, h)
 		if err != nil {
