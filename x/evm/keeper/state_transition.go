@@ -91,36 +91,40 @@ func (k *Keeper) NewEVM(
 	return evm
 }
 
-// GetHashFn implements vm.GetHashFunc for Ethermint. It handles 3 cases:
-//  1. The requested height matches the current height from context (and thus same epoch number)
-//  2. The requested height is from an previous height from the same chain epoch
-//  3. The requested height is from a height greater than the latest one
+// GetHashFn implements vm.GetHashFunc for Ethermint. It returns hash for 3 cases:
+//  1. The requested height matches current block height from the context.
+//  2. The requested height is within the valid range, retrieve the hash from GetHeaderHash for heights after sdk50.
+//  3. The requested height is within the valid range, retrieve the hash from GetHistoricalInfo for heights before sdk50.
 func (k Keeper) GetHashFn(ctx sdk.Context) vm.GetHashFunc {
-	return func(height uint64) common.Hash {
-		h, err := ethermint.SafeInt64(height)
+	return func(num64 uint64) common.Hash {
+		h, err := ethermint.SafeInt64(num64)
 		if err != nil {
 			return common.Hash{}
 		}
-		latestHeight := ctx.BlockHeight()
-		if latestHeight < h {
-			return common.Hash{}
-		}
-		latest, err := ethermint.SafeUint64(latestHeight)
+		upper, err := ethermint.SafeUint64(ctx.BlockHeight())
 		if err != nil {
 			return common.Hash{}
 		}
-		if latestHeight == h {
+		if upper == num64 {
 			headerHash := ctx.HeaderHash()
-			if len(headerHash) != 0 {
+			if len(headerHash) > 0 {
 				return common.BytesToHash(headerHash)
 			}
 		}
-		hash := k.GetHeaderHash(ctx, height)
+		// Align check with https://github.com/ethereum/go-ethereum/blob/release/1.11/core/vm/instructions.go#L433
+		headerNum := k.GetParams(ctx).HeaderHashNum
+		var lower uint64
+		if upper <= headerNum {
+			lower = 0
+		} else {
+			lower = upper - headerNum
+		}
+		if num64 < lower || num64 >= upper {
+			return common.Hash{}
+		}
+		hash := k.GetHeaderHash(ctx, num64)
 		if len(hash) > 0 {
 			return common.BytesToHash(hash)
-		}
-		if height < latest-k.GetParams(ctx).HeaderHashNum {
-			return common.Hash{}
 		}
 		histInfo, err := k.stakingKeeper.GetHistoricalInfo(ctx, h)
 		if err != nil {

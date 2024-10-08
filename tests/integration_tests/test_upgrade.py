@@ -103,8 +103,7 @@ def test_cosmovisor_upgrade(custom_ethermint: Ethermint, tmp_path):
     old_erc20_balance = contract.caller.balanceOf(ADDRS["validator"])
     print("old values", old_height, old_balance, old_base_fee)
 
-    height_before = w3.eth.block_number
-    target_height = height_before + 10
+    target_height = w3.eth.block_number + 10
     print("upgrade height", target_height)
 
     plan_name = "sdk50"
@@ -172,7 +171,7 @@ def test_cosmovisor_upgrade(custom_ethermint: Ethermint, tmp_path):
     assert p == {"allowed_clients": ["06-solomachine", "07-tendermint", "09-localhost"]}
 
     p = cli.get_params("evm")["params"]
-    header_hash_num = "2"
+    header_hash_num = "20"
     p["header_hash_num"] = header_hash_num
     # governance module account as signer
     data = hashlib.sha256("gov".encode()).digest()[:20]
@@ -191,6 +190,15 @@ def test_cosmovisor_upgrade(custom_ethermint: Ethermint, tmp_path):
     p = cli.get_params("evm")["params"]
     assert p["header_hash_num"] == header_hash_num, p
     contract, _ = deploy_contract(w3, CONTRACTS["TestBlockTxProperties"])
-    res = contract.caller.getBlockHash(height_before).hex()
-    blk = w3.eth.get_block(height_before)
-    assert f"0x{res}" == blk.hash.hex(), res
+    for h in [target_height - 1, target_height, target_height + 1]:
+        res = contract.caller.getBlockHash(h).hex()
+        blk = w3.eth.get_block(h)
+        assert f"0x{res}" == blk.hash.hex(), res
+
+    height = w3.eth.block_number
+    for h in [
+        height - int(header_hash_num) - 1,  # num64 < lower
+        height + 100,  # num64 >= upper
+    ]:
+        res = contract.caller.getBlockHash(h).hex()
+        assert f"0x{res}" == "0x" + "0" * 64, res
