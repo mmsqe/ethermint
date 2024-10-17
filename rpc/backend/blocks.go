@@ -16,7 +16,6 @@
 package backend
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -397,18 +396,7 @@ func (b *Backend) HeaderByHash(blockHash common.Hash) (*ethtypes.Header, error) 
 
 // BlockBloom query block bloom filter from block results
 func (b *Backend) BlockBloom(blockRes *tmrpctypes.ResultBlockResults) (ethtypes.Bloom, error) {
-	for _, event := range blockRes.FinalizeBlockEvents {
-		if event.Type != evmtypes.EventTypeBlockBloom {
-			continue
-		}
-
-		for _, attr := range event.Attributes {
-			if bytes.Equal([]byte(attr.Key), bAttributeKeyEthereumBloom) {
-				return ethtypes.BytesToBloom([]byte(attr.Value)), nil
-			}
-		}
-	}
-	return ethtypes.Bloom{}, errors.New("block bloom event is not found")
+	return GetBlockBloom(blockRes)
 }
 
 // RPCBlockFromTendermintBlock returns a JSON-RPC compatible Ethereum block from a
@@ -491,20 +479,10 @@ func (b *Backend) RPCBlockFromTendermintBlock(
 		b.logger.Error("failed to query consensus params", "error", err.Error())
 	}
 
-	var gasUsed uint64
-	for _, txsResult := range blockRes.TxsResults {
-		// workaround for cosmos-sdk bug. https://github.com/cosmos/cosmos-sdk/issues/10832
-		if ShouldIgnoreGasUsed(txsResult) {
-			// block gas limit has exceeded, other txs must have failed with same reason.
-			break
-		}
-		gas, err := ethermint.SafeUint64(txsResult.GetGasUsed())
-		if err != nil {
-			return nil, err
-		}
-		gasUsed += gas
+	gasUsed, err := GetGasUsed(blockRes)
+	if err != nil {
+		return nil, err
 	}
-
 	formattedBlock := rpctypes.FormatBlock(
 		block.Header, block.Size(),
 		gasLimit, new(big.Int).SetUint64(gasUsed),

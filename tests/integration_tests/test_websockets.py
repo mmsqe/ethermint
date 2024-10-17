@@ -108,9 +108,17 @@ def test_subscribe_basic(ethermint: Ethermint):
         assert int(msgs[1]["number"], 0) == int(msgs[0]["number"], 0) + 1
         assert int(msgs[2]["number"], 0) == int(msgs[1]["number"], 0) + 1
         for msg in msgs:
-            b = w3.eth.get_block(msg["number"])
-            assert HexBytes(msg["hash"]) == b["hash"]
-            assert msg["miner"] == b["miner"]
+            b = w3.provider.make_request(
+                "eth_getBlockByNumber", [msg["number"], True]
+            )["result"]
+            for key in b:
+                if not msg.get(key):
+                    continue
+                if key == "miner":
+                    eq = msg[key].lower() == b[key]
+                else:
+                    eq = msg[key] == b[key]
+                assert eq, key
         await assert_unsubscribe(c, sub_id)
 
     async def logs_test(c: Client, w3, contract):

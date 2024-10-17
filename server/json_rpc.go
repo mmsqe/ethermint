@@ -65,7 +65,7 @@ func StartJSONRPC(srvCtx *server.Context,
 	var err error
 	queryClient := rpctypes.NewQueryClient(clientCtx)
 	for i := 0; i < MaxRetry; i++ {
-		rpcStream, err = stream.NewRPCStreams(evtClient, logger, clientCtx.TxConfig.TxDecoder(), queryClient.ValidatorAccount)
+		rpcStream, err = stream.NewRPCStreams(evtClient, logger, clientCtx, queryClient.ValidatorAccount)
 		if err == nil {
 			break
 		}

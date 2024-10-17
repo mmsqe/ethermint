@@ -16,6 +16,7 @@
 package backend
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 	"sort"
@@ -338,4 +339,36 @@ func (b *Backend) getValidatorAccount(header *cmttypes.Header) (sdk.AccAddress, 
 		return nil, fmt.Errorf("failed to get validator account %w", err)
 	}
 	return sdk.AccAddressFromBech32(res.AccountAddress)
+}
+
+func GetBlockBloom(blockRes *tmrpctypes.ResultBlockResults) (ethtypes.Bloom, error) {
+	for _, event := range blockRes.FinalizeBlockEvents {
+		if event.Type != evmtypes.EventTypeBlockBloom {
+			continue
+		}
+
+		for _, attr := range event.Attributes {
+			if bytes.Equal([]byte(attr.Key), bAttributeKeyEthereumBloom) {
+				return ethtypes.BytesToBloom([]byte(attr.Value)), nil
+			}
+		}
+	}
+	return ethtypes.Bloom{}, errors.New("block bloom event is not found")
+}
+
+func GetGasUsed(blockRes *tmrpctypes.ResultBlockResults) (uint64, error) {
+	var gasUsed uint64
+	for _, txsResult := range blockRes.TxsResults {
+		// workaround for cosmos-sdk bug. https://github.com/cosmos/cosmos-sdk/issues/10832
+		if ShouldIgnoreGasUsed(txsResult) {
+			// block gas limit has exceeded, other txs must have failed with same reason.
+			break
+		}
+		gas, err := ethermint.SafeUint64(txsResult.GetGasUsed())
+		if err != nil {
+			return 0, err
+		}
+		gasUsed += gas
+	}
+	return gasUsed, nil
 }
