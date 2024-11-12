@@ -49,6 +49,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (ante) [#493](https://github.com/crypto-org-chain/ethermint/pull/493) Align gasWanted for process proposal mode, [#500](https://github.com/crypto-org-chain/ethermint/pull/500) Check for overflow before adding gasLimit to gasWanted.
 * (ante) [#506](https://github.com/crypto-org-chain/ethermint/pull/506) Disable MsgCreatePermanentLockedAccount and MsgCreatePeriodicVestingAccount messages.
 * (ante) [#513](https://github.com/crypto-org-chain/ethermint/pull/513) Avoid unnecessary GetAccount and MakeSigner in ante handlers.
+* (ante) [#560](https://github.com/crypto-org-chain/ethermint/pull/560) Check gasWanted only in checkTx mode.
 
 ### Bug Fixes
 
