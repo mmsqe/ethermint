@@ -22,19 +22,6 @@ import (
 	blockstm "github.com/crypto-org-chain/go-block-stm"
 )
 
-func DefaultTxExecutor(_ context.Context,
-	txs [][]byte,
-	ms storetypes.MultiStore,
-	deliverTxWithMultiStore func(int, sdk.Tx, storetypes.MultiStore, map[string]any) *abci.ExecTxResult,
-) ([]*abci.ExecTxResult, error) {
-	blockSize := len(txs)
-	results := make([]*abci.ExecTxResult, blockSize)
-	for i := 0; i < blockSize; i++ {
-		results[i] = deliverTxWithMultiStore(i, nil, ms, nil)
-	}
-	return evmtypes.PatchTxResponses(results), nil
-}
-
 type evmKeeper interface {
 	GetParams(ctx sdk.Context) evmtypes.Params
 }
@@ -62,6 +49,7 @@ func STMTxExecutor(
 		txs [][]byte,
 		ms storetypes.MultiStore,
 		deliverTxWithMultiStore func(int, sdk.Tx, storetypes.MultiStore, map[string]any) *abci.ExecTxResult,
+		patcher baseapp.TxResponsePatcher,
 	) ([]*abci.ExecTxResult, error) {
 		blockSize := len(txs)
 		if blockSize == 0 {
@@ -115,7 +103,7 @@ func STMTxExecutor(
 			return nil, err
 		}
 
-		return evmtypes.PatchTxResponses(results), nil
+		return patcher.Patch(results), nil
 	}
 }
 

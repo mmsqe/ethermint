@@ -9,6 +9,12 @@ import (
 	proto "github.com/cosmos/gogoproto/proto"
 )
 
+type EvmTxResponsePatcher struct{}
+
+func (p EvmTxResponsePatcher) Patch(input []*abci.ExecTxResult) []*abci.ExecTxResult {
+	return PatchTxResponses(input)
+}
+
 // PatchTxResponses fills the evm tx index and log indexes in the tx result
 func PatchTxResponses(input []*abci.ExecTxResult) []*abci.ExecTxResult {
 	var (

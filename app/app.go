@@ -810,6 +810,7 @@ func NewEthermintApp(
 	app.ScopedTransferKeeper = scopedTransferKeeper
 
 	executor := cast.ToString(appOpts.Get(server.FlagBlockSTMExecutor))
+	app.SetTxResponsePatcher(evmtypes.EvmTxResponsePatcher{})
 	switch executor {
 	case config.BlockExecutorBlockSTM:
 		sdk.SetAddrCacheEnabled(false)
@@ -817,7 +818,7 @@ func NewEthermintApp(
 		preEstimate := cast.ToBool(appOpts.Get(server.FlagBlockSTMPreEstimate))
 		app.SetTxExecutor(STMTxExecutor(app.GetStoreKeys(), workers, preEstimate, app.EvmKeeper, txConfig.TxDecoder()))
 	case "", config.BlockExecutorSequential:
-		app.SetTxExecutor(DefaultTxExecutor)
+		app.SetTxExecutor(baseapp.DefaultTxExecutor)
 	default:
 		panic(fmt.Errorf("unknown EVM block executor: %s", executor))
 	}
