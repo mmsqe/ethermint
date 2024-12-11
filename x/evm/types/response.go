@@ -11,12 +11,8 @@ import (
 
 type EvmTxResponsePatcher struct{}
 
+// Patch fills the evm tx index and log indexes in the tx result
 func (p EvmTxResponsePatcher) Patch(input []*abci.ExecTxResult) []*abci.ExecTxResult {
-	return PatchTxResponses(input)
-}
-
-// PatchTxResponses fills the evm tx index and log indexes in the tx result
-func PatchTxResponses(input []*abci.ExecTxResult) []*abci.ExecTxResult {
 	var (
 		txIndex  uint64
 		logIndex uint64

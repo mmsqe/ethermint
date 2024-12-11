@@ -34,7 +34,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	sigtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/gogoproto/proto"
-	blockstm "github.com/crypto-org-chain/go-block-stm"
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/cast"
@@ -42,7 +41,6 @@ import (
 	"cosmossdk.io/log"
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmos "github.com/cometbft/cometbft/libs/os"
-	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	dbm "github.com/cosmos/cosmos-db"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -820,22 +818,11 @@ func NewEthermintApp(
 		preEstimate := cast.ToBool(appOpts.Get(server.FlagBlockSTMPreEstimate))
 		txDecoder := txConfig.TxDecoder()
 		stores := app.GetStoreKeys()
-		app.SetTxExecutor(baseapp.STMTxExecutor(stores, workers, preEstimate, txDecoder,
-			func(txs [][]byte, workers int, txDecoder sdk.TxDecoder, ms storetypes.MultiStore) ([]sdk.Tx, []blockstm.MultiLocations) {
-				var authStore, bankStore int
-				index := make(map[storetypes.StoreKey]int, len(stores))
-				for i, k := range stores {
-					switch k.Name() {
-					case authtypes.StoreKey:
-						authStore = i
-					case banktypes.StoreKey:
-						bankStore = i
-					}
-					index[k] = i
-				}
-				evmDenom := app.EvmKeeper.GetParams(sdk.NewContext(ms, cmtproto.Header{}, false, log.NewNopLogger())).EvmDenom
-				return preEstimates(txs, workers, authStore, bankStore, evmDenom, txDecoder)
-			}))
+		var preEstimateFn PreEstimateFunc
+		if preEstimate {
+			preEstimateFn = GetPreEstimateFunc(stores, app.EvmKeeper)
+		}
+		app.SetTxExecutor(baseapp.STMTxExecutor(stores, workers, txDecoder, preEstimateFn))
 	case "", config.BlockExecutorSequential:
 		app.SetTxExecutor(baseapp.DefaultTxExecutor)
 	default:
