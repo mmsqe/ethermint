@@ -809,14 +809,14 @@ func NewEthermintApp(
 	app.ScopedIBCKeeper = scopedIBCKeeper
 	app.ScopedTransferKeeper = scopedTransferKeeper
 
-	executor := cast.ToString(appOpts.Get(srvflags.EVMBlockExecutor))
+	executor := cast.ToString(appOpts.Get(server.FlagBlockSTMExecutor))
 	switch executor {
-	case srvconfig.BlockExecutorBlockSTM:
+	case config.BlockExecutorBlockSTM:
 		sdk.SetAddrCacheEnabled(false)
-		workers := cast.ToInt(appOpts.Get(srvflags.EVMBlockSTMWorkers))
-		preEstimate := cast.ToBool(appOpts.Get(srvflags.EVMBlockSTMPreEstimate))
+		workers := cast.ToInt(appOpts.Get(server.FlagBlockSTMWorkers))
+		preEstimate := cast.ToBool(appOpts.Get(server.FlagBlockSTMPreEstimate))
 		app.SetTxExecutor(STMTxExecutor(app.GetStoreKeys(), workers, preEstimate, app.EvmKeeper, txConfig.TxDecoder()))
-	case "", srvconfig.BlockExecutorSequential:
+	case "", config.BlockExecutorSequential:
 		app.SetTxExecutor(DefaultTxExecutor)
 	default:
 		panic(fmt.Errorf("unknown EVM block executor: %s", executor))

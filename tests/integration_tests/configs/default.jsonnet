@@ -24,9 +24,9 @@
         'broadcast-mode': 'sync',
       },
       'app-config': {
-        evm: {
-          'block-executor': 'block-stm',
-          'block-stm-workers': 32,
+        'block-stm': {
+          executor: 'block-stm',
+          workers: 32,
         },
       },
     }, {

@@ -22,8 +22,6 @@ import (
 	blockstm "github.com/crypto-org-chain/go-block-stm"
 )
 
-const MinimalParallelPreEstimate = 16
-
 func DefaultTxExecutor(_ context.Context,
 	txs [][]byte,
 	ms storetypes.MultiStore,
