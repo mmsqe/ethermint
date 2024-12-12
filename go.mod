@@ -242,9 +242,9 @@ require (
 
 replace (
 	// release/v0.50.x
-	cosmossdk.io/store => github.com/crypto-org-chain/cosmos-sdk/store v0.0.0-20241015015202-783e224f9517
-	cosmossdk.io/x/tx => github.com/crypto-org-chain/cosmos-sdk/x/tx v0.0.0-20241015015202-783e224f9517
-	github.com/cosmos/cosmos-sdk => github.com/crypto-org-chain/cosmos-sdk v0.50.6-0.20241015015202-783e224f9517
+	cosmossdk.io/store => github.com/mmsqe/cosmos-sdk/store v0.0.0-20241212102320-38fc4cc39495
+	cosmossdk.io/x/tx => github.com/mmsqe/cosmos-sdk/x/tx v0.0.0-20241212102320-38fc4cc39495
+	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.0-beta2.0.20241212102320-38fc4cc39495
 )
 
 replace (
@@ -252,6 +252,7 @@ replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	// v0.38.x
 	github.com/cometbft/cometbft => github.com/yihuang/cometbft v0.38.0-alpha.1.0.20241106081635-f702b8b3f890
+	github.com/crypto-org-chain/go-block-stm => github.com/mmsqe/go-block-stm v0.0.0-20241212103207-0413e464b7f2
 	// release/v1.11.x
 	github.com/ethereum/go-ethereum => github.com/crypto-org-chain/go-ethereum v1.10.20-0.20241030073450-b9cc632bc183
 	// Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
