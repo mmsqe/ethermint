@@ -32,6 +32,7 @@ ADDRS = {name: account.address for name, account in ACCOUNTS.items()}
 ETHERMINT_ADDRESS_PREFIX = "ethm"
 TEST_CONTRACTS = {
     "TestERC20A": "TestERC20A.sol",
+    "TestERC20Owner": "TestERC20Owner.sol",
     "Greeter": "Greeter.sol",
     "BurnGas": "BurnGas.sol",
     "TestChainID": "ChainID.sol",
@@ -291,6 +292,10 @@ def modify_command_in_supervisor_config(ini: Path, fn, **kwargs):
 def build_batch_tx(w3, cli, txs, key=KEYS["validator"]):
     "return cosmos batch tx and eth tx hashes"
     signed_txs = [sign_transaction(w3, tx, key) for tx in txs]
+    return build_batch_tx_signed(cli, signed_txs)
+
+
+def build_batch_tx_signed(cli, signed_txs):
     tmp_txs = [cli.build_evm_tx(signed.rawTransaction.hex()) for signed in signed_txs]
 
     msgs = [tx["body"]["messages"][0] for tx in tmp_txs]

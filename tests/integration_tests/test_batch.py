@@ -1,30 +1,46 @@
 import json
 
-from .utils import ADDRS, CONTRACTS, build_batch_tx, contract_address
+from .utils import (
+    ADDRS,
+    CONTRACTS,
+    KEYS,
+    build_batch_tx_signed,
+    contract_address,
+    sign_transaction,
+)
 
 
 def test_batch_tx(ethermint):
     "send multiple eth txs in single cosmos tx"
     w3 = ethermint.w3
     cli = ethermint.cosmos_cli()
-    sender = ADDRS["validator"]
+    deployer = ADDRS["validator"]
+    sender = ADDRS["signer1"]
     recipient = ADDRS["community"]
+    deploy_nonce = w3.eth.get_transaction_count(deployer)
     nonce = w3.eth.get_transaction_count(sender)
-    info = json.loads(CONTRACTS["TestERC20A"].read_text())
+    info = json.loads(CONTRACTS["TestERC20Owner"].read_text())
     contract = w3.eth.contract(abi=info["abi"], bytecode=info["bytecode"])
-    deploy_tx = contract.constructor().build_transaction(
-        {"from": sender, "nonce": nonce}
+    deploy_tx = contract.constructor(sender).build_transaction(
+        {"from": deployer, "nonce": deploy_nonce}
     )
-    contract = w3.eth.contract(address=contract_address(sender, nonce), abi=info["abi"])
+    contract = w3.eth.contract(
+        address=contract_address(deployer, deploy_nonce), abi=info["abi"]
+    )
     transfer_tx1 = contract.functions.transfer(recipient, 1000).build_transaction(
-        {"from": sender, "nonce": nonce + 1, "gas": 200000}
+        {"from": sender, "nonce": nonce, "gas": 200000}
     )
     transfer_tx2 = contract.functions.transfer(recipient, 1000).build_transaction(
-        {"from": sender, "nonce": nonce + 2, "gas": 200000}
+        {"from": sender, "nonce": nonce + 1, "gas": 200000}
     )
 
-    cosmos_tx, tx_hashes = build_batch_tx(
-        w3, cli, [deploy_tx, transfer_tx1, transfer_tx2]
+    cosmos_tx, tx_hashes = build_batch_tx_signed(
+        cli,
+        [
+            sign_transaction(w3, deploy_tx, KEYS["validator"]),
+            sign_transaction(w3, transfer_tx1, KEYS["signer1"]),
+            sign_transaction(w3, transfer_tx2, KEYS["signer1"]),
+        ],
     )
     rsp = cli.broadcast_tx_json(cosmos_tx)
     assert rsp["code"] == 0, rsp["raw_log"]
@@ -32,6 +48,9 @@ def test_batch_tx(ethermint):
     receipts = [w3.eth.wait_for_transaction_receipt(h) for h in tx_hashes]
 
     assert 2000 == contract.caller.balanceOf(recipient)
+
+    assert w3.eth.get_transaction_count(deployer) == deploy_nonce + 1
+    assert w3.eth.get_transaction_count(sender) == nonce + 2
 
     # check logs
     assert receipts[0].contractAddress == contract.address
