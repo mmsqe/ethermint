@@ -16,15 +16,13 @@
 package ante
 
 import (
+	"cosmossdk.io/core/appmodule"
 	errorsmod "cosmossdk.io/errors"
-	storetypes "cosmossdk.io/store/types"
 	txsigning "cosmossdk.io/x/tx/signing"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante/unorderedtx"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
@@ -35,15 +33,18 @@ const EthSigVerificationResultCacheKey = "ante:EthSigVerificationResult"
 // HandlerOptions extend the SDK's AnteHandler options by requiring the IBC
 // channel keeper, EVM Keeper and Fee Market Keeper.
 type HandlerOptions struct {
-	AccountKeeper          evmtypes.AccountKeeper
-	BankKeeper             evmtypes.BankKeeper
-	FeeMarketKeeper        FeeMarketKeeper
-	EvmKeeper              EVMKeeper
-	FeegrantKeeper         ante.FeegrantKeeper
-	SignModeHandler        *txsigning.HandlerMap
-	SigGasConsumer         func(meter storetypes.GasMeter, sig signing.SignatureV2, params authtypes.Params) error
-	MaxTxGasWanted         uint64
-	ExtensionOptionChecker ante.ExtensionOptionChecker
+	Environment              appmodule.Environment
+	ConsensusKeeper          ante.ConsensusKeeper
+	AccountKeeper            evmtypes.AccountKeeper
+	AccountAbstractionKeeper ante.AccountAbstractionKeeper
+	BankKeeper               evmtypes.BankKeeper
+	FeeMarketKeeper          FeeMarketKeeper
+	EvmKeeper                EVMKeeper
+	FeegrantKeeper           ante.FeegrantKeeper
+	SignModeHandler          *txsigning.HandlerMap
+	SigGasConsumer           ante.SignatureVerificationGasConsumer
+	MaxTxGasWanted           uint64
+	ExtensionOptionChecker   ante.ExtensionOptionChecker
 	// use dynamic fee checker or the cosmos-sdk default one for native transactions
 	DynamicFeeChecker bool
 	DisabledAuthzMsgs []string
@@ -174,20 +175,16 @@ func newCosmosAnteHandler(ctx sdk.Context, options HandlerOptions, extra ...sdk.
 		RejectMessagesDecorator{}, // reject MsgEthereumTxs
 		// disable the Msg types that cannot be included on an authz.MsgExec msgs field
 		NewAuthzLimiterDecorator(options.DisabledAuthzMsgs),
-		ante.NewSetUpContextDecorator(),
+		ante.NewSetUpContextDecorator(options.Environment, options.ConsensusKeeper),
 		ante.NewExtensionOptionsDecorator(options.ExtensionOptionChecker),
-		ante.NewValidateBasicDecorator(),
-		ante.NewTxTimeoutHeightDecorator(),
+		ante.NewValidateBasicDecorator(options.Environment),
+		ante.NewTxTimeoutHeightDecorator(options.Environment),
 		NewMinGasPriceDecorator(options.FeeMarketKeeper, evmDenom, &feemarketParams),
 		ante.NewValidateMemoDecorator(options.AccountKeeper),
 		ante.NewConsumeGasForTxSizeDecorator(options.AccountKeeper),
 		NewDeductFeeDecorator(options.AccountKeeper, options.BankKeeper, options.FeegrantKeeper, txFeeChecker),
-		// SetPubKeyDecorator must be called before all signature verification decorators
-		ante.NewSetPubKeyDecorator(options.AccountKeeper),
 		ante.NewValidateSigCountDecorator(options.AccountKeeper),
-		ante.NewSigGasConsumeDecorator(options.AccountKeeper, options.SigGasConsumer),
-		ante.NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler),
-		ante.NewIncrementSequenceDecorator(options.AccountKeeper),
+		ante.NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler, options.SigGasConsumer, options.AccountAbstractionKeeper),
 	}
 	decorators = append(decorators, extra...)
 	return sdk.ChainAnteDecorators(decorators...)

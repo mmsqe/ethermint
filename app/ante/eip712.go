@@ -64,20 +64,16 @@ func NewLegacyCosmosAnteHandlerEip712(ctx sdk.Context, options HandlerOptions, e
 		RejectMessagesDecorator{}, // reject MsgEthereumTxs
 		// disable the Msg types that cannot be included on an authz.MsgExec msgs field
 		NewAuthzLimiterDecorator(options.DisabledAuthzMsgs),
-		authante.NewSetUpContextDecorator(),
-		authante.NewValidateBasicDecorator(),
-		authante.NewTxTimeoutHeightDecorator(),
+		authante.NewSetUpContextDecorator(options.Environment, options.ConsensusKeeper),
+		authante.NewValidateBasicDecorator(options.Environment),
+		authante.NewTxTimeoutHeightDecorator(options.Environment),
 		NewMinGasPriceDecorator(options.FeeMarketKeeper, evmDenom, &feemarketParams),
 		authante.NewValidateMemoDecorator(options.AccountKeeper),
 		authante.NewConsumeGasForTxSizeDecorator(options.AccountKeeper),
 		NewDeductFeeDecorator(options.AccountKeeper, options.BankKeeper, options.FeegrantKeeper, txFeeChecker),
-		// SetPubKeyDecorator must be called before all signature verification decorators
-		authante.NewSetPubKeyDecorator(options.AccountKeeper),
 		authante.NewValidateSigCountDecorator(options.AccountKeeper),
-		authante.NewSigGasConsumeDecorator(options.AccountKeeper, options.SigGasConsumer),
 		// Note: signature verification uses EIP instead of the cosmos signature validator
 		NewLegacyEip712SigVerificationDecorator(options.AccountKeeper, options.SignModeHandler),
-		authante.NewIncrementSequenceDecorator(options.AccountKeeper),
 	}
 	decorators = append(decorators, extra...)
 	return sdk.ChainAnteDecorators(decorators...)
@@ -157,11 +153,7 @@ func (svd LegacyEip712SigVerificationDecorator) AnteHandle(ctx sdk.Context,
 	i := 0
 	sig := sigs[i]
 
-	acc, err := authante.GetSignerAcc(ctx, svd.ak, signerAddrs[i])
-	if err != nil {
-		return ctx, err
-	}
-
+	acc := authante.GetSignerAcc(ctx, svd.ak, signerAddrs[i])
 	// retrieve pubkey
 	pubKey := acc.GetPubKey()
 	if !simulate && pubKey == nil {
@@ -230,17 +222,17 @@ func VerifySignature(
 		if len(msgs) == 0 {
 			return errorsmod.Wrap(errortypes.ErrNoSignatures, "tx doesn't contain any msgs to verify signature")
 		}
-
 		txBytes := legacytx.StdSignBytes(
 			signerData.ChainID,
 			signerData.AccountNumber,
 			signerData.Sequence,
-			tx.GetTimeoutHeight(),
+			tx.(sdk.TxWithTimeoutHeight).GetTimeoutHeight(),
 			legacytx.StdFee{
 				Amount: tx.GetFee(),
 				Gas:    tx.GetGas(),
 			},
-			msgs, tx.GetMemo(),
+			msgs,
+			tx.(sdk.TxWithMemo).GetMemo(),
 		)
 
 		signerChainID, err := ethermint.ParseChainID(signerData.ChainID)
