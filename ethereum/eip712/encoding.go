@@ -231,7 +231,7 @@ func validatePayloadMessages(msgs []sdk.Msg) error {
 	var msgSigner sdk.AccAddress
 
 	for i, m := range msgs {
-		signers, _, err := protoCodec.GetMsgV1Signers(m)
+		signers, _, err := protoCodec.GetMsgSigners(m)
 		if err != nil {
 			return fmt.Errorf("error getting signers. %w", err)
 		}

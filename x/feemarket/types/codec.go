@@ -1,6 +1,7 @@
 package types
 
 import (
+	coreregistry "cosmossdk.io/core/registry"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -38,6 +39,6 @@ func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 }
 
 // RegisterLegacyAminoCodec required for EIP-712
-func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
+func RegisterLegacyAminoCodec(cdc coreregistry.AminoRegistrar) {
 	cdc.RegisterConcrete(&MsgUpdateParams{}, updateParamsName)
 }

@@ -103,7 +103,7 @@ func legacyDecodeAminoSignDoc(signDocBytes []byte) (apitypes.TypedData, error) {
 	msg := msgs[0]
 
 	// By convention, the fee payer is the first address in the list of signers.
-	signers, _, err := protoCodec.GetMsgV1Signers(msg)
+	signers, _, err := protoCodec.GetMsgSigners(msg)
 	if err != nil {
 		return apitypes.TypedData{}, err
 	}
@@ -192,7 +192,7 @@ func legacyDecodeProtobufSignDoc(signDocBytes []byte) (apitypes.TypedData, error
 		Gas:    authInfo.Fee.GasLimit,
 	}
 
-	signers, _, err := protoCodec.GetMsgV1Signers(msg)
+	signers, _, err := protoCodec.GetMsgSigners(msg)
 	if err != nil {
 		return apitypes.TypedData{}, err
 	}
@@ -242,7 +242,7 @@ func legacyValidatePayloadMessages(msgs []sdk.Msg) error {
 			return err
 		}
 
-		signers, _, err := protoCodec.GetMsgV1Signers(m)
+		signers, _, err := protoCodec.GetMsgSigners(m)
 		if err != nil {
 			return err
 		}

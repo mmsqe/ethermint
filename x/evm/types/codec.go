@@ -16,6 +16,7 @@
 package types
 
 import (
+	coreregistry "cosmossdk.io/core/registry"
 	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -106,6 +107,6 @@ func UnpackTxData(codecAny *codectypes.Any) (TxData, error) {
 }
 
 // RegisterLegacyAminoCodec required for EIP-712
-func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
+func RegisterLegacyAminoCodec(cdc coreregistry.AminoRegistrar) {
 	cdc.RegisterConcrete(&MsgUpdateParams{}, updateParamsName)
 }

@@ -28,6 +28,7 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
+	coreregistry "cosmossdk.io/core/registry"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -59,7 +60,7 @@ func (AppModuleBasic) Name() string {
 }
 
 // RegisterLegacyAminoCodec registers the module's types with the given codec.
-func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
+func (AppModuleBasic) RegisterLegacyAminoCodec(cdc coreregistry.AminoRegistrar) {
 	types.RegisterLegacyAminoCodec(cdc)
 }
 

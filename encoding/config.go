@@ -50,10 +50,11 @@ func MakeConfig() ethermint.EncodingConfig {
 		panic(err)
 	}
 	codec := amino.NewProtoCodec(interfaceRegistry)
+	signingCtx := interfaceRegistry.SigningContext()
 	encodingConfig := ethermint.EncodingConfig{
 		InterfaceRegistry: interfaceRegistry,
 		Codec:             codec,
-		TxConfig:          tx.NewTxConfig(codec, tx.DefaultSignModes),
+		TxConfig:          tx.NewTxConfig(codec, signingCtx.AddressCodec(), signingCtx.ValidatorAddressCodec(), tx.DefaultSignModes),
 		Amino:             cdc,
 	}
 	enccodec.RegisterLegacyAminoCodec(cdc)
