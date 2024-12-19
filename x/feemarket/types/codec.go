@@ -39,5 +39,5 @@ func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 
 // RegisterLegacyAminoCodec required for EIP-712
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	cdc.RegisterConcrete(&MsgUpdateParams{}, updateParamsName, nil)
+	cdc.RegisterConcrete(&MsgUpdateParams{}, updateParamsName)
 }

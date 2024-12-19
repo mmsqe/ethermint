@@ -126,7 +126,7 @@ func (suite *AnteTestSuite) SetupTest() {
 
 	encodingConfig := config.MakeConfigForTest(suite.app.BasicModuleManager)
 	// We're using TestMsg amino encoding in some tests, so register it here.
-	encodingConfig.Amino.RegisterConcrete(&testdata.TestMsg{}, "testdata.TestMsg", nil)
+	encodingConfig.Amino.RegisterConcrete(&testdata.TestMsg{}, "testdata.TestMsg")
 	eip712.SetEncodingConfig(encodingConfig)
 
 	suite.clientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig)
