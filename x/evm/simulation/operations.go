@@ -9,14 +9,13 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/simulation"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	"github.com/cosmos/cosmos-sdk/x/simulation"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -51,7 +50,7 @@ var maxWaitSeconds = 10
 
 type simulateContext struct {
 	context sdk.Context
-	bapp    *baseapp.BaseApp
+	bapp    simtypes.AppEntrypoint
 	rand    *rand.Rand
 	keeper  *keeper.Keeper
 }
@@ -95,7 +94,7 @@ func WeightedOperations(
 // Other tx details like nonce, gasprice, gaslimit are calculated to get valid value.
 func SimulateEthSimpleTransfer(_ types.AccountKeeper, k *keeper.Keeper) simtypes.Operation {
 	return func(
-		r *rand.Rand, bapp *baseapp.BaseApp, ctx sdk.Context, accs []simtypes.Account, _ string,
+		r *rand.Rand, bapp simtypes.AppEntrypoint, ctx sdk.Context, accs []simtypes.Account, _ string,
 	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		simAccount, _ := simtypes.RandomAcc(r, accs)
 		var recipient simtypes.Account
@@ -118,7 +117,7 @@ func SimulateEthSimpleTransfer(_ types.AccountKeeper, k *keeper.Keeper) simtypes
 // to ensure valid contract call.
 func SimulateEthCreateContract(_ types.AccountKeeper, k *keeper.Keeper) simtypes.Operation {
 	return func(
-		r *rand.Rand, bapp *baseapp.BaseApp, ctx sdk.Context, accs []simtypes.Account, _ string,
+		r *rand.Rand, bapp simtypes.AppEntrypoint, ctx sdk.Context, accs []simtypes.Account, _ string,
 	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		simAccount, _ := simtypes.RandomAcc(r, accs)
 
@@ -156,7 +155,7 @@ func SimulateEthCreateContract(_ types.AccountKeeper, k *keeper.Keeper) simtypes
 // It is always calling an ERC20 contract.
 func operationSimulateEthCallContract(k *keeper.Keeper, contractAddr, to *common.Address, amount *big.Int) simtypes.Operation {
 	return func(
-		r *rand.Rand, bapp *baseapp.BaseApp, ctx sdk.Context, accs []simtypes.Account, _ string,
+		r *rand.Rand, bapp simtypes.AppEntrypoint, ctx sdk.Context, accs []simtypes.Account, _ string,
 	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		simAccount, _ := simtypes.RandomAcc(r, accs)
 
