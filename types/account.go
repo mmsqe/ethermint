@@ -18,19 +18,19 @@ package types
 import (
 	"bytes"
 
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
+	gogoprotoany "github.com/cosmos/gogoproto/types/any"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
 var (
-	_ sdk.AccountI                       = (*EthAccount)(nil)
-	_ EthAccountI                        = (*EthAccount)(nil)
-	_ authtypes.GenesisAccount           = (*EthAccount)(nil)
-	_ codectypes.UnpackInterfacesMessage = (*EthAccount)(nil)
+	_ sdk.AccountI                         = (*EthAccount)(nil)
+	_ EthAccountI                          = (*EthAccount)(nil)
+	_ authtypes.GenesisAccount             = (*EthAccount)(nil)
+	_ gogoprotoany.UnpackInterfacesMessage = (*EthAccount)(nil)
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)

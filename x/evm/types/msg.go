@@ -35,6 +35,7 @@ import (
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 
+	gogoprotoany "github.com/cosmos/gogoproto/types/any"
 	"github.com/ethereum/go-ethereum/common"
 	cmath "github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core"
@@ -47,7 +48,7 @@ var (
 	_ ante.GasTx = &MsgEthereumTx{}
 	_ sdk.Msg    = &MsgUpdateParams{}
 
-	_ codectypes.UnpackInterfacesMessage = MsgEthereumTx{}
+	_ gogoprotoany.UnpackInterfacesMessage = MsgEthereumTx{}
 )
 
 // message type and route constants
@@ -344,7 +345,7 @@ func (msg *MsgEthereumTx) VerifySender(signer ethtypes.Signer) error {
 }
 
 // UnpackInterfaces implements UnpackInterfacesMesssage.UnpackInterfaces
-func (msg MsgEthereumTx) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error {
+func (msg MsgEthereumTx) UnpackInterfaces(unpacker gogoprotoany.AnyUnpacker) error {
 	return unpacker.UnpackAny(msg.Data, new(TxData))
 }
 

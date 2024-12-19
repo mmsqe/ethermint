@@ -31,6 +31,7 @@ import (
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	ethermint "github.com/evmos/ethermint/types"
 
+	gogoprotoany "github.com/cosmos/gogoproto/types/any"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
@@ -47,7 +48,7 @@ const (
 // LegacyWrapTxToTypedData is an ultimate method that wraps Amino-encoded Cosmos Tx JSON data
 // into an EIP712-compatible TypedData request.
 func LegacyWrapTxToTypedData(
-	cdc codectypes.AnyUnpacker,
+	cdc gogoprotoany.AnyUnpacker,
 	chainID uint64,
 	msg sdk.Msg,
 	data []byte,
@@ -102,7 +103,7 @@ func LegacyWrapTxToTypedData(
 	return typedData, nil
 }
 
-func extractMsgTypes(cdc codectypes.AnyUnpacker, msgTypeName string, msg sdk.Msg) (apitypes.Types, error) {
+func extractMsgTypes(cdc gogoprotoany.AnyUnpacker, msgTypeName string, msg sdk.Msg) (apitypes.Types, error) {
 	rootTypes := apitypes.Types{
 		"EIP712Domain": {
 			{
@@ -158,7 +159,7 @@ func extractMsgTypes(cdc codectypes.AnyUnpacker, msgTypeName string, msg sdk.Msg
 	return rootTypes, nil
 }
 
-func walkFields(cdc codectypes.AnyUnpacker, typeMap apitypes.Types, rootType string, in interface{}) (err error) {
+func walkFields(cdc gogoprotoany.AnyUnpacker, typeMap apitypes.Types, rootType string, in interface{}) (err error) {
 	defer doRecover(&err)
 
 	t := reflect.TypeOf(in)
@@ -185,7 +186,7 @@ type cosmosAnyWrapper struct {
 }
 
 func legacyTraverseFields(
-	cdc codectypes.AnyUnpacker,
+	cdc gogoprotoany.AnyUnpacker,
 	typeMap apitypes.Types,
 	rootType string,
 	prefix string,
@@ -362,7 +363,7 @@ func jsonNameFromTag(tag reflect.StructTag) string {
 }
 
 // Unpack the given Any value with Type/Value deconstruction
-func unpackAny(cdc codectypes.AnyUnpacker, field reflect.Value) (reflect.Type, reflect.Value, error) {
+func unpackAny(cdc gogoprotoany.AnyUnpacker, field reflect.Value) (reflect.Type, reflect.Value, error) {
 	anyData, ok := field.Interface().(*codectypes.Any)
 	if !ok {
 		return nil, reflect.Value{}, errorsmod.Wrapf(errortypes.ErrPackAny, "%T", field.Interface())

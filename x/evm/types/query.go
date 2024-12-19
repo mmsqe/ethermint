@@ -16,11 +16,11 @@
 package types
 
 import (
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	gogoprotoany "github.com/cosmos/gogoproto/types/any"
 )
 
 // UnpackInterfaces implements UnpackInterfacesMesssage.UnpackInterfaces
-func (m QueryTraceTxRequest) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error {
+func (m QueryTraceTxRequest) UnpackInterfaces(unpacker gogoprotoany.AnyUnpacker) error {
 	for _, msg := range m.Predecessors {
 		if err := msg.UnpackInterfaces(unpacker); err != nil {
 			return err
@@ -29,7 +29,7 @@ func (m QueryTraceTxRequest) UnpackInterfaces(unpacker codectypes.AnyUnpacker) e
 	return m.Msg.UnpackInterfaces(unpacker)
 }
 
-func (m QueryTraceBlockRequest) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error {
+func (m QueryTraceBlockRequest) UnpackInterfaces(unpacker gogoprotoany.AnyUnpacker) error {
 	for _, msg := range m.Txs {
 		if err := msg.UnpackInterfaces(unpacker); err != nil {
 			return err
