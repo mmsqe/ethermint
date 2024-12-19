@@ -16,9 +16,11 @@
 package ante
 
 import (
+	"context"
 	"fmt"
 	"math"
 
+	"cosmossdk.io/core/transaction"
 	errorsmod "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 
@@ -40,24 +42,24 @@ import (
 // - when london hardfork is not enabled, it fallbacks to SDK default behavior (validator min-gas-prices).
 // - Tx priority is set to `effectiveGasPrice / DefaultPriorityReduction`.
 func NewDynamicFeeChecker(ethCfg *params.ChainConfig, evmParams *types.Params, feemarketParams *feemarkettypes.Params) authante.TxFeeChecker {
-	return func(ctx sdk.Context, tx sdk.Tx) (sdk.Coins, int64, error) {
+	return func(ctx context.Context, tx transaction.Tx) (sdk.Coins, int64, error) {
 		feeTx, ok := tx.(sdk.FeeTx)
 		if !ok {
 			return nil, 0, fmt.Errorf("tx must be a FeeTx")
 		}
-
-		if ctx.BlockHeight() == 0 {
+		if sdk.UnwrapSDKContext(ctx).BlockHeight() == 0 {
 			// genesis transactions: fallback to min-gas-price logic
 			return checkTxFeeWithValidatorMinGasPrices(ctx, feeTx)
 		}
 
 		denom := evmParams.EvmDenom
 
-		baseFee := types.GetBaseFee(ctx.BlockHeight(), ethCfg, feemarketParams)
-		if baseFee == nil {
-			// london hardfork is not enabled: fallback to min-gas-prices logic
-			return checkTxFeeWithValidatorMinGasPrices(ctx, feeTx)
-		}
+		baseFee := types.GetBaseFee(0, ethCfg, feemarketParams)
+		// baseFee := types.GetBaseFee(ctx.BlockHeight(), ethCfg, feemarketParams)
+		// if baseFee == nil {
+		// 	// london hardfork is not enabled: fallback to min-gas-prices logic
+		// 	return checkTxFeeWithValidatorMinGasPrices(ctx, feeTx)
+		// }
 
 		// default to `MaxInt64` when there's no extension option.
 		maxPriorityPrice := sdkmath.NewInt(math.MaxInt64)
@@ -111,7 +113,7 @@ func NewDynamicFeeChecker(ethCfg *params.ChainConfig, evmParams *types.Params, f
 
 // checkTxFeeWithValidatorMinGasPrices implements the default fee logic, where the minimum price per
 // unit of gas is fixed and set by each validator, and the tx priority is computed from the gas price.
-func checkTxFeeWithValidatorMinGasPrices(ctx sdk.Context, tx sdk.Tx) (sdk.Coins, int64, error) {
+func checkTxFeeWithValidatorMinGasPrices(ctx context.Context, tx transaction.Tx) (sdk.Coins, int64, error) {
 	feeTx, ok := tx.(sdk.FeeTx)
 	if !ok {
 		return nil, 0, errorsmod.Wrap(errortypes.ErrTxDecode, "Tx must be a FeeTx")
@@ -122,12 +124,13 @@ func checkTxFeeWithValidatorMinGasPrices(ctx sdk.Context, tx sdk.Tx) (sdk.Coins,
 	if err != nil {
 		return nil, 0, err
 	}
-	minGasPrices := ctx.MinGasPrices()
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	minGasPrices := sdkCtx.MinGasPrices()
 
 	// Ensure that the provided fees meet a minimum threshold for the validator,
 	// if this is a CheckTx. This is only for local mempool purposes, and thus
 	// is only ran on check tx.
-	if ctx.IsCheckTx() && !minGasPrices.IsZero() {
+	if sdkCtx.IsCheckTx() && !minGasPrices.IsZero() {
 		requiredFees := make(sdk.Coins, len(minGasPrices))
 
 		// Determine the required fees by multiplying each required minimum gas
