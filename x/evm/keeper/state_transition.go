@@ -96,10 +96,10 @@ func (k *Keeper) NewEVM(
 //  3. The requested height is within the valid range, retrieve the hash from GetHistoricalInfo for heights before sdk50.
 func (k Keeper) GetHashFn(ctx sdk.Context) vm.GetHashFunc {
 	return func(num64 uint64) common.Hash {
-		h, err := ethermint.SafeInt64(num64)
-		if err != nil {
-			return common.Hash{}
-		}
+		// h, err := ethermint.SafeInt64(num64)
+		// if err != nil {
+		// 	return common.Hash{}
+		// }
 		upper, err := ethermint.SafeUint64(ctx.BlockHeight())
 		if err != nil {
 			return common.Hash{}
@@ -137,6 +137,7 @@ func (k Keeper) GetHashFn(ctx sdk.Context) vm.GetHashFunc {
 		// 	return common.Hash{}
 		// }
 		// return common.BytesToHash(header.Hash())
+		return common.Hash{}
 	}
 }
 
