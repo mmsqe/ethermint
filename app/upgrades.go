@@ -19,28 +19,20 @@ import (
 	"context"
 	"fmt"
 
-	storetypes "cosmossdk.io/store/types"
+	"cosmossdk.io/core/appmodule"
+	corestore "cosmossdk.io/core/store"
+	"cosmossdk.io/x/accounts"
+	pooltypes "cosmossdk.io/x/protocolpool/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
-	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 
 func (app *EthermintApp) RegisterUpgradeHandlers() {
-	planName := "sdk50"
+	planName := "sdk52"
 	app.UpgradeKeeper.SetUpgradeHandler(planName,
-		func(ctx context.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+		func(ctx context.Context, _ upgradetypes.Plan, fromVM appmodule.VersionMap) (appmodule.VersionMap, error) {
 			m, err := app.ModuleManager.RunMigrations(ctx, app.configurator, fromVM)
 			if err != nil {
 				return m, err
-			}
-			sdkCtx := sdk.UnwrapSDKContext(ctx)
-			{
-				params := app.EvmKeeper.GetParams(sdkCtx)
-				params.HeaderHashNum = evmtypes.DefaultHeaderHashNum
-				if err := app.EvmKeeper.SetParams(sdkCtx, params); err != nil {
-					return m, err
-				}
 			}
 			return m, nil
 		},
@@ -52,7 +44,11 @@ func (app *EthermintApp) RegisterUpgradeHandlers() {
 	}
 	if !app.UpgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
 		if upgradeInfo.Name == planName {
-			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storetypes.StoreUpgrades{
+			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &corestore.StoreUpgrades{
+				Added: []string{
+					pooltypes.ModuleName,
+					accounts.ModuleName,
+				},
 				Deleted: []string{"ibc"},
 			}))
 		}
