@@ -77,11 +77,7 @@ func (k *Keeper) DeductTxCostsFromUserBalance(
 	from common.Address,
 ) error {
 	// fetch sender account
-	signerAcc, err := authante.GetSignerAcc(ctx, k.accountKeeper, from.Bytes())
-	if err != nil {
-		return errorsmod.Wrapf(err, "account not found for sender %s", from)
-	}
-
+	signerAcc := authante.GetSignerAcc(ctx, k.accountKeeper, from.Bytes())
 	// deduct the full gas cost from the user balance
 	if err := DeductFees(k.bankKeeper, ctx, signerAcc, fees); err != nil {
 		return errorsmod.Wrapf(err, "failed to deduct full gas cost %s from the user %s balance", fees, from)
