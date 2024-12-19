@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"cosmossdk.io/log"
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -57,9 +56,9 @@ func TestSDKTxFeeChecker(t *testing.T) {
 	encodingConfig := encoding.MakeConfig()
 	minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin("aphoton", sdkmath.NewInt(10)))
 
-	genesisCtx := sdk.NewContext(nil, tmproto.Header{}, false, log.NewNopLogger())
-	checkTxCtx := sdk.NewContext(nil, tmproto.Header{Height: 1}, true, log.NewNopLogger()).WithMinGasPrices(minGasPrices)
-	deliverTxCtx := sdk.NewContext(nil, tmproto.Header{Height: 1}, false, log.NewNopLogger())
+	genesisCtx := sdk.NewContext(nil, false, log.NewNopLogger())
+	checkTxCtx := sdk.NewContext(nil, true, log.NewNopLogger()).WithMinGasPrices(minGasPrices)
+	deliverTxCtx := sdk.NewContext(nil, false, log.NewNopLogger())
 
 	testCases := []struct {
 		name        string

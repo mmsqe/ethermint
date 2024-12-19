@@ -4,22 +4,21 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"math/rand"
 	"testing"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
+	banktypes "cosmossdk.io/x/bank/types"
+	stakingtypes "cosmossdk.io/x/staking/types"
+	cmtprotoversion "github.com/cometbft/cometbft/api/cometbft/version/v1"
 	cmtcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/tmhash"
-	cmtrand "github.com/cometbft/cometbft/libs/rand"
-	cmtversion "github.com/cometbft/cometbft/proto/tendermint/version"
 	tmtypes "github.com/cometbft/cometbft/types"
-	"github.com/cometbft/cometbft/version"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -92,10 +91,10 @@ func TestStateTransitionTestSuite(t *testing.T) {
 func makeRandHeader(height uint64) tmtypes.Header {
 	chainID := "test"
 	t := time.Now()
-	randBytes := cmtrand.Bytes(tmhash.Size)
-	randAddress := cmtrand.Bytes(cmtcrypto.AddressSize)
+	randBytes := rand.Bytes(tmhash.Size)
+	randAddress := rand.Bytes(cmtcrypto.AddressSize)
 	h := tmtypes.Header{
-		Version:            cmtversion.Consensus{Block: version.BlockProtocol, App: 1},
+		Version:            cmtprotoversion.Consensus{Block: version.BlockProtocol, App: 1},
 		ChainID:            chainID,
 		Height:             int64(height),
 		Time:               t,

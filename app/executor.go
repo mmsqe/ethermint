@@ -10,10 +10,9 @@ import (
 	"cosmossdk.io/log"
 	"cosmossdk.io/store/cachemulti"
 	storetypes "cosmossdk.io/store/types"
+	banktypes "cosmossdk.io/x/bank/types"
 	abci "github.com/cometbft/cometbft/abci/types"
-	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -82,7 +81,7 @@ func STMTxExecutor(
 		)
 		if estimate {
 			// pre-estimation
-			evmDenom := evmKeeper.GetParams(sdk.NewContext(ms, cmtproto.Header{}, false, log.NewNopLogger())).EvmDenom
+			evmDenom := evmKeeper.GetParams(sdk.NewContext(ms, false, log.NewNopLogger())).EvmDenom
 			memTxs, estimates = preEstimates(txs, workers, authStore, bankStore, evmDenom, txDecoder)
 		}
 

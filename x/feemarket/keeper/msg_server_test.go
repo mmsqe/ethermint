@@ -3,8 +3,8 @@ package keeper_test
 import (
 	"testing"
 
+	govtypes "cosmossdk.io/x/gov/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/evmos/ethermint/testutil"
 	"github.com/evmos/ethermint/x/feemarket/types"
 	"github.com/stretchr/testify/suite"

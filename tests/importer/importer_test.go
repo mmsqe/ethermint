@@ -31,10 +31,9 @@ import (
 	ethrlp "github.com/ethereum/go-ethereum/rlp"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	cmtproto "github.com/cometbft/cometbft/api/cometbft/types/v1"
+	cmtprotoversion "github.com/cometbft/cometbft/api/cometbft/version/v1"
 	"github.com/cometbft/cometbft/crypto/tmhash"
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
-	tmversion "github.com/cometbft/cometbft/proto/tendermint/version"
-	"github.com/cometbft/cometbft/version"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 )
 
@@ -66,17 +65,17 @@ func (suite *ImporterTestSuite) DoSetupTest(t require.TestingT) {
 	priv, err := ethsecp256k1.GenerateKey()
 	require.NoError(t, err)
 	consAddress := sdk.ConsAddress(priv.PubKey().Address())
-	suite.ctx = suite.app.BaseApp.NewUncachedContext(checkTx, tmproto.Header{
+	suite.ctx = suite.app.BaseApp.NewUncachedContext(checkTx, cmtproto.Header{
 		Height:          1,
 		ChainID:         "ethermint_9000-1",
 		Time:            time.Now().UTC(),
 		ProposerAddress: consAddress.Bytes(),
-		Version: tmversion.Consensus{
+		Version: cmtprotoversion.Consensus{
 			Block: version.BlockProtocol,
 		},
-		LastBlockId: tmproto.BlockID{
+		LastBlockId: cmtversion.BlockID{
 			Hash: tmhash.Sum([]byte("block_id")),
-			PartSetHeader: tmproto.PartSetHeader{
+			PartSetHeader: cmtversion.PartSetHeader{
 				Total: 11,
 				Hash:  tmhash.Sum([]byte("partset_header")),
 			},

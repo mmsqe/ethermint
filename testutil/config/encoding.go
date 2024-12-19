@@ -1,14 +1,14 @@
 package config
 
 import (
+	"cosmossdk.io/x/bank"
+	distr "cosmossdk.io/x/distribution"
+	"cosmossdk.io/x/gov"
+	govclient "cosmossdk.io/x/gov/client"
+	paramsclient "cosmossdk.io/x/params/client"
+	"cosmossdk.io/x/staking"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
-	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
-	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/evmos/ethermint/encoding"
 	"github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/evm"

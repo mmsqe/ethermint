@@ -16,7 +16,7 @@
 package types
 
 import (
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	paramtypes "cosmossdk.io/x/params/types"
 	currenttypes "github.com/evmos/ethermint/x/evm/types"
 )
 

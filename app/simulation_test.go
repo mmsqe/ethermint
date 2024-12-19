@@ -20,22 +20,22 @@ import (
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
 	storetypes "cosmossdk.io/store/types"
+	authzkeeper "cosmossdk.io/x/authz/keeper"
+	banktypes "cosmossdk.io/x/bank/types"
+	distrtypes "cosmossdk.io/x/distribution/types"
 	evidencetypes "cosmossdk.io/x/evidence/types"
+	govtypes "cosmossdk.io/x/gov/types"
+	minttypes "cosmossdk.io/x/mint/types"
+	paramtypes "cosmossdk.io/x/params/types"
+	slashingtypes "cosmossdk.io/x/slashing/types"
+	stakingtypes "cosmossdk.io/x/staking/types"
 	abci "github.com/cometbft/cometbft/abci/types"
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cmtproto "github.com/cometbft/cometbft/api/cometbft/types/v1"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
-	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/evmos/ethermint/app"
 	"github.com/evmos/ethermint/app/ante"
 	"github.com/evmos/ethermint/testutil"
@@ -216,8 +216,8 @@ func TestAppImportExport(t *testing.T) {
 		}
 	}()
 
-	ctxA := simApp.NewContextLegacy(true, tmproto.Header{Height: simApp.LastBlockHeight(), ChainID: SimAppChainID})
-	ctxB := newApp.NewContextLegacy(true, tmproto.Header{Height: simApp.LastBlockHeight(), ChainID: SimAppChainID})
+	ctxA := simApp.NewContextLegacy(true, cmtproto.Header{Height: simApp.LastBlockHeight(), ChainID: SimAppChainID})
+	ctxB := newApp.NewContextLegacy(true, cmtproto.Header{Height: simApp.LastBlockHeight(), ChainID: SimAppChainID})
 	newApp.ModuleManager.InitGenesis(ctxB, simApp.AppCodec(), genesisState)
 	newApp.StoreConsensusParams(ctxB, exported.ConsensusParams)
 

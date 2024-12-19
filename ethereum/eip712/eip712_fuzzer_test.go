@@ -2,9 +2,8 @@ package eip712_test
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
-
-	rand "github.com/cometbft/cometbft/libs/rand"
 
 	"github.com/evmos/ethermint/ethereum/eip712"
 	"github.com/tidwall/gjson"

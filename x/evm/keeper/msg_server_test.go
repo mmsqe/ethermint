@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"testing"
 
+	govtypes "cosmossdk.io/x/gov/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/stretchr/testify/suite"
 
 	ethtypes "github.com/ethereum/go-ethereum/core/types"

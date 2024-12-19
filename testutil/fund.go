@@ -16,9 +16,9 @@
 package testutil
 
 import (
+	bankkeeper "cosmossdk.io/x/bank/keeper"
+	minttypes "cosmossdk.io/x/mint/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
-	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 

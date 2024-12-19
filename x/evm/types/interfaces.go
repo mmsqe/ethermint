@@ -19,12 +19,12 @@ import (
 	context "context"
 	"math/big"
 
+	paramtypes "cosmossdk.io/x/params/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
+	stakingtypes "cosmossdk.io/x/staking/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/ethereum/go-ethereum/core"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"

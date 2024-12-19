@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cmtproto "github.com/cometbft/cometbft/api/cometbft/types/v1"
 	"github.com/evmos/ethermint/testutil"
 	"github.com/stretchr/testify/suite"
 )
@@ -109,11 +109,11 @@ func (suite *EIP1559TestSuite) TestCalculateBaseFee() {
 			suite.App.FeeMarketKeeper.SetBlockGasWanted(suite.Ctx, tc.parentBlockGasWanted)
 
 			// Set next block target/gasLimit through Consensus Param MaxGas
-			blockParams := tmproto.BlockParams{
+			blockParams := cmtproto.BlockParams{
 				MaxGas:   100,
 				MaxBytes: 10,
 			}
-			consParams := tmproto.ConsensusParams{Block: &blockParams}
+			consParams := cmtproto.ConsensusParams{Block: &blockParams}
 			suite.Ctx = suite.Ctx.WithConsensusParams(consParams)
 
 			fee := suite.App.FeeMarketKeeper.CalculateBaseFee(suite.Ctx)

@@ -6,7 +6,7 @@ import (
 	"github.com/evmos/ethermint/x/feemarket/types"
 
 	sdkmath "cosmossdk.io/math"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	paramtypes "cosmossdk.io/x/params/types"
 	"github.com/ethereum/go-ethereum/params"
 )
 

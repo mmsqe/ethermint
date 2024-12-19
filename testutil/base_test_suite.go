@@ -9,8 +9,10 @@ import (
 	coreheader "cosmossdk.io/core/header"
 	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
+	banktypes "cosmossdk.io/x/bank/types"
+	stakingtypes "cosmossdk.io/x/staking/types"
 	abci "github.com/cometbft/cometbft/abci/types"
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cmtproto "github.com/cometbft/cometbft/api/cometbft/types/v1"
 	tmtypes "github.com/cometbft/cometbft/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -23,8 +25,6 @@ import (
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -90,7 +90,7 @@ func (suite *BaseTestSuite) SetupTestWithCbAndOpts(
 ) {
 	checkTx := false
 	suite.App = SetupWithOpts(checkTx, patch, appOptions)
-	suite.Ctx = suite.App.NewUncachedContext(checkTx, tmproto.Header{
+	suite.Ctx = suite.App.NewUncachedContext(checkTx, cmtproto.Header{
 		Height:  1,
 		ChainID: ChainID,
 		Time:    time.Now().UTC(),
