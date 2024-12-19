@@ -447,7 +447,9 @@ func execTrace[T traceRequest](
 
 	ctx := sdk.UnwrapSDKContext(c)
 	ctx = ctx.WithBlockHeight(contextHeight)
-	ctx = ctx.WithBlockTime(req.GetBlockTime())
+	header := ctx.HeaderInfo()
+	header.Time = req.GetBlockTime()
+	ctx = ctx.WithHeaderInfo(header)
 	ctx = ctx.WithHeaderHash(common.Hex2Bytes(req.GetBlockHash()))
 	ctx = ctx.WithProposer(GetProposerAddress(ctx, req.GetProposerAddress()))
 
@@ -561,7 +563,9 @@ func (k Keeper) TraceBlock(c context.Context, req *types.QueryTraceBlockRequest)
 
 	ctx := sdk.UnwrapSDKContext(c)
 	ctx = ctx.WithBlockHeight(contextHeight)
-	ctx = ctx.WithBlockTime(req.BlockTime)
+	header := ctx.HeaderInfo()
+	header.Time = req.BlockTime
+	ctx = ctx.WithHeaderInfo(header)
 	ctx = ctx.WithHeaderHash(common.Hex2Bytes(req.BlockHash))
 	ctx = ctx.WithProposer(GetProposerAddress(ctx, req.ProposerAddress))
 	chainID, err := getChainID(ctx, req.ChainId)
