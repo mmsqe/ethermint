@@ -477,7 +477,7 @@ func prepareCosmosTx(gasPrice *sdkmath.Int, msgs ...sdk.Msg) []byte {
 	err := txBuilder.SetMsgs(msgs...)
 	s.Require().NoError(err)
 
-	seq, err := s.App.AccountKeeper.GetSequence(s.Ctx, accountAddress)
+	seq, err := s.App.AuthKeeper.GetSequence(s.Ctx, accountAddress)
 	s.Require().NoError(err)
 
 	defaultMode, err := authsigning.APISignModeToInternal(encodingConfig.TxConfig.SignModeHandler().DefaultMode())
@@ -500,7 +500,7 @@ func prepareCosmosTx(gasPrice *sdkmath.Int, msgs ...sdk.Msg) []byte {
 	s.Require().NoError(err)
 
 	// Second round: all signer infos are set, so each signer can sign.
-	accNumber := s.App.AccountKeeper.GetAccount(s.Ctx, accountAddress).GetAccountNumber()
+	accNumber := s.App.AuthKeeper.GetAccount(s.Ctx, accountAddress).GetAccountNumber()
 	signerData := authsigning.SignerData{
 		ChainID:       s.Ctx.ChainID(),
 		AccountNumber: accNumber,

@@ -67,9 +67,9 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 		suite.enableFeemarket = false
 		suite.SetupTest() // reset
 
-		acc = suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
+		acc = suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
 		suite.Require().NoError(acc.SetSequence(1))
-		suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
+		suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 
 		suite.app.EvmKeeper.SetBalance(suite.ctx, addr, big.NewInt(10000000000), evmtypes.DefaultEVMDenom)
 
@@ -270,7 +270,7 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 		{
 			"fail - DeliverTx (cosmos tx signed)",
 			func() sdk.Tx {
-				nonce, err := suite.app.AccountKeeper.GetSequence(suite.ctx, acc.GetAddress())
+				nonce, err := suite.app.AuthKeeper.GetSequence(suite.ctx, acc.GetAddress())
 				suite.Require().NoError(err)
 				signedTx := evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), nonce, &to, big.NewInt(10), 100000, big.NewInt(1), nil, nil, nil, nil)
 				signedTx.From = addr.Bytes()
@@ -282,7 +282,7 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 		{
 			"fail - DeliverTx (cosmos tx with memo)",
 			func() sdk.Tx {
-				nonce, err := suite.app.AccountKeeper.GetSequence(suite.ctx, acc.GetAddress())
+				nonce, err := suite.app.AuthKeeper.GetSequence(suite.ctx, acc.GetAddress())
 				suite.Require().NoError(err)
 				signedTx := evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), nonce, &to, big.NewInt(10), 100000, big.NewInt(1), nil, nil, nil, nil)
 				signedTx.From = addr.Bytes()
@@ -295,7 +295,7 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 		{
 			"fail - DeliverTx (cosmos tx with timeoutheight)",
 			func() sdk.Tx {
-				nonce, err := suite.app.AccountKeeper.GetSequence(suite.ctx, acc.GetAddress())
+				nonce, err := suite.app.AuthKeeper.GetSequence(suite.ctx, acc.GetAddress())
 				suite.Require().NoError(err)
 				signedTx := evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), nonce, &to, big.NewInt(10), 100000, big.NewInt(1), nil, nil, nil, nil)
 				signedTx.From = addr.Bytes()
@@ -308,7 +308,7 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 		{
 			"fail - DeliverTx (invalid fee amount)",
 			func() sdk.Tx {
-				nonce, err := suite.app.AccountKeeper.GetSequence(suite.ctx, acc.GetAddress())
+				nonce, err := suite.app.AuthKeeper.GetSequence(suite.ctx, acc.GetAddress())
 				suite.Require().NoError(err)
 				signedTx := evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), nonce, &to, big.NewInt(10), 100000, big.NewInt(1), nil, nil, nil, nil)
 				signedTx.From = addr.Bytes()
@@ -328,7 +328,7 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 		{
 			"fail - DeliverTx (invalid fee gaslimit)",
 			func() sdk.Tx {
-				nonce, err := suite.app.AccountKeeper.GetSequence(suite.ctx, acc.GetAddress())
+				nonce, err := suite.app.AuthKeeper.GetSequence(suite.ctx, acc.GetAddress())
 				suite.Require().NoError(err)
 				signedTx := evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), nonce, &to, big.NewInt(10), 100000, big.NewInt(1), nil, nil, nil, nil)
 				signedTx.From = addr.Bytes()
@@ -544,7 +544,7 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				gas := uint64(200000)
 				amount := sdk.NewCoins(sdk.NewCoin(evmtypes.DefaultEVMDenom, sdkmath.NewInt(100*int64(gas))))
 				txBuilder := suite.CreateTestEIP712TxBuilderMsgSend(from, privKey, "ethermint_9001-1", gas, amount)
-				nonce, err := suite.app.AccountKeeper.GetSequence(suite.ctx, acc.GetAddress())
+				nonce, err := suite.app.AuthKeeper.GetSequence(suite.ctx, acc.GetAddress())
 				suite.Require().NoError(err)
 				sigsV2 := signing.SignatureV2{
 					PubKey: privKey.PubKey(),
@@ -564,7 +564,7 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				gas := uint64(200000)
 				amount := sdk.NewCoins(sdk.NewCoin(evmtypes.DefaultEVMDenom, sdkmath.NewInt(100*int64(gas))))
 				txBuilder := suite.CreateTestEIP712TxBuilderMsgSend(from, privKey, "ethermint_9001-1", gas, amount)
-				nonce, err := suite.app.AccountKeeper.GetSequence(suite.ctx, acc.GetAddress())
+				nonce, err := suite.app.AuthKeeper.GetSequence(suite.ctx, acc.GetAddress())
 				suite.Require().NoError(err)
 				sigsV2 := signing.SignatureV2{
 					PubKey: privKey.PubKey(),
@@ -1204,9 +1204,9 @@ func (suite *AnteTestSuite) TestAnteHandlerWithDynamicTxFee() {
 			suite.enableLondonHF = tc.enableLondonHF
 			suite.SetupTest() // reset
 
-			acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
+			acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
 			suite.Require().NoError(acc.SetSequence(1))
-			suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
+			suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 
 			suite.ctx = suite.ctx.WithIsCheckTx(tc.checkTx).WithIsReCheckTx(tc.reCheckTx).WithConsensusParams(*testutil.DefaultConsensusParams)
 			suite.app.EvmKeeper.SetBalance(suite.ctx, addr, big.NewInt((ethparams.InitialBaseFee+10)*100000), evmtypes.DefaultEVMDenom)
@@ -1333,9 +1333,9 @@ func (suite *AnteTestSuite) TestAnteHandlerWithParams() {
 			}
 			suite.SetupTest() // reset
 
-			acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
+			acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
 			suite.Require().NoError(acc.SetSequence(1))
-			suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
+			suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 
 			suite.ctx = suite.ctx.WithIsCheckTx(true).WithConsensusParams(*testutil.DefaultConsensusParams)
 			suite.app.EvmKeeper.SetBalance(suite.ctx, addr, big.NewInt((ethparams.InitialBaseFee+10)*100000), evmtypes.DefaultEVMDenom)

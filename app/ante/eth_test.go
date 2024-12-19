@@ -76,8 +76,8 @@ func (suite *AnteTestSuite) TestNewEthAccountVerificationDecorator() {
 			"success existing account",
 			tx,
 			func() {
-				acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
-				suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
+				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
+				suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 
 				vmdb.AddBalance(addr, big.NewInt(1000000))
 			},
@@ -92,7 +92,7 @@ func (suite *AnteTestSuite) TestNewEthAccountVerificationDecorator() {
 			tc.malleate()
 			suite.Require().NoError(vmdb.Commit())
 
-			accountGetter := ante.NewCachedAccountGetter(suite.ctx, suite.app.AccountKeeper)
+			accountGetter := ante.NewCachedAccountGetter(suite.ctx, suite.app.AuthKeeper)
 			err := ante.VerifyEthAccount(suite.ctx.WithIsCheckTx(tc.checkTx), tc.tx, suite.app.EvmKeeper, evmtypes.DefaultEVMDenom, accountGetter)
 
 			if tc.expPass {
@@ -126,8 +126,8 @@ func (suite *AnteTestSuite) TestEthNonceVerificationDecorator() {
 			"sender nonce missmatch",
 			tx,
 			func() {
-				acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
-				suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
+				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
+				suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 			},
 			false,
 			false,
@@ -136,9 +136,9 @@ func (suite *AnteTestSuite) TestEthNonceVerificationDecorator() {
 			"success",
 			tx,
 			func() {
-				acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
+				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
 				suite.Require().NoError(acc.SetSequence(1))
-				suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
+				suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 			},
 			false,
 			true,
@@ -148,8 +148,8 @@ func (suite *AnteTestSuite) TestEthNonceVerificationDecorator() {
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
 			tc.malleate()
-			accountGetter := ante.NewCachedAccountGetter(suite.ctx, suite.app.AccountKeeper)
-			err := ante.CheckAndSetEthSenderNonce(suite.ctx.WithIsReCheckTx(tc.reCheckTx), tc.tx, suite.app.AccountKeeper, false, accountGetter)
+			accountGetter := ante.NewCachedAccountGetter(suite.ctx, suite.app.AuthKeeper)
+			err := ante.CheckAndSetEthSenderNonce(suite.ctx.WithIsReCheckTx(tc.reCheckTx), tc.tx, suite.app.AuthKeeper, false, accountGetter)
 
 			if tc.expPass {
 				suite.Require().NoError(err)
@@ -436,8 +436,8 @@ func (suite *AnteTestSuite) TestCanTransferDecorator() {
 			"evm CanTransfer failed",
 			tx,
 			func() {
-				acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
-				suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
+				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
+				suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 			},
 			false,
 		},
@@ -445,8 +445,8 @@ func (suite *AnteTestSuite) TestCanTransferDecorator() {
 			"success",
 			tx,
 			func() {
-				acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
-				suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
+				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
+				suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 
 				vmdb.AddBalance(addr, big.NewInt(1000000))
 			},
@@ -522,8 +522,8 @@ func (suite *AnteTestSuite) TestEthIncrementSenderSequenceDecorator() {
 			"success - create contract",
 			contract,
 			func() {
-				acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
-				suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
+				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
+				suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 			},
 			true, false,
 		},
@@ -538,16 +538,16 @@ func (suite *AnteTestSuite) TestEthIncrementSenderSequenceDecorator() {
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
 			tc.malleate()
-			accountGetter := ante.NewCachedAccountGetter(suite.ctx, suite.app.AccountKeeper)
+			accountGetter := ante.NewCachedAccountGetter(suite.ctx, suite.app.AuthKeeper)
 
 			if tc.expPanic {
 				suite.Require().Panics(func() {
-					_ = ante.CheckAndSetEthSenderNonce(suite.ctx, tc.tx, suite.app.AccountKeeper, false, accountGetter)
+					_ = ante.CheckAndSetEthSenderNonce(suite.ctx, tc.tx, suite.app.AuthKeeper, false, accountGetter)
 				})
 				return
 			}
 
-			err := ante.CheckAndSetEthSenderNonce(suite.ctx, tc.tx, suite.app.AccountKeeper, false, accountGetter)
+			err := ante.CheckAndSetEthSenderNonce(suite.ctx, tc.tx, suite.app.AuthKeeper, false, accountGetter)
 
 			if tc.expPass {
 				suite.Require().NoError(err)

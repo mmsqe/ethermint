@@ -97,7 +97,7 @@ func signCosmosTx(
 	txBuilder client.TxBuilder,
 ) (authsigning.Tx, error) {
 	addr := sdk.AccAddress(args.Priv.PubKey().Address().Bytes())
-	seq, err := appEthermint.AccountKeeper.GetSequence(ctx, addr)
+	seq, err := appEthermint.AuthKeeper.GetSequence(ctx, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func signCosmosTx(
 	}
 
 	// Second round: all signer infos are set, so each signer can sign.
-	accNumber := appEthermint.AccountKeeper.GetAccount(ctx, addr).GetAccountNumber()
+	accNumber := appEthermint.AuthKeeper.GetAccount(ctx, addr).GetAccountNumber()
 	signerData := authsigning.SignerData{
 		ChainID:       args.ChainID,
 		AccountNumber: accNumber,

@@ -100,12 +100,12 @@ func PrepareEIP712CosmosTx(
 	fmt.Println("args ", txArgs.Priv)
 	from := sdk.AccAddress(txArgs.Priv.PubKey().Address().Bytes())
 	fmt.Println("from ", from)
-	acc := appEthermint.AccountKeeper.GetAccount(ctx, from)
+	acc := appEthermint.AuthKeeper.GetAccount(ctx, from)
 
 	fmt.Println("acc: ", acc)
 	accNumber := acc.GetAccountNumber()
 
-	nonce, err := appEthermint.AccountKeeper.GetSequence(ctx, from)
+	nonce, err := appEthermint.AuthKeeper.GetSequence(ctx, from)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func signCosmosEIP712Tx(
 	priv := args.CosmosTxArgs.Priv
 
 	from := sdk.AccAddress(priv.PubKey().Address().Bytes())
-	nonce, err := appEvmos.AccountKeeper.GetSequence(ctx, from)
+	nonce, err := appEvmos.AuthKeeper.GetSequence(ctx, from)
 	if err != nil {
 		return nil, err
 	}

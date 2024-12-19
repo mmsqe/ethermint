@@ -28,7 +28,6 @@ import (
 	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 
-	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -126,17 +125,18 @@ func (k Keeper) GetHashFn(ctx sdk.Context) vm.GetHashFunc {
 		if len(hash) > 0 {
 			return common.BytesToHash(hash)
 		}
-		histInfo, err := k.stakingKeeper.GetHistoricalInfo(ctx, h)
-		if err != nil {
-			k.Logger(ctx).Debug("historical info not found", "height", h, "err", err.Error())
-			return common.Hash{}
-		}
-		header, err := cmttypes.HeaderFromProto(&histInfo.Header)
-		if err != nil {
-			k.Logger(ctx).Error("failed to cast tendermint header from proto", "error", err)
-			return common.Hash{}
-		}
-		return common.BytesToHash(header.Hash())
+		// mmsqe
+		// histInfo, err := k.stakingKeeper.GetHistoricalInfo(ctx, h)
+		// if err != nil {
+		// 	k.Logger(ctx).Debug("historical info not found", "height", h, "err", err.Error())
+		// 	return common.Hash{}
+		// }
+		// header, err := cmttypes.HeaderFromProto(&histInfo.Header)
+		// if err != nil {
+		// 	k.Logger(ctx).Error("failed to cast tendermint header from proto", "error", err)
+		// 	return common.Hash{}
+		// }
+		// return common.BytesToHash(header.Hash())
 	}
 }
 

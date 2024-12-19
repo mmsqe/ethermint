@@ -16,6 +16,7 @@ import (
 	cmtcrypto "github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	tmtypes "github.com/cometbft/cometbft/types"
+	"github.com/cometbft/cometbft/version"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -65,7 +66,7 @@ func (suite *StateTransitionTestSuite) SetupTest() {
 			// mint some coin to fee collector
 			balances := []banktypes.Balance{
 				{
-					Address: suite.App.AccountKeeper.GetModuleAddress(authtypes.FeeCollectorName).String(),
+					Address: suite.App.AuthKeeper.GetModuleAddress(authtypes.FeeCollectorName).String(),
 					Coins:   coins,
 				},
 			}

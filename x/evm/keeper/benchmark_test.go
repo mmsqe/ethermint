@@ -110,7 +110,7 @@ func doBenchmark(b *testing.B, txBuilder TxBuilder) {
 		ctx, _ := suite.Ctx.CacheContext()
 
 		fees := sdk.Coins{sdk.NewCoin(suite.EvmDenom(), sdkmath.NewIntFromBigInt(msg.GetFee()))}
-		err = evmkeeper.DeductFees(suite.App.BankKeeper, suite.Ctx, suite.App.AccountKeeper.GetAccount(ctx, msg.GetFrom()), fees)
+		err = evmkeeper.DeductFees(suite.App.BankKeeper, suite.Ctx, suite.App.AuthKeeper.GetAccount(ctx, msg.GetFrom()), fees)
 		require.NoError(b, err)
 
 		rsp, err := suite.App.EvmKeeper.EthereumTx(ctx, msg)
@@ -173,7 +173,7 @@ func BenchmarkMessageCall(b *testing.B) {
 		ctx, _ := suite.Ctx.CacheContext()
 
 		fees := sdk.Coins{sdk.NewCoin(suite.EvmDenom(), sdkmath.NewIntFromBigInt(msg.GetFee()))}
-		err = evmkeeper.DeductFees(suite.App.BankKeeper, suite.Ctx, suite.App.AccountKeeper.GetAccount(ctx, msg.GetFrom()), fees)
+		err = evmkeeper.DeductFees(suite.App.BankKeeper, suite.Ctx, suite.App.AuthKeeper.GetAccount(ctx, msg.GetFrom()), fees)
 		require.NoError(b, err)
 
 		rsp, err := suite.App.EvmKeeper.EthereumTx(ctx, msg)

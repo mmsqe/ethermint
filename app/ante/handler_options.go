@@ -23,6 +23,7 @@ import (
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
+	"github.com/cosmos/cosmos-sdk/x/auth/ante/unorderedtx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
@@ -51,6 +52,8 @@ type HandlerOptions struct {
 
 	// see #494, just for benchmark, don't turn on on production
 	UnsafeUnorderedTx bool
+
+	UnorderedTxManager *unorderedtx.Manager
 }
 
 func (options HandlerOptions) validate() error {

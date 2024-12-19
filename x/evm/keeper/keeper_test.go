@@ -12,11 +12,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/evmos/ethermint/testutil"
+	ethermint "github.com/evmos/ethermint/types"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 
 	"github.com/evmos/ethermint/app"
 	"github.com/evmos/ethermint/encoding"
-	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 
@@ -125,11 +125,11 @@ func (suite *KeeperTestSuite) TestGetAccountStorage() {
 			suite.SetupTest()
 			tc.malleate()
 			i := 0
-			suite.App.AccountKeeper.IterateAccounts(suite.Ctx, func(account sdk.AccountI) bool {
+			suite.App.AuthKeeper.Accounts.Walk(suite.Ctx, nil, func(_ sdk.AccAddress, account sdk.AccountI) (bool, error) {
 				ethAccount, ok := account.(ethermint.EthAccountI)
 				if !ok {
 					// ignore non EthAccounts
-					return false
+					return false, nil
 				}
 
 				addr := ethAccount.EthAddress()
@@ -137,7 +137,7 @@ func (suite *KeeperTestSuite) TestGetAccountStorage() {
 
 				suite.Require().Equal(tc.expRes[i], len(storage))
 				i++
-				return false
+				return false, nil
 			})
 		})
 	}

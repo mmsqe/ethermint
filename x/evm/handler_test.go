@@ -51,7 +51,7 @@ func (suite *HandlerTestSuite) SetupTest() {
 				Coins:   coins,
 			},
 			{
-				Address: app.AccountKeeper.GetModuleAddress(authtypes.FeeCollectorName).String(),
+				Address: app.AuthKeeper.GetModuleAddress(authtypes.FeeCollectorName).String(),
 				Coins:   coins,
 			},
 		}

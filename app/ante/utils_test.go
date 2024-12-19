@@ -118,11 +118,11 @@ func (suite *AnteTestSuite) SetupTest() {
 	suite.app.EvmKeeper.WithChainID(suite.ctx)
 
 	infCtx := suite.ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
-	suite.app.AccountKeeper.Params.Set(infCtx, authtypes.DefaultParams())
+	suite.app.AuthKeeper.Params.Set(infCtx, authtypes.DefaultParams())
 
 	addr := sdk.AccAddress(priv.PubKey().Address().Bytes())
-	acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr)
-	suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
+	acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr)
+	suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 
 	encodingConfig := config.MakeConfigForTest(suite.app.BasicModuleManager)
 	// We're using TestMsg amino encoding in some tests, so register it here.
@@ -132,7 +132,7 @@ func (suite *AnteTestSuite) SetupTest() {
 	suite.clientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig)
 
 	anteHandler, err := ante.NewAnteHandler(ante.HandlerOptions{
-		AccountKeeper:   suite.app.AccountKeeper,
+		AccountKeeper:   suite.app.AuthKeeper,
 		BankKeeper:      suite.app.BankKeeper,
 		EvmKeeper:       suite.app.EvmKeeper,
 		FeegrantKeeper:  suite.app.FeeGrantKeeper,
@@ -355,7 +355,7 @@ func (suite *AnteTestSuite) CreateTestEIP712GrantAllowance(from sdk.AccAddress, 
 		Expiration: &threeHours,
 	}
 	granted := tests.GenerateAddress()
-	grantedAddr := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, granted.Bytes())
+	grantedAddr := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, granted.Bytes())
 	msgGrant, err := feegrant.NewMsgGrantAllowance(basic, from, grantedAddr.GetAddress())
 	suite.Require().NoError(err)
 	return suite.CreateTestEIP712SingleMessageTxBuilder(priv, chainId, gas, gasAmount, msgGrant)
@@ -553,15 +553,15 @@ func (suite *AnteTestSuite) generateMultikeySignatures(signMode signing.SignMode
 
 // RegisterAccount creates an account with the keeper and populates the initial balance
 func (suite *AnteTestSuite) RegisterAccount(pubKey cryptotypes.PubKey, balance *big.Int) {
-	acc := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, sdk.AccAddress(pubKey.Address()))
-	suite.app.AccountKeeper.SetAccount(suite.ctx, acc)
+	acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, sdk.AccAddress(pubKey.Address()))
+	suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 
 	suite.app.EvmKeeper.SetBalance(suite.ctx, common.BytesToAddress(pubKey.Address()), balance, evmtypes.DefaultEVMDenom)
 }
 
 // createSignerBytes generates sign doc bytes using the given parameters
 func (suite *AnteTestSuite) createSignerBytes(chainId string, signMode signing.SignMode, pubKey cryptotypes.PubKey, txBuilder client.TxBuilder) []byte {
-	acc, err := sdkante.GetSignerAcc(suite.ctx, suite.app.AccountKeeper, sdk.AccAddress(pubKey.Address()))
+	acc, err := sdkante.GetSignerAcc(suite.ctx, suite.app.AuthKeeper, sdk.AccAddress(pubKey.Address()))
 	suite.Require().NoError(err)
 	anyPk, err := codectypes.NewAnyWithValue(pubKey)
 	suite.Require().NoError(err)
