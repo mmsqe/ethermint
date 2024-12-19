@@ -87,7 +87,7 @@ func (k *Keeper) SubBalance(ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coin
 	if err := k.bankKeeper.SendCoinsFromAccountToModule(ctx, addr, types.ModuleName, coins); err != nil {
 		return err
 	}
-	return k.bankKeeper.BurnCoins(ctx, types.ModuleName, coins)
+	return k.bankKeeper.BurnCoins(ctx, k.accountKeeper.GetModuleAddress(types.ModuleName), coins)
 }
 
 // SetBalance reset the account's balance, mainly used by unit tests
