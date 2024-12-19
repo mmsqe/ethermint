@@ -104,7 +104,7 @@ func (b *Backend) SetEtherbase(etherbase common.Address) bool {
 	}
 
 	withdrawAddr := sdk.AccAddress(etherbase.Bytes())
-	msg := distributiontypes.NewMsgSetWithdrawAddress(delAddr, withdrawAddr)
+	msg := distributiontypes.NewMsgSetWithdrawAddress(delAddr.String(), withdrawAddr.String())
 
 	// Assemble transaction from fields
 	builder, ok := b.clientCtx.TxConfig.NewTxBuilder().(authtx.ExtensionOptionsTxBuilder)
@@ -162,7 +162,7 @@ func (b *Backend) SetEtherbase(etherbase common.Address) bool {
 		return false
 	}
 
-	if err := tx.Sign(b.clientCtx.CmdContext, txFactory, keyInfo.Name, builder, false); err != nil {
+	if err := tx.Sign(b.clientCtx, txFactory, keyInfo.Name, builder, false); err != nil {
 		b.logger.Debug("failed to sign tx", "error", err.Error())
 		return false
 	}
@@ -276,14 +276,9 @@ func (b *Backend) SetGasPrice(gasPrice hexutil.Big) bool {
 	var unit string
 	minGasPrices := appConf.GetMinGasPrices()
 
-	// fetch the base denom from the sdk Config in case it's not currently defined on the node config
+	// use default base denom in case it's not currently defined on the node config
 	if len(minGasPrices) == 0 || minGasPrices.Empty() {
-		var err error
-		unit, err = sdk.GetBaseDenom()
-		if err != nil {
-			b.logger.Debug("could not get the denom of smallest unit registered", "error", err.Error())
-			return false
-		}
+		unit = ethermint.AttoPhoton
 	} else {
 		unit = minGasPrices[0].Denom
 	}
