@@ -21,21 +21,16 @@ import (
 	"os"
 	"time"
 
-	"github.com/evmos/ethermint/rpc/backend"
-
-	"github.com/evmos/ethermint/crypto/hd"
-	ethermint "github.com/evmos/ethermint/types"
-
 	"cosmossdk.io/log"
-
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-
+	"github.com/evmos/ethermint/crypto/hd"
+	"github.com/evmos/ethermint/rpc/backend"
+	ethermint "github.com/evmos/ethermint/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 
@@ -51,9 +46,7 @@ func NewAPI(
 	logger log.Logger,
 	backend backend.EVMBackend,
 ) *PrivateAccountAPI {
-	cfg := sdk.GetConfig()
-	basePath := cfg.GetFullBIP44Path()
-
+	basePath := sdk.GetFullBIP44Path()
 	iterator, err := ethermint.NewHDPathIterator(basePath, true)
 	if err != nil {
 		panic(err)
