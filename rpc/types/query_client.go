@@ -62,7 +62,7 @@ func (QueryClient) GetProof(clientCtx client.Context, storeKey string, key []byt
 		return nil, nil, fmt.Errorf("proof queries at height <= 2 are not supported")
 	}
 
-	abciReq := abci.RequestQuery{
+	abciReq := abci.QueryRequest{
 		Path:   fmt.Sprintf("store/%s/key", storeKey),
 		Data:   key,
 		Height: height,

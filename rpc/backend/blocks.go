@@ -295,7 +295,7 @@ func (b *Backend) EthMsgsFromTendermintBlock(
 	var result []*evmtypes.MsgEthereumTx
 	block := resBlock.Block
 
-	txResults := blockRes.TxsResults
+	txResults := blockRes.TxResults
 
 	for i, tx := range block.Txs {
 		// Check if tx exists on EVM by cross checking with blockResults:
@@ -492,7 +492,7 @@ func (b *Backend) RPCBlockFromTendermintBlock(
 	}
 
 	var gasUsed uint64
-	for _, txsResult := range blockRes.TxsResults {
+	for _, txsResult := range blockRes.TxResults {
 		// workaround for cosmos-sdk bug. https://github.com/cosmos/cosmos-sdk/issues/10832
 		if ShouldIgnoreGasUsed(txsResult) {
 			// block gas limit has exceeded, other txs must have failed with same reason.

@@ -182,7 +182,7 @@ func (b *Backend) GetTransactionReceipt(hash common.Hash) (map[string]interface{
 		b.logger.Debug("failed to retrieve block results", "height", res.Height, "error", err.Error())
 		return nil, nil
 	}
-	for _, txResult := range blockRes.TxsResults[0:res.TxIndex] {
+	for _, txResult := range blockRes.TxResults[0:res.TxIndex] {
 		gas, err := ethermint.SafeUint64(txResult.GasUsed)
 		if err != nil {
 			return nil, err
@@ -213,8 +213,8 @@ func (b *Backend) GetTransactionReceipt(hash common.Hash) (map[string]interface{
 	}
 	// parse tx logs from events
 	logs, err := evmtypes.DecodeMsgLogsFromEvents(
-		blockRes.TxsResults[res.TxIndex].Data,
-		blockRes.TxsResults[res.TxIndex].Events,
+		blockRes.TxResults[res.TxIndex].Data,
+		blockRes.TxResults[res.TxIndex].Events,
 		int(res.MsgIndex),
 		height,
 	)

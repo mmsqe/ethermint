@@ -454,8 +454,8 @@ func (e *PublicAPI) GetTransactionLogs(txHash common.Hash) ([]*ethtypes.Log, err
 	}
 	// parse tx logs from events
 	logs, err := evmtypes.DecodeMsgLogsFromEvents(
-		resBlockResult.TxsResults[res.TxIndex].Data,
-		resBlockResult.TxsResults[res.TxIndex].Events,
+		resBlockResult.TxResults[res.TxIndex].Data,
+		resBlockResult.TxResults[res.TxIndex].Events,
 		int(res.MsgIndex),
 		height,
 	)

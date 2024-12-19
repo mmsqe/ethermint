@@ -232,7 +232,7 @@ func (b *Backend) processBlock(
 
 	// check tendermintTxs
 	tendermintTxs := tendermintBlock.Block.Txs
-	tendermintTxResults := tendermintBlockResult.TxsResults
+	tendermintTxResults := tendermintBlockResult.TxResults
 	tendermintTxCount := len(tendermintTxs)
 
 	var sorter sortGasAndReward
@@ -300,7 +300,7 @@ func GetLogsFromBlockResults(blockRes *tmrpctypes.ResultBlockResults) ([][]*etht
 		return nil, err
 	}
 	blockLogs := [][]*ethtypes.Log{}
-	for _, txResult := range blockRes.TxsResults {
+	for _, txResult := range blockRes.TxResults {
 		logs, err := evmtypes.DecodeTxLogsFromEvents(txResult.Data, txResult.Events, height)
 		if err != nil {
 			return nil, err

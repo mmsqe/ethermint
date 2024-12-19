@@ -174,7 +174,7 @@ func (b *Backend) TraceBlock(height rpctypes.BlockNumber,
 
 	var txsMessages []*evmtypes.MsgEthereumTx
 	for i, tx := range txs {
-		if !rpctypes.TxSuccessOrExceedsBlockGasLimit(blockRes.TxsResults[i]) {
+		if !rpctypes.TxSuccessOrExceedsBlockGasLimit(blockRes.TxResults[i]) {
 			b.logger.Debug("invalid tx result code", "cosmos-hash", hexutil.Encode(tx.Hash()))
 			continue
 		}

@@ -203,7 +203,7 @@ func RegisterBlockResultsWithEventLog(client *mocks.Client, height int64) (*tmrp
 
 	res := &tmrpctypes.ResultBlockResults{
 		Height: height,
-		TxsResults: []*abci.ExecTxResult{
+		TxResults: []*abci.ExecTxResult{
 			{Code: 0, GasUsed: 0, Data: data},
 		},
 	}
@@ -218,8 +218,8 @@ func RegisterBlockResults(
 	height int64,
 ) (*tmrpctypes.ResultBlockResults, error) {
 	res := &tmrpctypes.ResultBlockResults{
-		Height:     height,
-		TxsResults: []*abci.ExecTxResult{{Code: 0, GasUsed: 0}},
+		Height:    height,
+		TxResults: []*abci.ExecTxResult{{Code: 0, GasUsed: 0}},
 	}
 
 	client.On("BlockResults", rpc.ContextWithHeight(height), mock.AnythingOfType("*int64")).
@@ -239,8 +239,8 @@ func TestRegisterBlockResults(t *testing.T) {
 
 	res, err := client.BlockResults(rpc.ContextWithHeight(height), &height)
 	expRes := &tmrpctypes.ResultBlockResults{
-		Height:     height,
-		TxsResults: []*abci.ExecTxResult{{Code: 0, GasUsed: 0}},
+		Height:    height,
+		TxResults: []*abci.ExecTxResult{{Code: 0, GasUsed: 0}},
 	}
 	require.Equal(t, expRes, res)
 	require.NoError(t, err)

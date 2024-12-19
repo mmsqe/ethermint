@@ -31,7 +31,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
-	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 
@@ -43,10 +42,11 @@ import (
 )
 
 var (
-	_ sdk.Msg    = &MsgEthereumTx{}
-	_ sdk.Tx     = &MsgEthereumTx{}
-	_ ante.GasTx = &MsgEthereumTx{}
-	_ sdk.Msg    = &MsgUpdateParams{}
+	_ sdk.Msg = &MsgEthereumTx{}
+	// mmsqe
+	// _ sdk.Tx     = &MsgEthereumTx{}
+	// _ ante.GasTx = &MsgEthereumTx{}
+	_ sdk.Msg = &MsgUpdateParams{}
 
 	_ gogoprotoany.UnpackInterfacesMessage = MsgEthereumTx{}
 )

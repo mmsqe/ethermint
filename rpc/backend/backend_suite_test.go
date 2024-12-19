@@ -132,7 +132,7 @@ func (suite *BackendTestSuite) buildFormattedBlock(
 ) map[string]interface{} {
 	header := resBlock.Block.Header
 	gasLimit := int64(^uint32(0)) // for `MaxGas = -1` (DefaultConsensusParams)
-	gasUsed := new(big.Int).SetUint64(uint64(blockRes.TxsResults[0].GasUsed))
+	gasUsed := new(big.Int).SetUint64(uint64(blockRes.TxResults[0].GasUsed))
 
 	root := common.Hash{}.Bytes()
 	receipt := ethtypes.NewReceipt(root, false, gasUsed.Uint64())
