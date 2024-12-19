@@ -28,6 +28,7 @@ import (
 	bip39 "github.com/cosmos/go-bip39"
 	"github.com/spf13/cobra"
 
+	"cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/input"
@@ -151,7 +152,7 @@ func RunAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 				return err
 			}
 
-			return printCreate(cmd, k, false, "", outputFormat)
+			return printCreate(cmd, k, false, "", outputFormat, ctx.AddressCodec)
 		}
 	}
 
@@ -167,7 +168,7 @@ func RunAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 			return err
 		}
 
-		return printCreate(cmd, k, false, "", outputFormat)
+		return printCreate(cmd, k, false, "", outputFormat, ctx.AddressCodec)
 	}
 
 	coinType, _ := cmd.Flags().GetUint32(flagCoinType)
@@ -191,7 +192,7 @@ func RunAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 			return err
 		}
 
-		return printCreate(cmd, k, false, "", outputFormat)
+		return printCreate(cmd, k, false, "", outputFormat, ctx.AddressCodec)
 	}
 
 	// Get bip39 mnemonic
@@ -265,14 +266,14 @@ func RunAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		mnemonic = ""
 	}
 
-	return printCreate(cmd, k, showMnemonic, mnemonic, outputFormat)
+	return printCreate(cmd, k, showMnemonic, mnemonic, outputFormat, ctx.AddressCodec)
 }
 
-func printCreate(cmd *cobra.Command, k *keyring.Record, showMnemonic bool, mnemonic, outputFormat string) error {
+func printCreate(cmd *cobra.Command, k *keyring.Record, showMnemonic bool, mnemonic, outputFormat string, addressCodec address.Codec) error {
 	switch outputFormat {
 	case OutputFormatText:
 		cmd.PrintErrln()
-		if err := printKeyringRecord(cmd.OutOrStdout(), k, keys.MkAccKeyOutput, outputFormat); err != nil {
+		if err := printKeyringRecord(cmd.OutOrStdout(), k, keys.MkAccKeyOutput, outputFormat, addressCodec); err != nil {
 			return err
 		}
 
@@ -285,7 +286,7 @@ func printCreate(cmd *cobra.Command, k *keyring.Record, showMnemonic bool, mnemo
 			}
 		}
 	case OutputFormatJSON:
-		out, err := keys.MkAccKeyOutput(k)
+		out, err := keys.MkAccKeyOutput(k, addressCodec)
 		if err != nil {
 			return err
 		}

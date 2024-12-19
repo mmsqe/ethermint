@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"io"
 
-	"sigs.k8s.io/yaml"
-
+	"cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	cryptokeyring "github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"sigs.k8s.io/yaml"
 )
 
 // available output formats.
@@ -32,10 +32,10 @@ const (
 	OutputFormatJSON = "json"
 )
 
-type bechKeyOutFn func(k *cryptokeyring.Record) (keys.KeyOutput, error)
+type bechKeyOutFn func(k *cryptokeyring.Record, addressCodec address.Codec) (keys.KeyOutput, error)
 
-func printKeyringRecord(w io.Writer, k *cryptokeyring.Record, bechKeyOut bechKeyOutFn, output string) error {
-	ko, err := bechKeyOut(k)
+func printKeyringRecord(w io.Writer, k *cryptokeyring.Record, bechKeyOut bechKeyOutFn, output string, addressCodec address.Codec) error {
+	ko, err := bechKeyOut(k, addressCodec)
 	if err != nil {
 		return err
 	}
