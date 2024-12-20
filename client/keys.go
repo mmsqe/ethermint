@@ -17,6 +17,7 @@ package client
 
 import (
 	"bufio"
+	"fmt"
 
 	"github.com/cometbft/cometbft/libs/cli"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -27,6 +28,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	clientkeys "github.com/evmos/ethermint/client/keys"
 	"github.com/evmos/ethermint/crypto/hd"
+	ethermint "github.com/evmos/ethermint/types"
 )
 
 // KeyCommands registers a sub-tree of commands to interact with
@@ -70,6 +72,13 @@ The pass backend requires GnuPG: https://gnupg.org/
 		panic(err)
 	}
 
+	coinTypeFlag := addCmd.Flag("coin-type")
+	coinTypeFlag.DefValue = fmt.Sprintf("%d", ethermint.Bip44CoinType)
+	err = coinTypeFlag.Value.Set(coinTypeFlag.DefValue)
+	if err != nil {
+		panic(err)
+	}
+
 	addCmd.RunE = runAddCmd
 
 	cmd.AddCommand(
@@ -87,11 +96,11 @@ The pass backend requires GnuPG: https://gnupg.org/
 		UnsafeExportEthKeyCommand(),
 		UnsafeImportKeyCommand(),
 	)
-
-	cmd.PersistentFlags().String(flags.FlagHome, defaultNodeHome, "The application home directory")
-	cmd.PersistentFlags().String(flags.FlagKeyringDir, "", "The client Keyring directory; if omitted, the default 'home' directory will be used")
-	cmd.PersistentFlags().String(flags.FlagKeyringBackend, keyring.BackendOS, "Select keyring's backend (os|file|test)")
-	cmd.PersistentFlags().String(cli.OutputFlag, "text", "Output format (text|json)")
+	persistentFlags := cmd.PersistentFlags()
+	persistentFlags.String(flags.FlagHome, defaultNodeHome, "The application home directory!")
+	persistentFlags.String(flags.FlagKeyringDir, "", "The client Keyring directory; if omitted, the default 'home' directory will be used")
+	persistentFlags.String(flags.FlagKeyringBackend, keyring.BackendOS, "Select keyring's backend (os|file|test)")
+	persistentFlags.String(cli.OutputFlag, "text", "Output format (text|json)")
 	return cmd
 }
 
