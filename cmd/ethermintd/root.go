@@ -48,6 +48,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	banktypes "cosmossdk.io/x/bank/types"
+	txsigning "cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
@@ -125,6 +126,10 @@ func NewRootCmd() (cmd *cobra.Command, cfg ethermint.EncodingConfig) {
 				txConfigOpts := tx.ConfigOptions{
 					EnabledSignModes:           enabledSignModes,
 					TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(initClientCtx),
+					SigningOptions: &txsigning.Options{
+						AddressCodec:          initClientCtx.InterfaceRegistry.SigningContext().AddressCodec(),
+						ValidatorAddressCodec: initClientCtx.InterfaceRegistry.SigningContext().ValidatorAddressCodec(),
+					},
 				}
 				txConfig, err := tx.NewTxConfigWithOptions(
 					initClientCtx.Codec,
