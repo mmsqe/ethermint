@@ -305,7 +305,7 @@ func NewEthermintApp(
 		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, upgradetypes.StoreKey,
-		evidencetypes.StoreKey, consensusparamtypes.StoreKey, pooltypes.StoreKey,
+		evidencetypes.StoreKey, consensusparamtypes.StoreKey, pooltypes.StoreKey, accounts.StoreKey,
 		feegrant.StoreKey, authzkeeper.StoreKey,
 		// ethermint keys
 		evmtypes.StoreKey, feemarkettypes.StoreKey,
@@ -346,6 +346,9 @@ func NewEthermintApp(
 		authAddr,
 	)
 	bApp.SetParamStore(app.ConsensusParamsKeeper.ParamsStore)
+
+	// set the version modifier
+	bApp.SetVersionModifier(consensus.ProvideAppVersionModifier(app.ConsensusParamsKeeper))
 
 	// add keepers
 	accountsKeeper, err := accounts.NewKeeper(
@@ -431,6 +434,9 @@ func NewEthermintApp(
 		authtypes.FeeCollectorName,
 		authAddr,
 	)
+	if err := app.MintKeeper.SetMintFn(mintkeeper.DefaultMintFn(minttypes.DefaultInflationCalculationFn, app.StakingKeeper, app.MintKeeper)); err != nil {
+		panic(err)
+	}
 	app.PoolKeeper = poolkeeper.NewKeeper(
 		appCodec,
 		runtime.NewEnvironment(runtime.NewKVStoreService(keys[pooltypes.StoreKey]), logger.With(log.ModuleKey, "x/protocolpool")),
@@ -684,6 +690,7 @@ func NewEthermintApp(
 		vestingtypes.ModuleName,
 		consensusparamtypes.ModuleName,
 		pooltypes.ModuleName,
+		accounts.ModuleName,
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisModuleOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisModuleOrder...)
@@ -751,7 +758,7 @@ func NewEthermintApp(
 	app.SetPreBlocker(app.PreBlocker)
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
-	app.setAnteHandler(txConfig, cast.ToUint64(appOpts.Get(srvflags.EVMMaxTxGasWanted)))
+	app.setAnteHandler(txConfig, cast.ToUint64(appOpts.Get(srvflags.EVMMaxTxGasWanted)), logger)
 	// In v0.46, the SDK introduces _postHandlers_. PostHandlers are like
 	// antehandlers, but are run _after_ the `runMsgs` execution. They are also
 	// defined as a chain, and have the same signature as antehandlers.
@@ -802,18 +809,21 @@ func NewEthermintApp(
 }
 
 // use Ethermint's custom AnteHandler
-func (app *EthermintApp) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
+func (app *EthermintApp) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64, logger log.Logger) {
 	anteHandler, err := ante.NewAnteHandler(ante.HandlerOptions{
-		AccountKeeper:          app.AuthKeeper,
-		BankKeeper:             app.BankKeeper,
-		SignModeHandler:        txConfig.SignModeHandler(),
-		FeegrantKeeper:         app.FeeGrantKeeper,
-		SigGasConsumer:         ante.DefaultSigVerificationGasConsumer,
-		EvmKeeper:              app.EvmKeeper,
-		FeeMarketKeeper:        app.FeeMarketKeeper,
-		MaxTxGasWanted:         maxGasWanted,
-		ExtensionOptionChecker: ethermint.HasDynamicFeeExtensionOption,
-		DynamicFeeChecker:      true,
+		Environment:              runtime.NewEnvironment(nil, logger, runtime.EnvWithMsgRouterService(app.MsgServiceRouter()), runtime.EnvWithQueryRouterService(app.GRPCQueryRouter())), // nil is set as the kvstoreservice to avoid module access
+		ConsensusKeeper:          app.ConsensusParamsKeeper,
+		AccountKeeper:            app.AuthKeeper,
+		AccountAbstractionKeeper: app.AccountsKeeper,
+		BankKeeper:               app.BankKeeper,
+		FeeMarketKeeper:          app.FeeMarketKeeper,
+		EvmKeeper:                app.EvmKeeper,
+		FeegrantKeeper:           app.FeeGrantKeeper,
+		SignModeHandler:          txConfig.SignModeHandler(),
+		SigGasConsumer:           ante.DefaultSigVerificationGasConsumer,
+		MaxTxGasWanted:           maxGasWanted,
+		ExtensionOptionChecker:   ethermint.HasDynamicFeeExtensionOption,
+		DynamicFeeChecker:        true,
 		DisabledAuthzMsgs: []string{
 			sdk.MsgTypeURL(&evmtypes.MsgEthereumTx{}),
 			sdk.MsgTypeURL(&vestingtypes.BaseVestingAccount{}),
