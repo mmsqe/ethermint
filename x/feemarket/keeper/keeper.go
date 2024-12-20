@@ -48,11 +48,6 @@ func NewKeeper(
 	storeKey storetypes.StoreKey,
 	ss paramstypes.Subspace,
 ) Keeper {
-	// ensure authority account is correctly formatted
-	if err := sdk.VerifyAddressFormat(authority); err != nil {
-		panic(err)
-	}
-
 	return Keeper{
 		cdc:       cdc,
 		storeKey:  storeKey,

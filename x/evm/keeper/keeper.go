@@ -93,11 +93,6 @@ func NewKeeper(
 		panic("the EVM module account has not been set")
 	}
 
-	// ensure the authority account is correct
-	if err := sdk.VerifyAddressFormat(authority); err != nil {
-		panic(err)
-	}
-
 	// NOTE: we pass in the parameter space to the CommitStateDB in order to use custom denominations for the EVM operations
 	return &Keeper{
 		cdc:               cdc,
