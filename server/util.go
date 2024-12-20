@@ -33,17 +33,17 @@ import (
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
+	"github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
 	tmlog "cosmossdk.io/log"
 	cmtcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 )
 
 // AddCommands adds server commands
-func AddCommands(
+func AddCommands[T types.Application](
 	rootCmd *cobra.Command,
-	opts StartOptions,
+	opts StartOptions[T],
 	appExport types.AppExporter,
-	addStartFlags types.ModuleInitFlags,
 ) {
 	cometCmd := &cobra.Command{
 		Use:     "comet",
@@ -62,14 +62,13 @@ func AddCommands(
 	)
 
 	startCmd := StartCmd(opts)
-	addStartFlags(startCmd)
 
 	rootCmd.AddCommand(
 		startCmd,
 		cometCmd,
-		sdkserver.ExportCmd(appExport, opts.DefaultNodeHome),
+		cli.ExportCmd(appExport),
 		version.NewVersionCommand(),
-		sdkserver.NewRollbackCmd(opts.AppCreator, opts.DefaultNodeHome),
+		sdkserver.NewRollbackCmd(opts.AppCreator),
 
 		// custom tx indexer command
 		NewIndexTxCmd(),

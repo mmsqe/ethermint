@@ -17,6 +17,8 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -42,7 +44,6 @@ import (
 	"github.com/cometbft/cometbft/proxy"
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	"github.com/cometbft/cometbft/rpc/client/local"
-	cmttypes "github.com/cometbft/cometbft/types"
 	dbm "github.com/cosmos/cosmos-db"
 
 	ethmetricsexp "github.com/ethereum/go-ethereum/metrics/exp"
@@ -72,15 +73,16 @@ const FlagAsyncCheckTx = "async-check-tx"
 type DBOpener func(opts types.AppOptions, rootDir string, backend dbm.BackendType) (dbm.DB, error)
 
 // StartOptions defines options that can be customized in `StartCmd`
-type StartOptions struct {
-	AppCreator      types.AppCreator
+type StartOptions[T types.Application] struct {
+	// AppCreator      types.AppCreator
+	AppCreator      types.AppCreator[T]
 	DefaultNodeHome string
 	DBOpener        DBOpener
 }
 
 // NewDefaultStartOptions use the default db opener provided in tm-db.
-func NewDefaultStartOptions(appCreator types.AppCreator, defaultNodeHome string) StartOptions {
-	return StartOptions{
+func NewDefaultStartOptions[T types.Application](appCreator types.AppCreator[T], defaultNodeHome string) StartOptions[T] {
+	return StartOptions[T]{
 		AppCreator:      appCreator,
 		DefaultNodeHome: defaultNodeHome,
 		DBOpener:        openDB,
@@ -89,7 +91,7 @@ func NewDefaultStartOptions(appCreator types.AppCreator, defaultNodeHome string)
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
 // CometBFT.
-func StartCmd(opts StartOptions) *cobra.Command {
+func StartCmd[T types.Application](opts StartOptions[T]) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Run the full node",
@@ -233,7 +235,7 @@ which accepts a path for the resulting pprof file.
 	return cmd
 }
 
-func startStandAlone(svrCtx *server.Context, opts StartOptions) error {
+func startStandAlone[T types.Application](svrCtx *server.Context, opts StartOptions[T]) error {
 	addr := svrCtx.Viper.GetString(srvflags.Address)
 	transport := svrCtx.Viper.GetString(srvflags.Transport)
 	home := svrCtx.Viper.GetString(flags.FlagHome)
@@ -298,7 +300,7 @@ func startStandAlone(svrCtx *server.Context, opts StartOptions) error {
 }
 
 // legacyAminoCdc is used for the legacy REST API
-func startInProcess(svrCtx *server.Context, clientCtx client.Context, opts StartOptions) (err error) {
+func startInProcess[T types.Application](svrCtx *server.Context, clientCtx client.Context, opts StartOptions[T]) (err error) {
 	cfg := svrCtx.Config
 	home := cfg.RootDir
 	logger := svrCtx.Logger
@@ -365,10 +367,14 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, opts Start
 			clientCreator = proxy.NewLocalClientCreator(cmtApp)
 		}
 
-		tmNode, err = node.NewNodeWithContext(
+		pv, err := pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile(), app.ValidatorKeyProvider())
+		if err != nil {
+			return err
+		}
+		tmNode, err = node.NewNode(
 			ctx,
 			cfg,
-			pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
+			pv,
 			nodeKey,
 			clientCreator,
 			genDocProvider,
@@ -441,7 +447,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, opts Start
 			if err != nil {
 				return err
 			}
-			chainID = genDoc.ChainID
+			chainID = genDoc.GenesisDoc.ChainID
 		}
 		clientCtx = clientCtx.
 			WithHomeDir(home).
@@ -647,19 +653,41 @@ func startJSONRPCServer(
 		return ctx, err
 	}
 
-	ctx = clientCtx.WithChainID(genDoc.ChainID)
+	ctx = clientCtx.WithChainID(genDoc.GenesisDoc.ChainID)
 	_, err = StartJSONRPC(stdCtx, svrCtx, clientCtx, g, &config, idxer, txApp)
 	return
 }
 
 // returns a function which returns the genesis doc from the genesis file.
-func GenDocProvider(cfg *cmtcfg.Config) func() (*cmttypes.GenesisDoc, error) {
-	return func() (*cmttypes.GenesisDoc, error) {
+func GenDocProvider(cfg *cmtcfg.Config) func() (node.ChecksummedGenesisDoc, error) {
+	return func() (node.ChecksummedGenesisDoc, error) {
+		defaultGenesisDoc := node.ChecksummedGenesisDoc{
+			Sha256Checksum: []byte{},
+		}
 		appGenesis, err := genutiltypes.AppGenesisFromFile(cfg.GenesisFile())
 		if err != nil {
-			return nil, err
+			return defaultGenesisDoc, err
 		}
 
-		return appGenesis.ToGenesisDoc()
+		gen, err := appGenesis.ToGenesisDoc()
+		if err != nil {
+			return defaultGenesisDoc, err
+		}
+
+		genbz, err := gen.AppState.MarshalJSON()
+		if err != nil {
+			return defaultGenesisDoc, err
+		}
+
+		bz, err := json.Marshal(genbz)
+		if err != nil {
+			return defaultGenesisDoc, err
+		}
+		sum := sha256.Sum256(bz)
+
+		return node.ChecksummedGenesisDoc{
+			GenesisDoc:     gen,
+			Sha256Checksum: sum[:],
+		}, nil
 	}
 }

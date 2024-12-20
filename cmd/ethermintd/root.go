@@ -22,6 +22,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	corestore "cosmossdk.io/core/store"
 	cmtlog "cosmossdk.io/log"
 	confixcmd "cosmossdk.io/tools/confix/cmd"
 	cmtcfg "github.com/cometbft/cometbft/config"
@@ -29,12 +30,16 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	clientcfg "github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	nodeservice "github.com/cosmos/cosmos-sdk/client/grpc/node"
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
@@ -66,7 +71,7 @@ const (
 
 // NewRootCmd creates a new root command for simd. It is called once in the
 // main function.
-func NewRootCmd() (*cobra.Command, ethermint.EncodingConfig) {
+func NewRootCmd() (cmd *cobra.Command, cfg ethermint.EncodingConfig) {
 	tempApp := app.NewEthermintApp(
 		cmtlog.NewNopLogger(), dbm.NewMemDB(), nil, true,
 		simtestutil.NewAppOptionsWithFlagHome(app.DefaultNodeHome),
@@ -135,11 +140,16 @@ func NewRootCmd() (*cobra.Command, ethermint.EncodingConfig) {
 		},
 	}
 
-	initRootCmd(rootCmd, encodingConfig, tempApp.BasicModuleManager)
+	initRootCmd(rootCmd, tempApp.ModuleManager)
 
-	// add keyring to autocli opts
 	autoCliOpts := tempApp.AutoCliOpts()
-	autoCliOpts.ClientCtx = initClientCtx
+	autoCliOpts.AddressCodec = initClientCtx.AddressCodec
+	autoCliOpts.ValidatorAddressCodec = initClientCtx.ValidatorAddressCodec
+	autoCliOpts.ConsensusAddressCodec = initClientCtx.ConsensusAddressCodec
+	autoCliOpts.Cdc = initClientCtx.Codec
+
+	nodeCmds := nodeservice.NewNodeCommands()
+	autoCliOpts.ModuleOptions[nodeCmds.Name()] = nodeCmds.AutoCLIOptions()
 
 	if err := autoCliOpts.EnhanceRootCommand(rootCmd); err != nil {
 		panic(err)
@@ -149,21 +159,20 @@ func NewRootCmd() (*cobra.Command, ethermint.EncodingConfig) {
 
 func initRootCmd(
 	rootCmd *cobra.Command,
-	encodingConfig ethermint.EncodingConfig,
-	basicManager module.BasicManager,
+	moduleManager *module.Manager,
 ) {
 	cfg := sdk.GetConfig()
 	cfg.Seal()
 
 	rootCmd.AddCommand(
 		ethermintclient.ValidateChainID(
-			genutilcli.InitCmd(basicManager, app.DefaultNodeHome),
+			genutilcli.InitCmd(moduleManager),
 		),
 		cmtcli.NewCompletionCmd(rootCmd, true),
-		ethermintclient.NewTestnetCmd(basicManager, banktypes.GenesisBalancesIterator{}),
+		ethermintclient.NewTestnetCmd(*moduleManager, banktypes.GenesisBalancesIterator{}),
 		debug.Cmd(),
 		confixcmd.ConfigCommand(),
-		pruning.Cmd(newApp, app.DefaultNodeHome),
+		pruning.Cmd(newApp),
 		snapshot.Cmd(newApp),
 		// this line is used by starport scaffolding # stargate/root/commands
 	)
@@ -173,7 +182,7 @@ func initRootCmd(
 	// add keybase, auxiliary RPC, query, and tx child commands
 	rootCmd.AddCommand(
 		sdkserver.StatusCommand(),
-		genesisCommand(encodingConfig.TxConfig, basicManager),
+		genesisCommand(moduleManager, appExport),
 		queryCommand(),
 		txCommand(),
 		ethermintclient.KeyCommands(app.DefaultNodeHome),
@@ -186,9 +195,8 @@ func initRootCmd(
 }
 
 // genesisCommand builds genesis-related `simd genesis` command. Users may provide application specific commands as a parameter
-func genesisCommand(txConfig client.TxConfig, basicManager module.BasicManager, cmds ...*cobra.Command) *cobra.Command {
-	cmd := genutilcli.Commands(txConfig, basicManager, app.DefaultNodeHome)
-
+func genesisCommand(moduleManager *module.Manager, appExport servertypes.AppExporter, cmds ...*cobra.Command) *cobra.Command {
+	cmd := genutilcli.Commands(moduleManager.Modules[genutiltypes.ModuleName].(genutil.AppModule), moduleManager, appExport)
 	for _, subCmd := range cmds {
 		cmd.AddCommand(subCmd)
 	}
@@ -206,7 +214,6 @@ func queryCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		rpc.ValidatorCommand(),
 		sdkserver.QueryBlockCmd(),
 		sdkserver.QueryBlocksCmd(),
 		sdkserver.QueryBlockResultsCmd(),
@@ -243,7 +250,12 @@ func txCommand() *cobra.Command {
 }
 
 // newApp creates the application
-func newApp(logger cmtlog.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
+func newApp(
+	logger cmtlog.Logger,
+	db corestore.KVStoreWithBatch,
+	traceStore io.Writer,
+	appOpts servertypes.AppOptions,
+) servertypes.Application {
 	baseappOptions := sdkserver.DefaultBaseappOptions(appOpts)
 	ethermintApp := app.NewEthermintApp(
 		logger, db, traceStore, true,
@@ -257,7 +269,7 @@ func newApp(logger cmtlog.Logger, db dbm.DB, traceStore io.Writer, appOpts serve
 // and exports state.
 func appExport(
 	logger cmtlog.Logger,
-	db dbm.DB,
+	db corestore.KVStoreWithBatch,
 	traceStore io.Writer,
 	height int64,
 	forZeroHeight bool,

@@ -235,7 +235,7 @@ func NewCLILogger(cmd *cobra.Command) CLILogger {
 }
 
 // New creates a new Network for integration tests or in-process testnets run via the CLI
-func New(l Logger, baseDir string, cfg Config) (*Network, error) {
+func New(l Logger, baseDir string, cfg Config, keyType string) (*Network, error) {
 	// only one caller/test can create and use a network at a time
 	l.Log("acquiring test network lock")
 	lock.Lock()
@@ -284,7 +284,6 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		apiAddr := ""
 		cmtCfg.RPC.ListenAddress = ""
 		appCfg.GRPC.Enable = false
-		appCfg.GRPCWeb.Enable = false
 		apiListenAddr := ""
 		if i == 0 {
 			if cfg.APIAddress != "" {
@@ -380,7 +379,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		cmtCfg.P2P.AddrBookStrict = false
 		cmtCfg.P2P.AllowDuplicateIP = true
 
-		nodeID, pubKey, err := genutil.InitializeNodeValidatorFiles(cmtCfg)
+		nodeID, pubKey, err := genutil.InitializeNodeValidatorFiles(cmtCfg, keyType)
 		if err != nil {
 			return nil, err
 		}
@@ -398,7 +397,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			return nil, err
 		}
 
-		addr, secret, err := testutil.GenerateSaveCoinKey(kb, nodeDirName, "", true, algo)
+		addr, secret, err := testutil.GenerateSaveCoinKey(kb, nodeDirName, "", true, algo, sdk.GetFullBIP44Path())
 		if err != nil {
 			return nil, err
 		}
@@ -442,7 +441,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			addr.String(),
 			valPubKeys[i],
 			sdk.NewCoin(cfg.BondDenom, cfg.BondedTokens),
-			stakingtypes.NewDescription(nodeDirName, "", "", "", ""),
+			stakingtypes.NewDescription(nodeDirName, "", "", "", "", nil),
 			stakingtypes.NewCommissionRates(commission, sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec()),
 			sdkmath.OneInt(),
 		)
@@ -473,7 +472,18 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			WithKeybase(kb).
 			WithTxConfig(cfg.TxConfig)
 
-		if err := tx.Sign(context.Background(), txFactory, nodeDirName, txBuilder, true); err != nil {
+		clientCtx := client.Context{}.
+			WithKeyringDir(clientDir).
+			WithKeyring(kb).
+			WithHomeDir(cmtCfg.RootDir).
+			WithChainID(cfg.ChainID).
+			WithInterfaceRegistry(cfg.InterfaceRegistry).
+			WithCodec(cfg.Codec).
+			WithLegacyAmino(cfg.LegacyAmino).
+			WithTxConfig(cfg.TxConfig).
+			WithAccountRetriever(cfg.AccountRetriever)
+
+		if err := tx.Sign(clientCtx, txFactory, nodeDirName, txBuilder, true); err != nil {
 			return nil, err
 		}
 
@@ -496,17 +506,6 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		clientCtx := client.Context{}.
-			WithKeyringDir(clientDir).
-			WithKeyring(kb).
-			WithHomeDir(cmtCfg.RootDir).
-			WithChainID(cfg.ChainID).
-			WithInterfaceRegistry(cfg.InterfaceRegistry).
-			WithCodec(cfg.Codec).
-			WithLegacyAmino(cfg.LegacyAmino).
-			WithTxConfig(cfg.TxConfig).
-			WithAccountRetriever(cfg.AccountRetriever)
 
 		network.Validators[i] = &Validator{
 			AppConfig:  appCfg,

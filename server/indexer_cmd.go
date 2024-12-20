@@ -78,7 +78,7 @@ func NewIndexTxCmd() *cobra.Command {
 			})
 
 			indexBlock := func(height int64) error {
-				blk := blockStore.LoadBlock(height)
+				blk, _ := blockStore.LoadBlock(height)
 				if blk == nil {
 					return fmt.Errorf("block not found %d", height)
 				}

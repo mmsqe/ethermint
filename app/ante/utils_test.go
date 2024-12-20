@@ -124,7 +124,7 @@ func (suite *AnteTestSuite) SetupTest() {
 	acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr)
 	suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 
-	encodingConfig := config.MakeConfigForTest(suite.app.BasicModuleManager)
+	encodingConfig := config.MakeConfigForTest(suite.app.ModuleManager)
 	// We're using TestMsg amino encoding in some tests, so register it here.
 	encodingConfig.Amino.RegisterConcrete(&testdata.TestMsg{}, "testdata.TestMsg")
 	eip712.SetEncodingConfig(encodingConfig)

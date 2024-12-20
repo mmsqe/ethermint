@@ -70,9 +70,16 @@ func startInProcess(cfg Config, val *Validator) error {
 
 	genDocProvider := server.GenDocProvider(cmtCfg)
 	cmtApp := sdkserver.NewCometABCIWrapper(app)
+
+	pv, err := pvm.LoadOrGenFilePV(cmtCfg.PrivValidatorKeyFile(), cmtCfg.PrivValidatorStateFile(), app.ValidatorKeyProvider())
+	if err != nil {
+		return err
+	}
+
 	tmNode, err := node.NewNode(
+		context.Background(),
 		cmtCfg,
-		pvm.LoadOrGenFilePV(cmtCfg.PrivValidatorKeyFile(), cmtCfg.PrivValidatorStateFile()),
+		pv,
 		nodeKey,
 		proxy.NewLocalClientCreator(cmtApp),
 		genDocProvider,
@@ -181,13 +188,15 @@ func collectGenFiles(cfg Config, vals []*Validator, outputDir string) error {
 			return err
 		}
 
-		appState, err := genutil.GenAppStateFromConfig(cfg.Codec, cfg.TxConfig,
+		appState, err := genutil.GenAppStateFromConfig(
+			cfg.Codec,
+			cfg.TxConfig,
 			tmCfg,
 			initCfg,
 			genDoc,
-			banktypes.GenesisBalancesIterator{},
 			genutiltypes.DefaultMessageValidator,
-			cfg.TxConfig.SigningContext().ValidatorAddressCodec(),
+			vals[i].ClientCtx.ValidatorAddressCodec,
+			vals[i].ClientCtx.AddressCodec,
 		)
 		if err != nil {
 			return err
@@ -270,7 +279,7 @@ func initGenFiles(cfg Config, genAccounts []authtypes.GenesisAccount, genBalance
 func WriteFile(name string, dir string, contents []byte) error {
 	file := filepath.Join(dir, name)
 
-	err := os.EnsureDir(dir, 0o755)
+	err := os.MkdirAll(dir, 0o755)
 	if err != nil {
 		return err
 	}

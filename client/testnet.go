@@ -19,7 +19,6 @@ package client
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -46,7 +45,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	"github.com/cosmos/cosmos-sdk/runtime"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	srvconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/testutil"
@@ -116,7 +114,7 @@ func addTestnetFlagsToCmd(cmd *cobra.Command) {
 
 // NewTestnetCmd creates a root testnet command with subcommands to run an in-process testnet or initialize
 // validator configuration files for running a multi-validator testnet in a separate process
-func NewTestnetCmd(mbm module.BasicManager, genBalIterator banktypes.GenesisBalancesIterator) *cobra.Command {
+func NewTestnetCmd(mbm module.Manager, genBalIterator banktypes.GenesisBalancesIterator) *cobra.Command {
 	testnetCmd := &cobra.Command{
 		Use:                        "testnet",
 		Short:                      "subcommands for starting or configuring local testnets",
@@ -132,7 +130,7 @@ func NewTestnetCmd(mbm module.BasicManager, genBalIterator banktypes.GenesisBala
 }
 
 // get cmd to initialize all files for tendermint testnet and application
-func testnetInitFilesCmd(mbm module.BasicManager, genBalIterator banktypes.GenesisBalancesIterator) *cobra.Command {
+func testnetInitFilesCmd(mbm module.Manager, genBalIterator banktypes.GenesisBalancesIterator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init-files",
 		Short: "Initialize config directories & files for a multi-validator testnet running locally via separate processes (e.g. Docker Compose or similar)", //nolint:lll
@@ -228,7 +226,7 @@ func initTestnetFiles(
 	clientCtx client.Context,
 	cmd *cobra.Command,
 	nodeConfig *tmconfig.Config,
-	mbm module.BasicManager,
+	mbm module.Manager,
 	genBalIterator banktypes.GenesisBalancesIterator,
 	args initArgs,
 ) error {
@@ -276,7 +274,7 @@ func initTestnetFiles(
 			return err
 		}
 
-		nodeIDs[i], valPubKeys[i], err = genutil.InitializeNodeValidatorFiles(nodeConfig)
+		nodeIDs[i], valPubKeys[i], err = genutil.InitializeNodeValidatorFiles(nodeConfig, args.algo)
 		if err != nil {
 			_ = os.RemoveAll(args.outputDir)
 			return err
@@ -296,7 +294,7 @@ func initTestnetFiles(
 			return err
 		}
 
-		addr, secret, err := testutil.GenerateSaveCoinKey(kb, nodeDirName, "", true, algo)
+		addr, secret, err := testutil.GenerateSaveCoinKey(kb, nodeDirName, "", true, algo, sdk.GetFullBIP44Path())
 		if err != nil {
 			_ = os.RemoveAll(args.outputDir)
 			return err
@@ -330,7 +328,7 @@ func initTestnetFiles(
 			addr.String(),
 			valPubKeys[i],
 			sdk.NewCoin(ethermint.AttoPhoton, valTokens),
-			stakingtypes.NewDescription(nodeDirName, "", "", "", ""),
+			stakingtypes.NewDescription(nodeDirName, "", "", "", "", nil),
 			stakingtypes.NewCommissionRates(sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec()),
 			sdkmath.OneInt(),
 		)
@@ -352,7 +350,7 @@ func initTestnetFiles(
 			WithKeybase(kb).
 			WithTxConfig(clientCtx.TxConfig)
 
-		if err := tx.Sign(context.Background(), txFactory, nodeDirName, txBuilder, true); err != nil {
+		if err := tx.Sign(clientCtx, txFactory, nodeDirName, txBuilder, true); err != nil {
 			return err
 		}
 
@@ -381,7 +379,6 @@ func initTestnetFiles(
 	err := collectGenFiles(
 		clientCtx, nodeConfig, args.chainID, nodeIDs, valPubKeys, args.numValidators,
 		args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator,
-		clientCtx.InterfaceRegistry.SigningContext().ValidatorAddressCodec(),
 	)
 	if err != nil {
 		return err
@@ -393,7 +390,7 @@ func initTestnetFiles(
 
 func initGenFiles(
 	clientCtx client.Context,
-	mbm module.BasicManager,
+	mbm module.Manager,
 	chainID,
 	coinDenom string,
 	genAccounts []authtypes.GenesisAccount,
@@ -401,7 +398,7 @@ func initGenFiles(
 	genFiles []string,
 	numValidators int,
 ) error {
-	appGenState := mbm.DefaultGenesis(clientCtx.Codec)
+	appGenState := mbm.DefaultGenesis()
 	// set the accounts in the genesis state
 	var authGenState authtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[authtypes.ModuleName], &authGenState)
@@ -439,12 +436,6 @@ func initGenFiles(
 	mintGenState.Params.MintDenom = coinDenom
 	appGenState[mintypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&mintGenState)
 
-	var crisisGenState crisistypes.GenesisState
-	clientCtx.Codec.MustUnmarshalJSON(appGenState[crisistypes.ModuleName], &crisisGenState)
-
-	crisisGenState.ConstantFee.Denom = coinDenom
-	appGenState[crisistypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&crisisGenState)
-
 	var evmGenState evmtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[evmtypes.ModuleName], &evmGenState)
 
@@ -475,7 +466,6 @@ func collectGenFiles(
 	clientCtx client.Context, nodeConfig *tmconfig.Config, chainID string,
 	nodeIDs []string, valPubKeys []cryptotypes.PubKey, numValidators int,
 	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator banktypes.GenesisBalancesIterator,
-	valAddrCodec runtime.ValidatorAddressCodec,
 ) error {
 	var appState json.RawMessage
 	genTime := tmtime.Now()
@@ -491,7 +481,7 @@ func collectGenFiles(
 		nodeID, valPubKey := nodeIDs[i], valPubKeys[i]
 		initCfg := genutiltypes.NewInitConfig(chainID, gentxsDir, nodeID, valPubKey)
 
-		genDoc, err := genutiltypes.AppGenesisFromFile(nodeConfig.GenesisFile())
+		appGenesis, err := genutiltypes.AppGenesisFromFile(nodeConfig.GenesisFile())
 		if err != nil {
 			return err
 		}
@@ -501,10 +491,10 @@ func collectGenFiles(
 			clientCtx.TxConfig,
 			nodeConfig,
 			initCfg,
-			genDoc,
-			genBalIterator,
+			appGenesis,
 			genutiltypes.DefaultMessageValidator,
-			valAddrCodec,
+			clientCtx.ValidatorAddressCodec,
+			clientCtx.AddressCodec,
 		)
 		if err != nil {
 			return err
@@ -577,7 +567,7 @@ func startTestnet(cmd *cobra.Command, args startArgs) error {
 			networkConfig.ChainID, baseDir)
 	}
 
-	testnet, err := network.New(networkLogger, baseDir, networkConfig)
+	testnet, err := network.New(networkLogger, baseDir, networkConfig, args.algo)
 	if err != nil {
 		return err
 	}
