@@ -16,6 +16,7 @@
 package ante
 
 import (
+	"context"
 	"fmt"
 
 	errorsmod "cosmossdk.io/errors"
@@ -49,7 +50,7 @@ func init() {
 
 // Deprecated: NewLegacyCosmosAnteHandlerEip712 creates an AnteHandler to process legacy EIP-712
 // transactions, as defined by the presence of an ExtensionOptionsWeb3Tx extension.
-func NewLegacyCosmosAnteHandlerEip712(ctx sdk.Context, options HandlerOptions, extra ...sdk.AnteDecorator) sdk.AnteHandler {
+func NewLegacyCosmosAnteHandlerEip712(ctx context.Context, options HandlerOptions, extra ...sdk.AnteDecorator) sdk.AnteHandler {
 	evmParams := options.EvmKeeper.GetParams(ctx)
 	feemarketParams := options.FeeMarketKeeper.GetParams(ctx)
 	evmDenom := evmParams.EvmDenom

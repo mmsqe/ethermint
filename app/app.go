@@ -506,8 +506,9 @@ func NewEthermintApp(
 	feeMarketSs := app.GetSubspace(feemarkettypes.ModuleName)
 	app.FeeMarketKeeper = feemarketkeeper.NewKeeper(
 		appCodec,
+		runtime.NewEnvironment(runtime.NewKVStoreService(keys[feemarkettypes.StoreKey]), logger.With(log.ModuleKey, "x/feemarket"),
+			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()), runtime.EnvWithQueryRouterService(app.GRPCQueryRouter())),
 		authtypes.NewModuleAddress(govtypes.ModuleName),
-		keys[feemarkettypes.StoreKey],
 		feeMarketSs,
 	)
 
@@ -515,6 +516,8 @@ func NewEthermintApp(
 	evmSs := app.GetSubspace(evmtypes.ModuleName)
 	app.EvmKeeper = evmkeeper.NewKeeper(
 		appCodec,
+		runtime.NewEnvironment(runtime.NewKVStoreService(keys[evmtypes.StoreKey]), logger.With(log.ModuleKey, "x/evm"),
+			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()), runtime.EnvWithQueryRouterService(app.GRPCQueryRouter())),
 		keys[evmtypes.StoreKey], okeys[evmtypes.ObjectStoreKey], authtypes.NewModuleAddress(govtypes.ModuleName),
 		app.AuthKeeper, app.BankKeeper, app.StakingKeeper, app.FeeMarketKeeper,
 		tracer,

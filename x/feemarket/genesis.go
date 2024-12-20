@@ -16,9 +16,10 @@
 package feemarket
 
 import (
+	"context"
+
 	errorsmod "cosmossdk.io/errors"
 	abci "github.com/cometbft/cometbft/abci/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/evmos/ethermint/x/feemarket/keeper"
 	"github.com/evmos/ethermint/x/feemarket/types"
@@ -26,7 +27,7 @@ import (
 
 // InitGenesis initializes genesis state based on exported genesis
 func InitGenesis(
-	ctx sdk.Context,
+	ctx context.Context,
 	k keeper.Keeper,
 	data types.GenesisState,
 ) []abci.ValidatorUpdate {
@@ -41,7 +42,7 @@ func InitGenesis(
 }
 
 // ExportGenesis exports genesis state of the fee market module
-func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
+func ExportGenesis(ctx context.Context, k keeper.Keeper) *types.GenesisState {
 	return &types.GenesisState{
 		Params:   k.GetParams(ctx),
 		BlockGas: k.GetBlockGasWanted(ctx),

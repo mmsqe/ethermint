@@ -16,11 +16,11 @@
 package keeper
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 )
@@ -29,19 +29,20 @@ import (
 // block during BeginBlock. If the NoBaseFee parameter is enabled or below activation height, this function returns nil.
 // NOTE: This code is inspired from the go-ethereum EIP1559 implementation and adapted to Cosmos SDK-based
 // chains. For the canonical code refer to: https://github.com/ethereum/go-ethereum/blob/master/consensus/misc/eip1559.go
-func (k Keeper) CalculateBaseFee(ctx sdk.Context) *big.Int {
+func (k Keeper) CalculateBaseFee(ctx context.Context) *big.Int {
 	params := k.GetParams(ctx)
 
 	// Ignore the calculation if not enabled
-	if !params.IsBaseFeeEnabled(ctx.BlockHeight()) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx) // mmsqe: https://github.com/cosmos/ibc-go/issues/5917
+	if !params.IsBaseFeeEnabled(sdkCtx.BlockHeight()) {
 		return nil
 	}
-	consParams := ctx.ConsensusParams()
+	consParams := sdkCtx.ConsensusParams()
 
 	// If the current block is the first EIP-1559 block, return the base fee
 	// defined in the parameters (DefaultBaseFee if it hasn't been changed by
 	// governance).
-	if ctx.BlockHeight() == params.EnableHeight {
+	if sdkCtx.BlockHeight() == params.EnableHeight {
 		return params.BaseFee.BigInt()
 	}
 

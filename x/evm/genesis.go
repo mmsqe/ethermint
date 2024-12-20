@@ -17,6 +17,7 @@ package evm
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -31,7 +32,7 @@ import (
 
 // InitGenesis initializes genesis state based on exported genesis
 func InitGenesis(
-	ctx sdk.Context,
+	ctx context.Context,
 	k *keeper.Keeper,
 	accountKeeper types.AccountKeeper,
 	data types.GenesisState,
@@ -86,7 +87,7 @@ func InitGenesis(
 }
 
 // ExportGenesis exports genesis state of the EVM module
-func ExportGenesis(ctx sdk.Context, k *keeper.Keeper, ak types.AccountKeeper, accs types.Accounts[sdk.AccAddress, sdk.AccountI]) *types.GenesisState {
+func ExportGenesis(ctx context.Context, k *keeper.Keeper, ak types.AccountKeeper, accs types.Accounts[sdk.AccAddress, sdk.AccountI]) *types.GenesisState {
 	var ethGenAccounts []types.GenesisAccount
 	accs.Walk(ctx, nil, func(_ sdk.AccAddress, account sdk.AccountI) (bool, error) {
 		ethAccount, ok := account.(ethermint.EthAccountI)

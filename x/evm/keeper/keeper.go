@@ -16,10 +16,12 @@
 package keeper
 
 import (
+	"context"
 	"math/big"
 
+	"cosmossdk.io/core/appmodule"
+	"cosmossdk.io/core/event"
 	errorsmod "cosmossdk.io/errors"
-	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	paramstypes "cosmossdk.io/x/params/types"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -39,6 +41,7 @@ type CustomContractFn func(sdk.Context, params.Rules) vm.PrecompiledContract
 
 // Keeper grants access to the EVM module state and implements the go-ethereum StateDB interface.
 type Keeper struct {
+	appmodule.Environment
 	// Protobuf codec
 	cdc codec.Codec
 	// Store key required for the EVM Prefix KVStore. It is required by:
@@ -78,6 +81,7 @@ type Keeper struct {
 // NewKeeper generates new evm module keeper
 func NewKeeper(
 	cdc codec.Codec,
+	env appmodule.Environment,
 	storeKey, objectKey storetypes.StoreKey,
 	authority sdk.AccAddress,
 	ak types.AccountKeeper,
@@ -95,6 +99,7 @@ func NewKeeper(
 
 	// NOTE: we pass in the parameter space to the CommitStateDB in order to use custom denominations for the EVM operations
 	return &Keeper{
+		Environment:       env,
 		cdc:               cdc,
 		authority:         authority,
 		accountKeeper:     ak,
@@ -109,15 +114,10 @@ func NewKeeper(
 	}
 }
 
-// Logger returns a module-specific logger.
-func (k Keeper) Logger(ctx sdk.Context) log.Logger {
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	return sdkCtx.Logger().With("module", "x/"+types.ModuleName)
-}
-
 // WithChainID sets the chain ID for the keeper by extracting it from the provided context
-func (k *Keeper) WithChainID(ctx sdk.Context) {
-	k.WithChainIDString(ctx.ChainID())
+func (k *Keeper) WithChainID(ctx context.Context) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx) // mmsqe: https://github.com/cosmos/ibc-go/issues/5917
+	k.WithChainIDString(sdkCtx.ChainID())
 }
 
 // WithChainIDString sets the chain ID for the keeper after parsing the provided string value
@@ -145,12 +145,10 @@ func (k Keeper) ChainID() *big.Int {
 // ----------------------------------------------------------------------------
 
 // EmitBlockBloomEvent emit block bloom events
-func (k Keeper) EmitBlockBloomEvent(ctx sdk.Context, bloom []byte) {
-	ctx.EventManager().EmitEvent(
-		sdk.NewEvent(
-			types.EventTypeBlockBloom,
-			sdk.NewAttribute(types.AttributeKeyEthereumBloom, string(bloom)),
-		),
+func (k Keeper) EmitBlockBloomEvent(ctx context.Context, bloom []byte) {
+	k.EventService.EventManager(ctx).EmitKV(
+		types.EventTypeBlockBloom,
+		event.NewAttribute(types.AttributeKeyEthereumBloom, string(bloom)),
 	)
 }
 
@@ -164,7 +162,7 @@ func (k Keeper) GetAuthority() sdk.AccAddress {
 // ----------------------------------------------------------------------------
 
 // GetAccountStorage return state storage associated with an account
-func (k Keeper) GetAccountStorage(ctx sdk.Context, address common.Address) types.Storage {
+func (k Keeper) GetAccountStorage(ctx context.Context, address common.Address) types.Storage {
 	storage := types.Storage{}
 
 	k.ForEachStorage(ctx, address, func(key, value common.Hash) bool {
@@ -191,7 +189,7 @@ func (k *Keeper) SetHooks(eh types.EvmHooks) *Keeper {
 }
 
 // PostTxProcessing delegate the call to the hooks. If no hook has been registered, this function returns with a `nil` error
-func (k *Keeper) PostTxProcessing(ctx sdk.Context, msg *core.Message, receipt *ethtypes.Receipt) error {
+func (k *Keeper) PostTxProcessing(ctx context.Context, msg *core.Message, receipt *ethtypes.Receipt) error {
 	if k.hooks == nil {
 		return nil
 	}
@@ -205,7 +203,7 @@ func (k Keeper) Tracer(msg *core.Message, rules params.Rules) vm.EVMLogger {
 
 // GetAccount load nonce and codehash without balance,
 // more efficient in cases where balance is not needed.
-func (k *Keeper) GetAccount(ctx sdk.Context, addr common.Address) *statedb.Account {
+func (k *Keeper) GetAccount(ctx context.Context, addr common.Address) *statedb.Account {
 	cosmosAddr := sdk.AccAddress(addr.Bytes())
 	acct := k.accountKeeper.GetAccount(ctx, cosmosAddr)
 	if acct == nil {
@@ -215,7 +213,7 @@ func (k *Keeper) GetAccount(ctx sdk.Context, addr common.Address) *statedb.Accou
 }
 
 // GetAccountOrEmpty returns empty account if not exist, returns error if it's not `EthAccount`
-func (k *Keeper) GetAccountOrEmpty(ctx sdk.Context, addr common.Address) statedb.Account {
+func (k *Keeper) GetAccountOrEmpty(ctx context.Context, addr common.Address) statedb.Account {
 	acct := k.GetAccount(ctx, addr)
 	if acct != nil {
 		return *acct
@@ -228,7 +226,7 @@ func (k *Keeper) GetAccountOrEmpty(ctx sdk.Context, addr common.Address) statedb
 }
 
 // GetNonce returns the sequence number of an account, returns 0 if not exists.
-func (k *Keeper) GetNonce(ctx sdk.Context, addr common.Address) uint64 {
+func (k *Keeper) GetNonce(ctx context.Context, addr common.Address) uint64 {
 	cosmosAddr := sdk.AccAddress(addr.Bytes())
 	acct := k.accountKeeper.GetAccount(ctx, cosmosAddr)
 	if acct == nil {
@@ -239,7 +237,7 @@ func (k *Keeper) GetNonce(ctx sdk.Context, addr common.Address) uint64 {
 }
 
 // GetEVMDenomBalance returns the balance of evm denom
-func (k *Keeper) GetEVMDenomBalance(ctx sdk.Context, addr common.Address) *big.Int {
+func (k *Keeper) GetEVMDenomBalance(ctx context.Context, addr common.Address) *big.Int {
 	cosmosAddr := sdk.AccAddress(addr.Bytes())
 	evmParams := k.GetParams(ctx)
 	evmDenom := evmParams.GetEvmDenom()
@@ -251,7 +249,7 @@ func (k *Keeper) GetEVMDenomBalance(ctx sdk.Context, addr common.Address) *big.I
 }
 
 // GetBalance load account's balance of specified denom
-func (k *Keeper) GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) *big.Int {
+func (k *Keeper) GetBalance(ctx context.Context, addr sdk.AccAddress, denom string) *big.Int {
 	return k.bankKeeper.GetBalance(ctx, addr, denom).Amount.BigInt()
 }
 
@@ -259,11 +257,11 @@ func (k *Keeper) GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) 
 // - `nil`: london hardfork not enabled.
 // - `0`: london hardfork enabled but feemarket is not enabled.
 // - `n`: both london hardfork and feemarket are enabled.
-func (k Keeper) GetBaseFee(ctx sdk.Context, ethCfg *params.ChainConfig) *big.Int {
-	return k.getBaseFee(ctx, types.IsLondon(ethCfg, ctx.BlockHeight()))
+func (k Keeper) GetBaseFee(ctx context.Context, ethCfg *params.ChainConfig) *big.Int {
+	return k.getBaseFee(ctx, types.IsLondon(ethCfg, k.HeaderService.HeaderInfo(ctx).Height))
 }
 
-func (k Keeper) getBaseFee(ctx sdk.Context, london bool) *big.Int {
+func (k Keeper) getBaseFee(ctx context.Context, london bool) *big.Int {
 	if !london {
 		return nil
 	}
@@ -302,23 +300,32 @@ func (k Keeper) AddTransientGasUsed(ctx sdk.Context, gasUsed uint64) (uint64, er
 }
 
 // SetHeaderHash stores the hash of the current block header in the store.
-func (k Keeper) SetHeaderHash(ctx sdk.Context) {
-	store := ctx.KVStore(k.storeKey)
-	height, err := ethermint.SafeUint64(ctx.BlockHeight())
+func (k Keeper) SetHeaderHash(ctx context.Context) {
+	header := k.HeaderService.HeaderInfo(ctx)
+	height, err := ethermint.SafeUint64(header.Height)
 	if err != nil {
 		panic(err)
 	}
-	store.Set(types.GetHeaderHashKey(height), ctx.HeaderHash())
+	store := k.KVStoreService.OpenKVStore(ctx)
+	if err := store.Set(types.GetHeaderHashKey(height), header.Hash); err != nil {
+		panic(err)
+	}
 }
 
 // GetHeaderHash retrieves the hash of a block header from the store by height.
-func (k Keeper) GetHeaderHash(ctx sdk.Context, height uint64) []byte {
-	store := ctx.KVStore(k.storeKey)
-	return store.Get(types.GetHeaderHashKey(height))
+func (k Keeper) GetHeaderHash(ctx context.Context, height uint64) []byte {
+	store := k.KVStoreService.OpenKVStore(ctx)
+	bz, err := store.Get(types.GetHeaderHashKey(height))
+	if err != nil {
+		panic(err)
+	}
+	return bz
 }
 
 // DeleteHeaderHash removes the hash of a block header from the store by height
-func (k Keeper) DeleteHeaderHash(ctx sdk.Context, height uint64) {
-	store := ctx.KVStore(k.storeKey)
-	store.Delete(types.GetHeaderHashKey(height))
+func (k Keeper) DeleteHeaderHash(ctx context.Context, height uint64) {
+	store := k.KVStoreService.OpenKVStore(ctx)
+	if err := store.Delete(types.GetHeaderHashKey(height)); err != nil {
+		panic(err)
+	}
 }

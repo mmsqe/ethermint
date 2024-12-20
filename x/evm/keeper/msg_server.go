@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"cosmossdk.io/core/event"
 	govtypes "cosmossdk.io/x/gov/types"
 
 	cmtbytes "github.com/cometbft/cometbft/libs/bytes"
@@ -78,11 +79,11 @@ func (k *Keeper) EthereumTx(goCtx context.Context, msg *types.MsgEthereumTx) (*t
 			// gas_limit and gas_used are always > 0
 			gasLimit, err := ethermint.SafeInt64(tx.Gas())
 			if err != nil {
-				k.Logger(ctx).Error("failed to cast gas to int64", "error", err)
+				k.Logger.Error("failed to cast gas to int64", "error", err)
 			}
 			gasUsed, err := ethermint.SafeInt64(response.GasUsed)
 			if err != nil {
-				k.Logger(ctx).Error("failed to cast gasUsed to int64", "error", err)
+				k.Logger.Error("failed to cast gasUsed to int64", "error", err)
 			}
 			gasRatio, err := sdkmath.LegacyNewDec(gasLimit).QuoInt64(gasUsed).Float64()
 			if err == nil {
@@ -95,41 +96,39 @@ func (k *Keeper) EthereumTx(goCtx context.Context, msg *types.MsgEthereumTx) (*t
 		}
 	}()
 
-	attrs := []sdk.Attribute{
-		sdk.NewAttribute(sdk.AttributeKeyAmount, tx.Value().String()),
+	attrs := []event.Attribute{
+		event.NewAttribute(sdk.AttributeKeyAmount, tx.Value().String()),
 		// add event for ethereum transaction hash format
-		sdk.NewAttribute(types.AttributeKeyEthereumTxHash, response.Hash),
+		event.NewAttribute(types.AttributeKeyEthereumTxHash, response.Hash),
 		// add event for eth tx gas used, we can't get it from cosmos tx result when it contains multiple eth tx msgs.
-		sdk.NewAttribute(types.AttributeKeyTxGasUsed, strconv.FormatUint(response.GasUsed, 10)),
+		event.NewAttribute(types.AttributeKeyTxGasUsed, strconv.FormatUint(response.GasUsed, 10)),
 	}
 
 	if len(ctx.TxBytes()) > 0 {
 		// add event for tendermint transaction hash format
 		hash := cmtbytes.HexBytes(cmttypes.Tx(ctx.TxBytes()).Hash())
-		attrs = append(attrs, sdk.NewAttribute(types.AttributeKeyTxHash, hash.String()))
+		attrs = append(attrs, event.NewAttribute(types.AttributeKeyTxHash, hash.String()))
 	}
 
 	if to := tx.To(); to != nil {
-		attrs = append(attrs, sdk.NewAttribute(types.AttributeKeyRecipient, types.HexAddress(to.Bytes())))
+		attrs = append(attrs, event.NewAttribute(types.AttributeKeyRecipient, types.HexAddress(to.Bytes())))
 	}
 
 	if response.Failed() {
-		attrs = append(attrs, sdk.NewAttribute(types.AttributeKeyEthereumTxFailed, response.VmError))
+		attrs = append(attrs, event.NewAttribute(types.AttributeKeyEthereumTxFailed, response.VmError))
 	}
 
 	// emit events
-	ctx.EventManager().EmitEvents(sdk.Events{
-		sdk.NewEvent(
-			types.EventTypeEthereumTx,
-			attrs...,
-		),
-		sdk.NewEvent(
-			sdk.EventTypeMessage,
-			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
-			sdk.NewAttribute(sdk.AttributeKeySender, types.HexAddress(msg.From)),
-			sdk.NewAttribute(types.AttributeKeyTxType, strconv.Itoa(int(tx.Type()))),
-		),
-	})
+	k.EventService.EventManager(ctx).EmitKV(
+		types.EventTypeEthereumTx,
+		attrs...,
+	)
+	k.EventService.EventManager(ctx).EmitKV(
+		sdk.EventTypeMessage,
+		event.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
+		event.NewAttribute(sdk.AttributeKeySender, types.HexAddress(msg.From)),
+		event.NewAttribute(types.AttributeKeyTxType, strconv.Itoa(int(tx.Type()))),
+	)
 
 	return response, nil
 }

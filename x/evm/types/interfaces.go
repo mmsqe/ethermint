@@ -66,9 +66,9 @@ type StakingKeeper interface {
 
 // FeeMarketKeeper
 type FeeMarketKeeper interface {
-	GetBaseFee(ctx sdk.Context) *big.Int
-	CalculateBaseFee(ctx sdk.Context) *big.Int
-	GetParams(ctx sdk.Context) feemarkettypes.Params
+	GetBaseFee(ctx context.Context) *big.Int
+	CalculateBaseFee(ctx context.Context) *big.Int
+	GetParams(ctx context.Context) feemarkettypes.Params
 }
 
 // Event Hooks
@@ -77,7 +77,7 @@ type FeeMarketKeeper interface {
 // EvmHooks event hooks for evm tx processing
 type EvmHooks interface {
 	// Must be called after tx is processed successfully, if return an error, the whole transaction is reverted.
-	PostTxProcessing(ctx sdk.Context, msg *core.Message, receipt *ethtypes.Receipt) error
+	PostTxProcessing(ctx context.Context, msg *core.Message, receipt *ethtypes.Receipt) error
 }
 
 type (

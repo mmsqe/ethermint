@@ -16,20 +16,23 @@
 package keeper
 
 import (
+	"context"
 	"math/big"
 
 	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/feemarket/types"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // GetParams returns the total set of fee market parameters.
-func (k Keeper) GetParams(ctx sdk.Context) types.Params {
+func (k Keeper) GetParams(ctx context.Context) types.Params {
+	bz, err := k.KVStoreService.OpenKVStore(ctx).Get(types.ParamsKey)
+	if err != nil {
+		panic(err)
+	}
 	var params types.Params
-	bz := ctx.KVStore(k.storeKey).Get(types.ParamsKey)
 	if len(bz) == 0 {
-		k.ss.GetParamSetIfExists(ctx, &params)
+		// mmsqe
+		// k.ss.GetParamSetIfExists(ctx, &params)
 	} else {
 		k.cdc.MustUnmarshal(bz, &params)
 	}
@@ -37,14 +40,13 @@ func (k Keeper) GetParams(ctx sdk.Context) types.Params {
 }
 
 // SetParams sets the fee market params in a single key
-func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
+func (k Keeper) SetParams(ctx context.Context, p types.Params) error {
 	if err := p.Validate(); err != nil {
 		return err
 	}
-	store := ctx.KVStore(k.storeKey)
+	store := k.KVStoreService.OpenKVStore(ctx)
 	bz := k.cdc.MustMarshal(&p)
 	store.Set(types.ParamsKey, bz)
-
 	return nil
 }
 
@@ -54,7 +56,7 @@ func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
 // ----------------------------------------------------------------------------
 
 // GetBaseFee gets the base fee from the store
-func (k Keeper) GetBaseFee(ctx sdk.Context) *big.Int {
+func (k Keeper) GetBaseFee(ctx context.Context) *big.Int {
 	params := k.GetParams(ctx)
 	if params.NoBaseFee {
 		return nil
@@ -69,7 +71,7 @@ func (k Keeper) GetBaseFee(ctx sdk.Context) *big.Int {
 }
 
 // SetBaseFee set's the base fee in the store
-func (k Keeper) SetBaseFee(ctx sdk.Context, baseFee *big.Int) {
+func (k Keeper) SetBaseFee(ctx context.Context, baseFee *big.Int) {
 	params := k.GetParams(ctx)
 	params.BaseFee = ethermint.SaturatedNewInt(baseFee)
 	err := k.SetParams(ctx, params)

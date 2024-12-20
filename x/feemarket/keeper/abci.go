@@ -20,6 +20,7 @@ import (
 
 	"github.com/evmos/ethermint/x/feemarket/types"
 
+	"cosmossdk.io/core/event"
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -42,12 +43,10 @@ func (k *Keeper) BeginBlock(ctx sdk.Context) error {
 	}()
 
 	// Store current base fee in event
-	ctx.EventManager().EmitEvents(sdk.Events{
-		sdk.NewEvent(
-			types.EventTypeFeeMarket,
-			sdk.NewAttribute(types.AttributeKeyBaseFee, baseFee.String()),
-		),
-	})
+	k.EventService.EventManager(ctx).EmitKV(
+		types.EventTypeFeeMarket,
+		event.NewAttribute(types.AttributeKeyBaseFee, baseFee.String()),
+	)
 	return nil
 }
 
@@ -78,10 +77,10 @@ func (k *Keeper) EndBlock(ctx sdk.Context) error {
 		telemetry.SetGauge(float32(gasWanted), "feemarket", "block_gas")
 	}()
 
-	ctx.EventManager().EmitEvent(sdk.NewEvent(
+	k.EventService.EventManager(ctx).EmitKV(
 		"block_gas",
-		sdk.NewAttribute("height", fmt.Sprintf("%d", ctx.BlockHeight())),
-		sdk.NewAttribute("amount", fmt.Sprintf("%d", gasWanted)),
-	))
+		event.NewAttribute("height", fmt.Sprintf("%d", ctx.BlockHeight())),
+		event.NewAttribute("amount", fmt.Sprintf("%d", gasWanted)),
+	)
 	return nil
 }

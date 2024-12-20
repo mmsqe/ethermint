@@ -16,6 +16,8 @@
 package ante
 
 import (
+	"context"
+
 	"cosmossdk.io/core/appmodule"
 	errorsmod "cosmossdk.io/errors"
 	txsigning "cosmossdk.io/x/tx/signing"
@@ -160,7 +162,7 @@ func newEthAnteHandler(options HandlerOptions) sdk.AnteHandler {
 	}
 }
 
-func newCosmosAnteHandler(ctx sdk.Context, options HandlerOptions, extra ...sdk.AnteDecorator) sdk.AnteHandler {
+func newCosmosAnteHandler(ctx context.Context, options HandlerOptions, extra ...sdk.AnteDecorator) sdk.AnteHandler {
 	evmParams := options.EvmKeeper.GetParams(ctx)
 	feemarketParams := options.FeeMarketKeeper.GetParams(ctx)
 	evmDenom := evmParams.EvmDenom

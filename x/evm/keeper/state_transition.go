@@ -128,12 +128,12 @@ func (k Keeper) GetHashFn(ctx sdk.Context) vm.GetHashFunc {
 		// mmsqe
 		// histInfo, err := k.stakingKeeper.GetHistoricalInfo(ctx, h)
 		// if err != nil {
-		// 	k.Logger(ctx).Debug("historical info not found", "height", h, "err", err.Error())
+		// 	k.Logger.Debug("historical info not found", "height", h, "err", err.Error())
 		// 	return common.Hash{}
 		// }
 		// header, err := cmttypes.HeaderFromProto(&histInfo.Header)
 		// if err != nil {
-		// 	k.Logger(ctx).Error("failed to cast tendermint header from proto", "error", err)
+		// 	k.Logger.Error("failed to cast tendermint header from proto", "error", err)
 		// 	return common.Hash{}
 		// }
 		// return common.BytesToHash(header.Hash())
@@ -212,7 +212,7 @@ func (k *Keeper) ApplyTransaction(ctx sdk.Context, msgEth *types.MsgEthereumTx) 
 		if err = k.PostTxProcessing(tmpCtx, msg, receipt); err != nil {
 			// If hooks return error, revert the whole tx.
 			res.VmError = types.ErrPostTxProcessing.Error()
-			k.Logger(ctx).Error("tx post processing failed", "error", err)
+			k.Logger.Error("tx post processing failed", "error", err)
 
 			// If the tx failed in post processing hooks, we should clear the logs
 			res.Logs = nil

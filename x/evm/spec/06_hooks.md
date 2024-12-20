@@ -94,13 +94,13 @@ func (k Keeper) PostTxProcessing(
   }
 
   if event.Name != types.ERC20EventTransfer {
-   h.k.Logger(ctx).Info("emitted event", "name", event.Name, "signature", event.Sig)
+   h.k.Logger.Info("emitted event", "name", event.Name, "signature", event.Sig)
    continue
   }
 
   transferEvent, err := erc20.Unpack(event.Name, log.Data)
   if err != nil {
-   h.k.Logger(ctx).Error("failed to unpack transfer event", "error", err.Error())
+   h.k.Logger.Error("failed to unpack transfer event", "error", err.Error())
    continue
   }
 
@@ -132,7 +132,7 @@ func (k Keeper) PostTxProcessing(
   // check that conversion for the pair is enabled
   if !pair.Enabled {
    // continue to allow transfers for the ERC20 in case the token pair is disabled
-   h.k.Logger(ctx).Debug(
+   h.k.Logger.Debug(
     "ERC20 token -> Cosmos coin conversion is disabled for pair",
     "coin", pair.Denom, "contract", pair.Erc20Address,
    )
@@ -162,7 +162,7 @@ func (k Keeper) PostTxProcessing(
   }
 
   if err != nil {
-   h.k.Logger(ctx).Debug(
+   h.k.Logger.Debug(
     "failed to process EVM hook for ER20 -> coin conversion",
     "coin", pair.Denom, "contract", pair.Erc20Address, "error", err.Error(),
    )
@@ -175,7 +175,7 @@ func (k Keeper) PostTxProcessing(
 
   // transfer the tokens from ModuleAccount to sender address
   if err := h.k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, recipient, coins); err != nil {
-   h.k.Logger(ctx).Debug(
+   h.k.Logger.Debug(
     "failed to process EVM hook for ER20 -> coin conversion",
     "tx-hash", receipt.TxHash.Hex(), "log-idx", i,
     "coin", pair.Denom, "contract", pair.Erc20Address, "error", err.Error(),

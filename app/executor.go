@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 
 	"cosmossdk.io/collections"
-	"cosmossdk.io/log"
 	"cosmossdk.io/store/cachemulti"
 	storetypes "cosmossdk.io/store/types"
 	banktypes "cosmossdk.io/x/bank/types"
@@ -37,7 +36,7 @@ func DefaultTxExecutor(_ context.Context,
 }
 
 type evmKeeper interface {
-	GetParams(ctx sdk.Context) evmtypes.Params
+	GetParams(ctx context.Context) evmtypes.Params
 }
 
 func STMTxExecutor(
@@ -81,7 +80,7 @@ func STMTxExecutor(
 		)
 		if estimate {
 			// pre-estimation
-			evmDenom := evmKeeper.GetParams(sdk.NewContext(ms, false, log.NewNopLogger())).EvmDenom
+			evmDenom := evmKeeper.GetParams(ctx).EvmDenom
 			memTxs, estimates = preEstimates(txs, workers, authStore, bankStore, evmDenom, txDecoder)
 		}
 
