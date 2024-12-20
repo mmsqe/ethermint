@@ -28,8 +28,6 @@ import (
 
 func main() {
 	setupConfig()
-	cmdcfg.RegisterDenoms()
-
 	rootCmd, _ := NewRootCmd()
 
 	if err := svrcmd.Execute(rootCmd, EnvPrefix, app.DefaultNodeHome); err != nil {
@@ -42,6 +40,5 @@ func setupConfig() {
 	// set the address prefixes
 	config := sdk.GetConfig()
 	cmdcfg.SetBech32Prefixes(config)
-	cmdcfg.SetBip44CoinType(config)
 	config.Seal()
 }

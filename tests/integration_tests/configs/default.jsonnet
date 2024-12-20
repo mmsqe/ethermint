@@ -20,6 +20,7 @@
       coins: '1000000000000000000stake,10000000000000000000000aphoton',
       staked: '1000000000000000000stake',
       mnemonic: '${VALIDATOR1_MNEMONIC}',
+      'coin-type': 60,
       client_config: {
         'broadcast-mode': 'sync',
       },
@@ -33,6 +34,7 @@
       coins: '1000000000000000000stake,10000000000000000000000aphoton',
       staked: '1000000000000000000stake',
       mnemonic: '${VALIDATOR2_MNEMONIC}',
+      'coin-type': 60,
       client_config: {
         'broadcast-mode': 'sync',
       },
@@ -41,14 +43,17 @@
       name: 'community',
       coins: '10000000000000000000000aphoton',
       mnemonic: '${COMMUNITY_MNEMONIC}',
+      'coin-type': 60,
     }, {
       name: 'signer1',
       coins: '20000000000000000000000aphoton',
       mnemonic: '${SIGNER1_MNEMONIC}',
+      'coin-type': 60,
     }, {
       name: 'signer2',
       coins: '30000000000000000000000aphoton',
       mnemonic: '${SIGNER2_MNEMONIC}',
+      'coin-type': 60,
     }],
     genesis: {
       consensus: {
