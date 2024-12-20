@@ -19,7 +19,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"slices"
 
 	"github.com/spf13/cobra"
 
@@ -87,11 +86,6 @@ func NewRootCmd() (*cobra.Command, ethermint.EncodingConfig) {
 		WithKeyringOptions(hd.EthSecp256k1Option()).
 		WithViper(EnvPrefix)
 
-	initClientCtx, err := clientcfg.ReadDefaultValuesFromDefaultClientConfig(initClientCtx)
-	if err != nil {
-		panic(err)
-	}
-
 	eip712.SetEncodingConfig(encodingConfig)
 
 	rootCmd := &cobra.Command{
@@ -117,8 +111,7 @@ func NewRootCmd() (*cobra.Command, ethermint.EncodingConfig) {
 			// sets the RPC client needed for SIGN_MODE_TEXTUAL. This sign mode
 			// is only available if the client is online.
 			if !initClientCtx.Offline {
-				enabledSignModes := slices.Clone(tx.DefaultSignModes)
-				enabledSignModes = append(enabledSignModes, signing.SignMode_SIGN_MODE_TEXTUAL)
+				enabledSignModes := append(tx.DefaultSignModes, signing.SignMode_SIGN_MODE_TEXTUAL)
 				txConfigOpts := tx.ConfigOptions{
 					EnabledSignModes:           enabledSignModes,
 					TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(initClientCtx),
@@ -144,13 +137,12 @@ func NewRootCmd() (*cobra.Command, ethermint.EncodingConfig) {
 		},
 	}
 
-	// TODO: double-check
-	// authclient.Codec = encodingConfig.Codec
-
 	initRootCmd(rootCmd, encodingConfig, tempApp.BasicModuleManager)
+
+	// add keyring to autocli opts
 	autoCliOpts := tempApp.AutoCliOpts()
-	initClientCtx, _ = clientcfg.ReadDefaultValuesFromDefaultClientConfig(initClientCtx)
 	autoCliOpts.ClientCtx = initClientCtx
+
 	if err := autoCliOpts.EnhanceRootCommand(rootCmd); err != nil {
 		panic(err)
 	}
