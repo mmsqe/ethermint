@@ -16,7 +16,7 @@
 package types
 
 import (
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	coreregistry "cosmossdk.io/core/registry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -24,7 +24,7 @@ import (
 
 // RegisterInterfaces registers the tendermint concrete client-related
 // implementations and interfaces.
-func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
+func RegisterInterfaces(registry coreregistry.InterfaceRegistrar) {
 	registry.RegisterImplementations(
 		(*sdk.AccountI)(nil),
 		&EthAccount{},
