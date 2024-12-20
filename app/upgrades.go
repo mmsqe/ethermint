@@ -17,7 +17,9 @@ package app
 
 import (
 	"context"
+	"fmt"
 
+	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -43,4 +45,16 @@ func (app *EthermintApp) RegisterUpgradeHandlers() {
 			return m, nil
 		},
 	)
+
+	upgradeInfo, err := app.UpgradeKeeper.ReadUpgradeInfoFromDisk()
+	if err != nil {
+		panic(fmt.Sprintf("failed to read upgrade info from disk %s", err))
+	}
+	if !app.UpgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
+		if upgradeInfo.Name == planName {
+			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storetypes.StoreUpgrades{
+				Deleted: []string{"ibc"},
+			}))
+		}
+	}
 }

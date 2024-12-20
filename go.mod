@@ -24,8 +24,6 @@ require (
 	github.com/cosmos/cosmos-sdk v0.50.9
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.7.0
-	github.com/cosmos/ibc-go/modules/capability v1.0.1
-	github.com/cosmos/ibc-go/v8 v8.5.1
 	github.com/cosmos/rosetta v0.50.3-1
 	github.com/crypto-org-chain/go-block-stm v0.0.0-20240919080136-6c49aef68716
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
