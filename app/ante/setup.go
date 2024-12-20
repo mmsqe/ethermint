@@ -24,6 +24,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
@@ -61,12 +62,11 @@ func ValidateEthBasic(ctx sdk.Context, tx sdk.Tx, evmParams *evmtypes.Params, ba
 
 	// For eth type cosmos tx, some fields should be verified as zero values,
 	// since we will only verify the signature against the hash of the MsgEthereumTx.Data
-	wrapperTx, ok := tx.(protoTxProvider)
-	if !ok {
-		return errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid tx type %T, didn't implement interface protoTxProvider", tx)
+	protoTx, err := tx.(interface{ AsTx() (*txtypes.Tx, error) }).AsTx()
+	if err != nil {
+		return errorsmod.Wrap(errortypes.ErrUnknownRequest, err.Error())
 	}
 
-	protoTx := wrapperTx.GetProtoTx()
 	body := protoTx.Body
 	if body.Memo != "" || body.TimeoutHeight != uint64(0) || len(body.NonCriticalExtensionOptions) > 0 {
 		return errorsmod.Wrap(errortypes.ErrInvalidRequest,

@@ -20,7 +20,6 @@ import (
 	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	tx "github.com/cosmos/cosmos-sdk/types/tx"
 
 	"github.com/ethereum/go-ethereum/common"
 	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
@@ -35,10 +34,6 @@ type EVMKeeper interface {
 	EVMBlockConfig(sdk.Context, *big.Int) (*evmkeeper.EVMBlockConfig, error)
 
 	DeductTxCostsFromUserBalance(ctx sdk.Context, fees sdk.Coins, from common.Address) error
-}
-
-type protoTxProvider interface {
-	GetProtoTx() *tx.Tx
 }
 
 // FeeMarketKeeper defines the expected keeper interface used on the AnteHandler
