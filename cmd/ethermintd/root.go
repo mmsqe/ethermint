@@ -56,6 +56,7 @@ import (
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	"github.com/evmos/ethermint/app"
 	ethermintclient "github.com/evmos/ethermint/client"
+	"github.com/evmos/ethermint/cmd/config"
 	"github.com/evmos/ethermint/crypto/hd"
 	"github.com/evmos/ethermint/ethereum/eip712"
 	"github.com/evmos/ethermint/server"
@@ -77,6 +78,7 @@ func NewRootCmd() (cmd *cobra.Command, cfg ethermint.EncodingConfig) {
 		simtestutil.NewAppOptionsWithFlagHome(app.DefaultNodeHome),
 	)
 	encodingConfig := tempApp.EncodingConfig()
+	autoCliOpts := tempApp.AutoCliOpts()
 	initClientCtx := client.Context{}.
 		WithCodec(encodingConfig.Codec).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
@@ -87,7 +89,12 @@ func NewRootCmd() (cmd *cobra.Command, cfg ethermint.EncodingConfig) {
 		WithBroadcastMode(flags.BroadcastSync).
 		WithHomeDir(app.DefaultNodeHome).
 		WithKeyringOptions(hd.EthSecp256k1Option()).
-		WithViper(EnvPrefix)
+		WithViper(EnvPrefix).
+		WithAddressCodec(autoCliOpts.AddressCodec).
+		WithValidatorAddressCodec(autoCliOpts.ValidatorAddressCodec).
+		WithConsensusAddressCodec(autoCliOpts.ConsensusAddressCodec).
+		WithAddressPrefix(config.Bech32Prefix).
+		WithValidatorPrefix(config.Bech32PrefixValAddr)
 
 	eip712.SetEncodingConfig(encodingConfig)
 
@@ -142,7 +149,6 @@ func NewRootCmd() (cmd *cobra.Command, cfg ethermint.EncodingConfig) {
 
 	initRootCmd(rootCmd, tempApp.ModuleManager)
 
-	autoCliOpts := tempApp.AutoCliOpts()
 	autoCliOpts.AddressCodec = initClientCtx.AddressCodec
 	autoCliOpts.ValidatorAddressCodec = initClientCtx.ValidatorAddressCodec
 	autoCliOpts.ConsensusAddressCodec = initClientCtx.ConsensusAddressCodec
