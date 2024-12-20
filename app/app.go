@@ -599,8 +599,8 @@ func NewEthermintApp(
 		consensus.NewAppModule(appCodec, app.ConsensusParamsKeeper),
 		protocolpool.NewAppModule(appCodec, app.PoolKeeper, app.AuthKeeper, app.BankKeeper),
 		// Ethermint app modules
-		feemarket.NewAppModule(app.FeeMarketKeeper, feeMarketSs),
-		evm.NewAppModule(app.EvmKeeper, app.AuthKeeper, app.AuthKeeper.Accounts, evmSs),
+		feemarket.NewAppModule(appCodec, app.FeeMarketKeeper, feeMarketSs),
+		evm.NewAppModule(appCodec, app.EvmKeeper, app.AuthKeeper, app.AuthKeeper.Accounts, evmSs),
 	)
 
 	app.ModuleManager.RegisterLegacyAminoCodec(cdc)

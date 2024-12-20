@@ -113,15 +113,17 @@ func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 // AppModule implements an application module for the fee market module.
 type AppModule struct {
 	AppModuleBasic
+	cdc    codec.Codec
 	keeper keeper.Keeper
 	// legacySubspace is used solely for migration of x/params managed parameters
 	legacySubspace types.Subspace
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(k keeper.Keeper, ss types.Subspace) AppModule {
+func NewAppModule(cdc codec.Codec, k keeper.Keeper, ss types.Subspace) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
+		cdc:            cdc,
 		keeper:         k,
 		legacySubspace: ss,
 	}
@@ -161,19 +163,18 @@ func (am AppModule) EndBlock(ctx context.Context) error {
 
 // InitGenesis performs genesis initialization for the fee market module. It returns
 // no validator updates.
-func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
+func (am AppModule) InitGenesis(ctx sdk.Context, data json.RawMessage) []abci.ValidatorUpdate {
 	var genesisState types.GenesisState
-
-	cdc.MustUnmarshalJSON(data, &genesisState)
+	am.cdc.MustUnmarshalJSON(data, &genesisState)
 	InitGenesis(ctx, am.keeper, genesisState)
 	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns the exported genesis state as raw bytes for the fee market
 // module.
-func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
+func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
 	gs := ExportGenesis(ctx, am.keeper)
-	return cdc.MustMarshalJSON(gs)
+	return am.cdc.MustMarshalJSON(gs)
 }
 
 // RegisterStoreDecoder registers a decoder for fee market module's types

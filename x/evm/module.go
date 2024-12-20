@@ -115,6 +115,7 @@ func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 // AppModule implements an application module for the evm module.
 type AppModule struct {
 	AppModuleBasic
+	cdc      codec.Codec
 	keeper   *keeper.Keeper
 	ak       types.AccountKeeper
 	accounts *collections.IndexedMap[sdk.AccAddress, sdk.AccountI, authkeeper.AccountsIndexes]
@@ -123,9 +124,10 @@ type AppModule struct {
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(k *keeper.Keeper, ak types.AccountKeeper, accounts *collections.IndexedMap[sdk.AccAddress, sdk.AccountI, authkeeper.AccountsIndexes], ss types.Subspace) AppModule {
+func NewAppModule(cdc codec.Codec, k *keeper.Keeper, ak types.AccountKeeper, accounts *collections.IndexedMap[sdk.AccAddress, sdk.AccountI, authkeeper.AccountsIndexes], ss types.Subspace) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
+		cdc:            cdc,
 		keeper:         k,
 		ak:             ak,
 		accounts:       accounts,
@@ -176,18 +178,18 @@ func (am AppModule) EndBlock(ctx context.Context) error {
 
 // InitGenesis performs genesis initialization for the evm module. It returns
 // no validator updates.
-func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
+func (am AppModule) InitGenesis(ctx sdk.Context, data json.RawMessage) []abci.ValidatorUpdate {
 	var genesisState types.GenesisState
-	cdc.MustUnmarshalJSON(data, &genesisState)
+	am.cdc.MustUnmarshalJSON(data, &genesisState)
 	InitGenesis(ctx, am.keeper, am.ak, genesisState)
 	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns the exported genesis state as raw bytes for the evm
 // module.
-func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
+func (am AppModule) ExportGenesis(ctx sdk.Context) json.RawMessage {
 	gs := ExportGenesis(ctx, am.keeper, am.ak, am.accounts)
-	return cdc.MustMarshalJSON(gs)
+	return am.cdc.MustMarshalJSON(gs)
 }
 
 // RegisterStoreDecoder registers a decoder for evm module's types
