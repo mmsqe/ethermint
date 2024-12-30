@@ -16,10 +16,18 @@
 package ante
 
 import (
+	"errors"
+
 	errorsmod "cosmossdk.io/errors"
+	txsigning "cosmossdk.io/x/tx/signing"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
+	secp256k1dcrd "github.com/decred/dcrd/dcrec/secp256k1/v4"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 
@@ -41,4 +49,39 @@ func VerifyEthSig(tx sdk.Tx, signer ethtypes.Signer) error {
 	}
 
 	return nil
+}
+
+type SigVerificationDecorator struct {
+	authante.SigVerificationDecorator
+}
+
+func NewSigVerificationDecorator(
+	ak authante.AccountKeeper,
+	signModeHandler *txsigning.HandlerMap,
+	sigGasConsumer authante.SignatureVerificationGasConsumer,
+	aaKeeper authante.AccountAbstractionKeeper,
+) SigVerificationDecorator {
+	return SigVerificationDecorator{
+		SigVerificationDecorator: authante.NewSigVerificationDecoratorWithVerifyOnCurve(
+			ak, signModeHandler, sigGasConsumer, aaKeeper,
+			func(pubKey cryptotypes.PubKey) (bool, error) {
+				if pubKey.Bytes() != nil {
+					if typedPubKey, ok := pubKey.(*ethsecp256k1.PubKey); ok {
+						pubKeyObject, err := secp256k1dcrd.ParsePubKey(typedPubKey.Bytes())
+						if err != nil {
+							if errors.Is(err, secp256k1dcrd.ErrPubKeyNotOnCurve) {
+								return true, errorsmod.Wrap(sdkerrors.ErrInvalidPubKey, "secp256k1 key is not on curve")
+							}
+							return true, err
+						}
+						if !pubKeyObject.IsOnCurve() {
+							return true, errorsmod.Wrap(sdkerrors.ErrInvalidPubKey, "secp256k1 key is not on curve")
+						}
+						return true, nil
+					}
+				}
+				return false, nil
+			},
+		),
+	}
 }
