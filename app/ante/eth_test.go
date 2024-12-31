@@ -31,23 +31,23 @@ func (suite *AnteTestSuite) TestNewEthAccountVerificationDecorator() {
 
 	testCases := []struct {
 		name     string
-		tx       sdk.Tx
+		msgs     []sdk.Msg
 		malleate func()
 		checkTx  bool
 		expPass  bool
 	}{
 		{"not CheckTx", nil, func() {}, false, true},
-		{"invalid transaction type", &invalidTx{}, func() {}, true, false},
+		{"invalid transaction type", invalidTx{}.GetMsgs(), func() {}, true, false},
 		{
 			"sender not set to msg",
-			evmtypes.NewTxContract(suite.app.EvmKeeper.ChainID(), 1, big.NewInt(10), 1000, big.NewInt(1), nil, nil, nil, nil),
+			evmtypes.NewTxContract(suite.app.EvmKeeper.ChainID(), 1, big.NewInt(10), 1000, big.NewInt(1), nil, nil, nil, nil).GetMsgs(),
 			func() {},
 			true,
 			false,
 		},
 		{
 			"sender not EOA",
-			tx,
+			tx.GetMsgs(),
 			func() {
 				// set not as an EOA
 				vmdb.SetCode(addr, []byte("1"))
@@ -57,7 +57,7 @@ func (suite *AnteTestSuite) TestNewEthAccountVerificationDecorator() {
 		},
 		{
 			"not enough balance to cover tx cost",
-			tx,
+			tx.GetMsgs(),
 			func() {
 				// reset back to EOA
 				vmdb.SetCode(addr, nil)
@@ -67,7 +67,7 @@ func (suite *AnteTestSuite) TestNewEthAccountVerificationDecorator() {
 		},
 		{
 			"success new account",
-			tx,
+			tx.GetMsgs(),
 			func() {
 				vmdb.AddBalance(addr, big.NewInt(1000000))
 			},
@@ -76,7 +76,7 @@ func (suite *AnteTestSuite) TestNewEthAccountVerificationDecorator() {
 		},
 		{
 			"success existing account",
-			tx,
+			tx.GetMsgs(),
 			func() {
 				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
 				suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
@@ -95,7 +95,7 @@ func (suite *AnteTestSuite) TestNewEthAccountVerificationDecorator() {
 			suite.Require().NoError(vmdb.Commit())
 
 			accountGetter := ante.NewCachedAccountGetter(suite.ctx, suite.app.AuthKeeper)
-			err := ante.VerifyEthAccount(suite.ctx.WithIsCheckTx(tc.checkTx), tc.tx, suite.app.EvmKeeper, evmtypes.DefaultEVMDenom, accountGetter)
+			err := ante.VerifyEthAccount(suite.ctx.WithIsCheckTx(tc.checkTx), tc.msgs, suite.app.EvmKeeper, evmtypes.DefaultEVMDenom, accountGetter)
 
 			if tc.expPass {
 				suite.Require().NoError(err)
@@ -116,17 +116,17 @@ func (suite *AnteTestSuite) TestEthNonceVerificationDecorator() {
 
 	testCases := []struct {
 		name      string
-		tx        sdk.Tx
+		msgs      []sdk.Msg
 		malleate  func()
 		reCheckTx bool
 		expPass   bool
 	}{
-		{"ReCheckTx", &invalidTx{}, func() {}, true, false},
-		{"invalid transaction type", &invalidTx{}, func() {}, false, false},
-		{"sender account not found", tx, func() {}, false, false},
+		{"ReCheckTx", invalidTx{}.GetMsgs(), func() {}, true, false},
+		{"invalid transaction type", invalidTx{}.GetMsgs(), func() {}, false, false},
+		{"sender account not found", tx.GetMsgs(), func() {}, false, false},
 		{
 			"sender nonce missmatch",
-			tx,
+			tx.GetMsgs(),
 			func() {
 				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
 				suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
@@ -136,7 +136,7 @@ func (suite *AnteTestSuite) TestEthNonceVerificationDecorator() {
 		},
 		{
 			"success",
-			tx,
+			tx.GetMsgs(),
 			func() {
 				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
 				suite.Require().NoError(acc.SetSequence(1))
@@ -151,7 +151,7 @@ func (suite *AnteTestSuite) TestEthNonceVerificationDecorator() {
 		suite.Run(tc.name, func() {
 			tc.malleate()
 			accountGetter := ante.NewCachedAccountGetter(suite.ctx, suite.app.AuthKeeper)
-			err := ante.CheckAndSetEthSenderNonce(suite.ctx.WithIsReCheckTx(tc.reCheckTx), tc.tx, suite.app.AuthKeeper, false, accountGetter)
+			err := ante.CheckAndSetEthSenderNonce(suite.ctx.WithIsReCheckTx(tc.reCheckTx), tc.msgs, suite.app.AuthKeeper, false, accountGetter)
 
 			if tc.expPass {
 				suite.Require().NoError(err)
@@ -227,7 +227,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 
 	testCases := []struct {
 		name        string
-		tx          sdk.Tx
+		msgs        []sdk.Msg
 		gasLimit    uint64
 		malleate    func()
 		expPass     bool
@@ -235,10 +235,10 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 		expPriority int64
 		err         error
 	}{
-		{"invalid transaction type", &invalidTx{}, math.MaxUint64, func() {}, false, false, 0, nil},
+		{"invalid transaction type", invalidTx{}.GetMsgs(), math.MaxUint64, func() {}, false, false, 0, nil},
 		{
 			"sender not found",
-			evmtypes.NewTxContract(suite.app.EvmKeeper.ChainID(), 1, big.NewInt(10), 1000, big.NewInt(1), nil, nil, nil, nil),
+			evmtypes.NewTxContract(suite.app.EvmKeeper.ChainID(), 1, big.NewInt(10), 1000, big.NewInt(1), nil, nil, nil, nil).GetMsgs(),
 			math.MaxUint64,
 			func() {},
 			false, false,
@@ -247,7 +247,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 		},
 		{
 			"gas limit too low",
-			tx,
+			tx.GetMsgs(),
 			math.MaxUint64,
 			func() {},
 			false, false,
@@ -256,7 +256,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 		},
 		{
 			"gas limit above block gas limit",
-			tx3,
+			tx3.GetMsgs(),
 			math.MaxUint64,
 			func() {},
 			false, false,
@@ -265,7 +265,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 		},
 		{
 			"not enough balance for fees",
-			tx2,
+			tx2.GetMsgs(),
 			math.MaxUint64,
 			func() {},
 			false, false,
@@ -274,7 +274,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 		},
 		{
 			"not enough tx gas",
-			tx2,
+			tx2.GetMsgs(),
 			0,
 			func() {
 				vmdb.AddBalance(addr, big.NewInt(1000000))
@@ -285,7 +285,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 		},
 		{
 			"not enough block gas",
-			tx2,
+			tx2.GetMsgs(),
 			0,
 			func() {
 				vmdb.AddBalance(addr, big.NewInt(1000000))
@@ -297,9 +297,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 		},
 		{
 			"gas limit overflow",
-			&multiTx{
-				Msgs: []sdk.Msg{maxGasLimitTx, tx2},
-			},
+			[]sdk.Msg{maxGasLimitTx, tx2},
 			math.MaxUint64,
 			func() {
 				limit := new(big.Int).SetUint64(math.MaxUint64)
@@ -312,7 +310,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 		},
 		{
 			"success - legacy tx",
-			tx2,
+			tx2.GetMsgs(),
 			tx2GasLimit, // it's capped
 			func() {
 				vmdb.AddBalance(addr, big.NewInt(1001000000000000))
@@ -324,7 +322,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 		},
 		{
 			"success - dynamic fee tx",
-			dynamicFeeTx,
+			dynamicFeeTx.GetMsgs(),
 			tx2GasLimit, // it's capped
 			func() {
 				vmdb.AddBalance(addr, big.NewInt(1001000000000000))
@@ -336,7 +334,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 		},
 		{
 			"success - gas limit on gasMeter is set on ReCheckTx mode",
-			dynamicFeeTx,
+			dynamicFeeTx.GetMsgs(),
 			tx2GasLimit, // it's capped
 			func() {
 				vmdb.AddBalance(addr, big.NewInt(1001000000000000))
@@ -357,7 +355,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 			if tc.expPanic {
 				suite.Require().Panics(func() {
 					_, _ = ante.CheckEthGasConsume(
-						suite.ctx.WithIsCheckTx(true).WithGasMeter(storetypes.NewGasMeter(1)), tc.tx,
+						suite.ctx.WithIsCheckTx(true).WithGasMeter(storetypes.NewGasMeter(1)), tc.msgs,
 						rules, suite.app.EvmKeeper, baseFee, config.DefaultMaxTxGasWanted, evmtypes.DefaultEVMDenom,
 					)
 				})
@@ -365,7 +363,7 @@ func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 			}
 
 			ctx, err := ante.CheckEthGasConsume(
-				suite.ctx.WithIsCheckTx(true).WithGasMeter(storetypes.NewInfiniteGasMeter()), tc.tx,
+				suite.ctx.WithIsCheckTx(true).WithGasMeter(storetypes.NewInfiniteGasMeter()), tc.msgs,
 				rules, suite.app.EvmKeeper, baseFee, config.DefaultMaxTxGasWanted, evmtypes.DefaultEVMDenom,
 			)
 			if tc.expPass {
@@ -439,16 +437,16 @@ func (suite *AnteTestSuite) TestCanTransferDecorator() {
 
 	testCases := []struct {
 		name     string
-		tx       sdk.Tx
+		msgs     []sdk.Msg
 		malleate func()
 		expPass  bool
 	}{
-		{"invalid transaction type", &invalidTx{}, func() {}, false},
-		{"AsMessage failed", tx2, func() {}, false},
-		{"negative value", tx3, func() {}, false},
+		{"invalid transaction type", invalidTx{}.GetMsgs(), func() {}, false},
+		{"AsMessage failed", tx2.GetMsgs(), func() {}, false},
+		{"negative value", tx3.GetMsgs(), func() {}, false},
 		{
 			"evm CanTransfer failed",
-			tx,
+			tx.GetMsgs(),
 			func() {
 				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
 				suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
@@ -457,7 +455,7 @@ func (suite *AnteTestSuite) TestCanTransferDecorator() {
 		},
 		{
 			"success",
-			tx,
+			tx.GetMsgs(),
 			func() {
 				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
 				suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
@@ -475,7 +473,7 @@ func (suite *AnteTestSuite) TestCanTransferDecorator() {
 			suite.Require().NoError(vmdb.Commit())
 
 			err := ante.CheckEthCanTransfer(
-				suite.ctx.WithIsCheckTx(true), tc.tx,
+				suite.ctx.WithIsCheckTx(true), tc.msgs,
 				baseFee, rules, suite.app.EvmKeeper, &evmParams,
 			)
 
@@ -509,32 +507,32 @@ func (suite *AnteTestSuite) TestEthIncrementSenderSequenceDecorator() {
 
 	testCases := []struct {
 		name     string
-		tx       sdk.Tx
+		msgs     []sdk.Msg
 		malleate func()
 		expPass  bool
 		expPanic bool
 	}{
 		{
 			"invalid transaction type",
-			&invalidTx{},
+			invalidTx{}.GetMsgs(),
 			func() {},
 			false, false,
 		},
 		{
 			"no signers",
-			evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), 1, &to, big.NewInt(10), 1000, big.NewInt(1), nil, nil, nil, nil),
+			evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), 1, &to, big.NewInt(10), 1000, big.NewInt(1), nil, nil, nil, nil).GetMsgs(),
 			func() {},
 			false, false,
 		},
 		{
 			"account not set to store",
-			tx,
+			tx.GetMsgs(),
 			func() {},
 			true, false,
 		},
 		{
 			"success - create contract",
-			contract,
+			contract.GetMsgs(),
 			func() {
 				acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr.Bytes())
 				suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
@@ -543,7 +541,7 @@ func (suite *AnteTestSuite) TestEthIncrementSenderSequenceDecorator() {
 		},
 		{
 			"success - call",
-			tx2,
+			tx2.GetMsgs(),
 			func() {},
 			true, false,
 		},
@@ -556,16 +554,16 @@ func (suite *AnteTestSuite) TestEthIncrementSenderSequenceDecorator() {
 
 			if tc.expPanic {
 				suite.Require().Panics(func() {
-					_ = ante.CheckAndSetEthSenderNonce(suite.ctx, tc.tx, suite.app.AuthKeeper, false, accountGetter)
+					_ = ante.CheckAndSetEthSenderNonce(suite.ctx, tc.msgs, suite.app.AuthKeeper, false, accountGetter)
 				})
 				return
 			}
 
-			err := ante.CheckAndSetEthSenderNonce(suite.ctx, tc.tx, suite.app.AuthKeeper, false, accountGetter)
+			err := ante.CheckAndSetEthSenderNonce(suite.ctx, tc.msgs, suite.app.AuthKeeper, false, accountGetter)
 
 			if tc.expPass {
 				suite.Require().NoError(err)
-				msg := tc.tx.(*evmtypes.MsgEthereumTx)
+				msg := tc.msgs[0].(*evmtypes.MsgEthereumTx)
 
 				txData := msg.AsTransaction()
 				suite.Require().NotNil(txData)

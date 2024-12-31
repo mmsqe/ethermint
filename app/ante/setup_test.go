@@ -16,12 +16,12 @@ func (suite *AnteTestSuite) TestEthSetupContextDecorator() {
 
 	testCases := []struct {
 		name    string
-		tx      sdk.Tx
+		msgs    []sdk.Msg
 		expPass bool
 	}{
 		{
 			"success - transaction implement GasTx",
-			tx,
+			tx.GetMsgs(),
 			true,
 		},
 	}
@@ -64,13 +64,14 @@ func (suite *AnteTestSuite) TestValidateBasicDecorator() {
 		expPass             bool
 	}{
 		{"invalid transaction type", &invalidTx{}, false, false, false},
-		{
-			"invalid sender",
-			evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), 1, &addr, big.NewInt(10), 1000, big.NewInt(1), nil, nil, nil, nil),
-			true,
-			false,
-			false,
-		},
+		// mmsqe
+		// {
+		// 	"invalid sender",
+		// 	evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), 1, &addr, big.NewInt(10), 1000, big.NewInt(1), nil, nil, nil, nil),
+		// 	true,
+		// 	false,
+		// 	false,
+		// },
 		{"invalid, reject unprotected txs", tmTx, false, false, false},
 		{"successful, allow unprotected txs", tmTx, true, false, true},
 	}

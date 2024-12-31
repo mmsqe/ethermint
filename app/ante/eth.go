@@ -65,15 +65,17 @@ func NewCachedAccountGetter(ctx sdk.Context, ak evmtypes.AccountKeeper) AccountG
 // - from address is empty
 // - account balance is lower than the transaction cost
 func VerifyEthAccount(
-	ctx sdk.Context, tx sdk.Tx,
-	evmKeeper EVMKeeper, evmDenom string,
+	ctx sdk.Context,
+	msgs []sdk.Msg,
+	evmKeeper EVMKeeper,
+	evmDenom string,
 	accountGetter AccountGetter,
 ) error {
 	if !ctx.IsCheckTx() {
 		return nil
 	}
 
-	for _, msg := range tx.GetMsgs() {
+	for _, msg := range msgs {
 		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
 		if !ok {
 			return errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
@@ -119,7 +121,8 @@ func VerifyEthAccount(
 // - sets the gas meter limit
 // - gas limit is greater than the block gas meter limit
 func CheckEthGasConsume(
-	ctx sdk.Context, tx sdk.Tx,
+	ctx sdk.Context,
+	msgs []sdk.Msg,
 	rules params.Rules,
 	evmKeeper EVMKeeper,
 	baseFee *big.Int,
@@ -132,7 +135,7 @@ func CheckEthGasConsume(
 	// Use the lowest priority of all the messages as the final one.
 	minPriority := int64(math.MaxInt64)
 
-	for _, msg := range tx.GetMsgs() {
+	for _, msg := range msgs {
 		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
 		if !ok {
 			return ctx, errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
@@ -212,13 +215,14 @@ func CheckEthGasConsume(
 // CheckEthCanTransfer creates an EVM from the message and calls the BlockContext CanTransfer function to
 // see if the address can execute the transaction.
 func CheckEthCanTransfer(
-	ctx sdk.Context, tx sdk.Tx,
+	ctx sdk.Context,
+	msgs []sdk.Msg,
 	baseFee *big.Int,
 	rules params.Rules,
 	evmKeeper EVMKeeper,
 	evmParams *evmtypes.Params,
 ) error {
-	for _, msg := range tx.GetMsgs() {
+	for _, msg := range msgs {
 		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
 		if !ok {
 			return errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
@@ -270,9 +274,13 @@ func canTransfer(ctx sdk.Context, evmKeeper EVMKeeper, denom string, from common
 // contract creation, the nonce will be incremented during the transaction execution and not within
 // this AnteHandler decorator.
 func CheckAndSetEthSenderNonce(
-	ctx sdk.Context, tx sdk.Tx, ak evmtypes.AccountKeeper, unsafeUnOrderedTx bool, accountGetter AccountGetter,
+	ctx sdk.Context,
+	msgs []sdk.Msg,
+	ak evmtypes.AccountKeeper,
+	unsafeUnOrderedTx bool,
+	accountGetter AccountGetter,
 ) error {
-	for _, msg := range tx.GetMsgs() {
+	for _, msg := range msgs {
 		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
 		if !ok {
 			return errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))

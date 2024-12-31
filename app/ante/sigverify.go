@@ -36,8 +36,8 @@ import (
 // It's not skipped for RecheckTx, because it set `From` address which is critical from other ante handler to work.
 // Failure in RecheckTx will prevent tx to be included into block, especially when CheckTx succeed, in which case user
 // won't see the error message.
-func VerifyEthSig(tx sdk.Tx, signer ethtypes.Signer) error {
-	for _, msg := range tx.GetMsgs() {
+func VerifyEthSig(msgs []sdk.Msg, signer ethtypes.Signer) error {
+	for _, msg := range msgs {
 		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
 		if !ok {
 			return errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))

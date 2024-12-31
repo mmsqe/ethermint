@@ -120,7 +120,7 @@ func newEthAnteHandler(options HandlerOptions) sdk.AnteHandler {
 			}
 		} else {
 			ethSigner := ethtypes.MakeSigner(blockCfg.ChainConfig, blockCfg.BlockNumber)
-			err = VerifyEthSig(tx, ethSigner)
+			err = VerifyEthSig(tx.GetMsgs(), ethSigner)
 			ctx.SetIncarnationCache(EthSigVerificationResultCacheKey, err)
 		}
 		if err != nil {
@@ -130,24 +130,23 @@ func newEthAnteHandler(options HandlerOptions) sdk.AnteHandler {
 		// AccountGetter cache the account objects during the ante handler execution,
 		// it's safe because there's no store branching in the ante handlers.
 		accountGetter := NewCachedAccountGetter(ctx, options.AccountKeeper)
-
-		if err := VerifyEthAccount(ctx, tx, options.EvmKeeper, evmDenom, accountGetter); err != nil {
+		if err := VerifyEthAccount(ctx, tx.GetMsgs(), options.EvmKeeper, evmDenom, accountGetter); err != nil {
 			return ctx, err
 		}
 
-		if err := CheckEthCanTransfer(ctx, tx, baseFee, rules, options.EvmKeeper, evmParams); err != nil {
+		if err := CheckEthCanTransfer(ctx, tx.GetMsgs(), baseFee, rules, options.EvmKeeper, evmParams); err != nil {
 			return ctx, err
 		}
 
 		ctx, err = CheckEthGasConsume(
-			ctx, tx, rules, options.EvmKeeper,
+			ctx, tx.GetMsgs(), rules, options.EvmKeeper,
 			baseFee, options.MaxTxGasWanted, evmDenom,
 		)
 		if err != nil {
 			return ctx, err
 		}
 
-		if err := CheckAndSetEthSenderNonce(ctx, tx, options.AccountKeeper, options.UnsafeUnorderedTx, accountGetter); err != nil {
+		if err := CheckAndSetEthSenderNonce(ctx, tx.GetMsgs(), options.AccountKeeper, options.UnsafeUnorderedTx, accountGetter); err != nil {
 			return ctx, err
 		}
 

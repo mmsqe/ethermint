@@ -25,25 +25,25 @@ func (suite *AnteTestSuite) TestEthSigVerificationDecorator() {
 
 	testCases := []struct {
 		name      string
-		tx        sdk.Tx
+		msgs      []sdk.Msg
 		reCheckTx bool
 		expPass   bool
 	}{
-		{"ReCheckTx", &invalidTx{}, true, false},
-		{"invalid transaction type", &invalidTx{}, false, false},
+		{"ReCheckTx", invalidTx{}.GetMsgs(), true, false},
+		{"invalid transaction type", invalidTx{}.GetMsgs(), false, false},
 		{
 			"invalid sender",
-			evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), 1, &addr, big.NewInt(10), 1000, big.NewInt(1), nil, nil, nil, nil),
+			evmtypes.NewTx(suite.app.EvmKeeper.ChainID(), 1, &addr, big.NewInt(10), 1000, big.NewInt(1), nil, nil, nil, nil).GetMsgs(),
 			false,
 			false,
 		},
-		{"successful signature verification", signedTx, false, true},
+		{"successful signature verification", signedTx.GetMsgs(), false, true},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
 			suite.SetupTest()
-			err := ante.VerifyEthSig(tc.tx, suite.ethSigner)
+			err := ante.VerifyEthSig(tc.msgs, suite.ethSigner)
 
 			if tc.expPass {
 				suite.Require().NoError(err)
