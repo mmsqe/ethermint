@@ -47,19 +47,19 @@ func NewDynamicFeeChecker(ethCfg *params.ChainConfig, evmParams *types.Params, f
 		if !ok {
 			return nil, 0, fmt.Errorf("tx must be a FeeTx")
 		}
-		if sdk.UnwrapSDKContext(ctx).BlockHeight() == 0 {
+		height := sdk.UnwrapSDKContext(ctx).BlockHeight()
+		if height == 0 {
 			// genesis transactions: fallback to min-gas-price logic
 			return checkTxFeeWithValidatorMinGasPrices(ctx, feeTx)
 		}
 
 		denom := evmParams.EvmDenom
 
-		baseFee := types.GetBaseFee(0, ethCfg, feemarketParams)
-		// baseFee := types.GetBaseFee(ctx.BlockHeight(), ethCfg, feemarketParams)
-		// if baseFee == nil {
-		// 	// london hardfork is not enabled: fallback to min-gas-prices logic
-		// 	return checkTxFeeWithValidatorMinGasPrices(ctx, feeTx)
-		// }
+		baseFee := types.GetBaseFee(height, ethCfg, feemarketParams)
+		if baseFee == nil {
+			// london hardfork is not enabled: fallback to min-gas-prices logic
+			return checkTxFeeWithValidatorMinGasPrices(ctx, feeTx)
+		}
 
 		// default to `MaxInt64` when there's no extension option.
 		maxPriorityPrice := sdkmath.NewInt(math.MaxInt64)

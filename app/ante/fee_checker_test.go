@@ -55,10 +55,10 @@ func TestSDKTxFeeChecker(t *testing.T) {
 	//      london hardfork enableness
 	encodingConfig := encoding.MakeConfig()
 	minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin("aphoton", sdkmath.NewInt(10)))
-
-	genesisCtx := sdk.NewContext(nil, false, log.NewNopLogger())
-	checkTxCtx := sdk.NewContext(nil, true, log.NewNopLogger()).WithMinGasPrices(minGasPrices)
-	deliverTxCtx := sdk.NewContext(nil, false, log.NewNopLogger())
+	logger := log.NewNopLogger()
+	genesisCtx := sdk.NewContext(nil, false, logger)
+	checkTxCtx := sdk.NewContext(nil, true, logger).WithMinGasPrices(minGasPrices).WithBlockHeight(1)
+	deliverTxCtx := sdk.NewContext(nil, false, logger).WithBlockHeight(1)
 
 	testCases := []struct {
 		name        string

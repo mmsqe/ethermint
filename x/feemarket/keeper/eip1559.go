@@ -34,7 +34,8 @@ func (k Keeper) CalculateBaseFee(ctx context.Context) *big.Int {
 
 	// Ignore the calculation if not enabled
 	sdkCtx := sdk.UnwrapSDKContext(ctx) // mmsqe: https://github.com/cosmos/ibc-go/issues/5917
-	if !params.IsBaseFeeEnabled(sdkCtx.BlockHeight()) {
+	height := sdkCtx.BlockHeight()
+	if !params.IsBaseFeeEnabled(height) {
 		return nil
 	}
 	consParams := sdkCtx.ConsensusParams()
@@ -42,7 +43,7 @@ func (k Keeper) CalculateBaseFee(ctx context.Context) *big.Int {
 	// If the current block is the first EIP-1559 block, return the base fee
 	// defined in the parameters (DefaultBaseFee if it hasn't been changed by
 	// governance).
-	if sdkCtx.BlockHeight() == params.EnableHeight {
+	if height == params.EnableHeight {
 		return params.BaseFee.BigInt()
 	}
 
