@@ -8,7 +8,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
+	"cosmossdk.io/core/transaction"
 	storetypes "cosmossdk.io/store/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/evmos/ethermint/app/ante"
@@ -171,6 +173,18 @@ func (msg *multiTx) GetMsgs() []sdk.Msg {
 func (msg *multiTx) GetMsgsV2() ([]proto.Message, error) {
 	return nil, errors.New("not implemented")
 }
+
+func (msg *multiTx) Hash() [32]byte { return [32]byte{} }
+
+func (msg *multiTx) GetSenders() ([]transaction.Identity, error) { return nil, nil }
+
+func (msg *multiTx) GetReflectMessages() ([]protoreflect.Message, error) { return nil, nil }
+
+func (msg *multiTx) GetMessages() ([]sdk.Msg, error) { return []sdk.Msg{nil}, nil }
+
+func (msg *multiTx) GetGasLimit() (uint64, error) { return 0, nil }
+
+func (msg *multiTx) Bytes() []byte { return nil }
 
 func (suite *AnteTestSuite) TestEthGasConsumeDecorator() {
 	evmParams := suite.app.EvmKeeper.GetParams(suite.ctx)

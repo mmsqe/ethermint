@@ -104,7 +104,7 @@ func SetupWithDBAndOpts(
 		initialHeight := app.LastBlockHeight() + 1
 		consensusParams.Abci = &cmtproto.ABCIParams{VoteExtensionsEnableHeight: initialHeight}
 		if _, err := app.InitChain(
-			&abci.RequestInitChain{
+			&abci.InitChainRequest{
 				ChainId:         ChainID,
 				Validators:      []abci.ValidatorUpdate{},
 				ConsensusParams: consensusParams,
@@ -115,7 +115,7 @@ func SetupWithDBAndOpts(
 			panic(err)
 		}
 	}
-	if _, err := app.FinalizeBlock(&abci.RequestFinalizeBlock{
+	if _, err := app.FinalizeBlock(&abci.FinalizeBlockRequest{
 		Height: app.LastBlockHeight() + 1,
 		Hash:   app.LastCommitID().Hash,
 	}); err != nil {
@@ -171,7 +171,9 @@ func StateFn(a *app.EthermintApp) simtypes.AppStateFn {
 	var bondDenom string
 	return simtestutil.AppStateFnWithExtendedCbs(
 		a.AppCodec(),
-		a.SimulationManager(),
+		a.AppAddressCodec(),
+		a.AppValidatorAddressCodec(),
+		a.SimulationManager().Modules,
 		a.DefaultGenesis(),
 		func(moduleName string, genesisState interface{}) {
 			if moduleName == stakingtypes.ModuleName {

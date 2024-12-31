@@ -61,6 +61,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
+	"cosmossdk.io/core/address"
 	corestore "cosmossdk.io/core/store"
 	storetypes "cosmossdk.io/store/types"
 	"cosmossdk.io/x/authz"
@@ -195,10 +196,12 @@ type EthermintApp struct {
 	*baseapp.BaseApp
 
 	// encoding
-	cdc               *codec.LegacyAmino
-	appCodec          codec.Codec
-	txConfig          client.TxConfig
-	interfaceRegistry types.InterfaceRegistry
+	cdc                   *codec.LegacyAmino
+	appCodec              codec.Codec
+	addressCodec          address.Codec
+	validatorAddressCodec address.Codec
+	txConfig              client.TxConfig
+	interfaceRegistry     types.InterfaceRegistry
 
 	invCheckPeriod uint
 
@@ -321,15 +324,17 @@ func NewEthermintApp(
 	}
 	invCheckPeriod := cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod))
 	app := &EthermintApp{
-		BaseApp:           bApp,
-		cdc:               cdc,
-		txConfig:          txConfig,
-		appCodec:          appCodec,
-		interfaceRegistry: interfaceRegistry,
-		invCheckPeriod:    invCheckPeriod,
-		keys:              keys,
-		tkeys:             tkeys,
-		okeys:             okeys,
+		BaseApp:               bApp,
+		cdc:                   cdc,
+		txConfig:              txConfig,
+		appCodec:              appCodec,
+		addressCodec:          encodingConfig.AddressCodec,
+		validatorAddressCodec: encodingConfig.ValidatorAddressCodec,
+		interfaceRegistry:     interfaceRegistry,
+		invCheckPeriod:        invCheckPeriod,
+		keys:                  keys,
+		tkeys:                 tkeys,
+		okeys:                 okeys,
 	}
 
 	// init params keeper and subspaces
@@ -373,7 +378,8 @@ func NewEthermintApp(
 	// use custom Ethermint account for contracts
 	app.AuthKeeper = authkeeper.NewAccountKeeper(
 		runtime.NewEnvironment(runtime.NewKVStoreService(keys[authtypes.StoreKey]), logger.With(log.ModuleKey, "x/auth")),
-		appCodec, authtypes.ProtoBaseAccount,
+		appCodec,
+		ethermint.ProtoAccount,
 		accountsKeeper,
 		maccPerms,
 		signingCtx.AddressCodec(),
@@ -948,6 +954,14 @@ func (app *EthermintApp) AppCodec() codec.Codec {
 	return app.appCodec
 }
 
+func (app *EthermintApp) AppAddressCodec() address.Codec {
+	return app.addressCodec
+}
+
+func (app *EthermintApp) AppValidatorAddressCodec() address.Codec {
+	return app.validatorAddressCodec
+}
+
 // InterfaceRegistry returns EthermintApp's InterfaceRegistry
 func (app *EthermintApp) InterfaceRegistry() types.InterfaceRegistry {
 	return app.interfaceRegistry
@@ -964,10 +978,12 @@ func (app *EthermintApp) TxConfig() client.TxConfig {
 
 func (app *EthermintApp) EncodingConfig() ethermint.EncodingConfig {
 	return ethermint.EncodingConfig{
-		InterfaceRegistry: app.InterfaceRegistry(),
-		Codec:             app.AppCodec(),
-		TxConfig:          app.TxConfig(),
-		Amino:             app.LegacyAmino(),
+		InterfaceRegistry:     app.InterfaceRegistry(),
+		Codec:                 app.AppCodec(),
+		AddressCodec:          app.AppAddressCodec(),
+		ValidatorAddressCodec: app.AppValidatorAddressCodec(),
+		TxConfig:              app.TxConfig(),
+		Amino:                 app.LegacyAmino(),
 	}
 }
 

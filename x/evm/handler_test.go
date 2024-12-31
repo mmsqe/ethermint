@@ -1,6 +1,7 @@
 package evm_test
 
 import (
+	"context"
 	"errors"
 	"math/big"
 	"testing"
@@ -570,13 +571,13 @@ func (suite *HandlerTestSuite) TestContractDeploymentRevert() {
 // DummyHook implements EvmHooks interface
 type DummyHook struct{}
 
-func (dh *DummyHook) PostTxProcessing(ctx sdk.Context, msg *core.Message, receipt *ethtypes.Receipt) error {
+func (dh *DummyHook) PostTxProcessing(ctx context.Context, msg *core.Message, receipt *ethtypes.Receipt) error {
 	return nil
 }
 
 // FailureHook implements EvmHooks interface
 type FailureHook struct{}
 
-func (dh *FailureHook) PostTxProcessing(ctx sdk.Context, msg *core.Message, receipt *ethtypes.Receipt) error {
+func (dh *FailureHook) PostTxProcessing(ctx context.Context, msg *core.Message, receipt *ethtypes.Receipt) error {
 	return errors.New("mock error")
 }

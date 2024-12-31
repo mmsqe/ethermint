@@ -218,7 +218,7 @@ func (app *EthermintApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAd
 		addr := sdk.ValAddress(stakingtypes.AddressFromValidatorsKey(iter.Key()))
 		validator, err := app.StakingKeeper.GetValidator(ctx, addr)
 		if err != nil {
-			panic(fmt.Sprintf("expected validator %s not found, %w", addr, err))
+			panic(fmt.Errorf("expected validator %s not found: %w", addr, err))
 		}
 
 		validator.UnbondingHeight = 0

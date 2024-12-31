@@ -18,7 +18,7 @@ import (
 //  4. Commit
 func Commit(ctx sdk.Context, app *app.EthermintApp, t time.Duration, vs *cmttypes.ValidatorSet) (sdk.Context, error) {
 	header := ctx.BlockHeader()
-	req := abci.RequestFinalizeBlock{Height: header.Height}
+	req := abci.FinalizeBlockRequest{Height: header.Height}
 
 	if vs != nil {
 		res, err := app.FinalizeBlock(&req)

@@ -19,6 +19,7 @@ import (
 
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 
+	codectestutil "github.com/cosmos/cosmos-sdk/codec/testutil"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
@@ -28,11 +29,13 @@ func (suite *AnteTestSuite) TestAuthzLimiterDecorator() {
 	suite.Require().NoError(err)
 
 	validator := sdk.ValAddress(testAddresses[4])
+	valAddressCodec := codectestutil.CodecOptions{}.GetValidatorCodec()
 	stakingAuthDelegate, err := stakingtypes.NewStakeAuthorization(
 		[]sdk.ValAddress{validator},
 		nil,
 		stakingtypes.AuthorizationType_AUTHORIZATION_TYPE_DELEGATE,
 		nil,
+		valAddressCodec,
 	)
 	suite.Require().NoError(err)
 
@@ -41,6 +44,7 @@ func (suite *AnteTestSuite) TestAuthzLimiterDecorator() {
 		nil,
 		stakingtypes.AuthorizationType_AUTHORIZATION_TYPE_UNDELEGATE,
 		nil,
+		valAddressCodec,
 	)
 	suite.Require().NoError(err)
 
@@ -349,9 +353,9 @@ func (suite *AnteTestSuite) TestRejectDeliverMsgsInAuthz() {
 			suite.Require().NoError(err)
 
 			resCheckTx, err := suite.app.CheckTx(
-				&abci.RequestCheckTx{
+				&abci.CheckTxRequest{
 					Tx:   bz,
-					Type: abci.CheckTxType_New,
+					Type: abci.CHECK_TX_TYPE_CHECK,
 				},
 			)
 			suite.Require().NoError(err)
@@ -359,7 +363,7 @@ func (suite *AnteTestSuite) TestRejectDeliverMsgsInAuthz() {
 
 			header := suite.ctx.BlockHeader()
 			blockRes, err := suite.app.FinalizeBlock(
-				&abci.RequestFinalizeBlock{
+				&abci.FinalizeBlockRequest{
 					Height:             header.Height,
 					Txs:                [][]byte{bz},
 					Hash:               header.AppHash,
@@ -395,7 +399,7 @@ func generatePrivKeyAddressPairs(accCount int) ([]*ethsecp256k1.PrivKey, []sdk.A
 
 func newMsgGrant(testAddresses []sdk.AccAddress, auth authz.Authorization) *authz.MsgGrant {
 	expiration := time.Date(9000, 1, 1, 0, 0, 0, 0, time.UTC)
-	msg, err := authz.NewMsgGrant(testAddresses[0], testAddresses[1], auth, &expiration)
+	msg, err := authz.NewMsgGrant(testAddresses[0].String(), testAddresses[1].String(), auth, &expiration)
 	if err != nil {
 		panic(err)
 	}
@@ -408,7 +412,7 @@ func newGenericMsgGrant(testAddresses []sdk.AccAddress, typeUrl string) *authz.M
 }
 
 func newMsgExec(grantee sdk.AccAddress, msgs []sdk.Msg) *authz.MsgExec {
-	msg := authz.NewMsgExec(grantee, msgs)
+	msg := authz.NewMsgExec(grantee.String(), msgs)
 	return &msg
 }
 
@@ -424,8 +428,8 @@ func createNestedExecMsgSend(testAddresses []sdk.AccAddress, depth int) *authz.M
 
 func createMsgSend(testAddresses []sdk.AccAddress) *banktypes.MsgSend {
 	return banktypes.NewMsgSend(
-		testAddresses[0],
-		testAddresses[3],
+		testAddresses[0].String(),
+		testAddresses[3].String(),
 		sdk.NewCoins(sdk.NewInt64Coin(evmtypes.DefaultEVMDenom, 1e8)),
 	)
 }

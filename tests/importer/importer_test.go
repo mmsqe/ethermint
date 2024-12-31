@@ -34,6 +34,7 @@ import (
 	cmtproto "github.com/cometbft/cometbft/api/cometbft/types/v1"
 	cmtprotoversion "github.com/cometbft/cometbft/api/cometbft/version/v1"
 	"github.com/cometbft/cometbft/crypto/tmhash"
+	"github.com/cometbft/cometbft/version"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 )
 
@@ -73,9 +74,9 @@ func (suite *ImporterTestSuite) DoSetupTest(t require.TestingT) {
 		Version: cmtprotoversion.Consensus{
 			Block: version.BlockProtocol,
 		},
-		LastBlockId: cmtversion.BlockID{
+		LastBlockId: cmtproto.BlockID{
 			Hash: tmhash.Sum([]byte("block_id")),
-			PartSetHeader: cmtversion.PartSetHeader{
+			PartSetHeader: cmtproto.PartSetHeader{
 				Total: 11,
 				Hash:  tmhash.Sum([]byte("partset_header")),
 			},
@@ -157,7 +158,7 @@ func (suite *ImporterTestSuite) TestImportBlocks() {
 
 		// simulate BaseApp EndBlocker commitment
 		suite.app.EndBlocker(ctx)
-		if _, err := suite.app.FinalizeBlock(&abci.RequestFinalizeBlock{
+		if _, err := suite.app.FinalizeBlock(&abci.FinalizeBlockRequest{
 			Height: suite.app.LastBlockHeight() + 1,
 			Hash:   suite.app.LastCommitID().Hash,
 		}); err != nil {

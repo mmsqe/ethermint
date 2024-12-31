@@ -315,7 +315,7 @@ func RegisterHeaderNotFound(client *mocks.Client, height int64) {
 func RegisterABCIQueryWithOptions(client *mocks.Client, height int64, path string, data bytes.HexBytes, opts tmrpcclient.ABCIQueryOptions) {
 	client.On("ABCIQueryWithOptions", context.Background(), path, data, opts).
 		Return(&tmrpctypes.ResultABCIQuery{
-			Response: abci.ResponseQuery{
+			Response: abci.QueryResponse{
 				Value:  []byte{2}, // TODO replace with data.Bytes(),
 				Height: height,
 			},
@@ -334,7 +334,7 @@ func RegisterABCIQueryAccount(clients *mocks.Client, data bytes.HexBytes, opts t
 	respBz, _ := accResponse.Marshal()
 	clients.On("ABCIQueryWithOptions", context.Background(), "/cosmos.auth.v1beta1.Query/Account", data, opts).
 		Return(&tmrpctypes.ResultABCIQuery{
-			Response: abci.ResponseQuery{
+			Response: abci.QueryResponse{
 				Value:  respBz,
 				Height: 1,
 			},

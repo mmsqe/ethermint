@@ -51,11 +51,15 @@ func MakeConfig() ethermint.EncodingConfig {
 	}
 	codec := amino.NewProtoCodec(interfaceRegistry)
 	signingCtx := interfaceRegistry.SigningContext()
+	addressCodec := signingCtx.AddressCodec()
+	validatorAddressCodec := signingCtx.ValidatorAddressCodec()
 	encodingConfig := ethermint.EncodingConfig{
-		InterfaceRegistry: interfaceRegistry,
-		Codec:             codec,
-		TxConfig:          tx.NewTxConfig(codec, signingCtx.AddressCodec(), signingCtx.ValidatorAddressCodec(), tx.DefaultSignModes),
-		Amino:             cdc,
+		InterfaceRegistry:     interfaceRegistry,
+		Codec:                 codec,
+		AddressCodec:          addressCodec,
+		ValidatorAddressCodec: validatorAddressCodec,
+		TxConfig:              tx.NewTxConfig(codec, addressCodec, validatorAddressCodec, tx.DefaultSignModes),
+		Amino:                 cdc,
 	}
 	enccodec.RegisterLegacyAminoCodec(cdc)
 	enccodec.RegisterInterfaces(encodingConfig.InterfaceRegistry)

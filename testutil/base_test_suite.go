@@ -221,8 +221,8 @@ func (suite *BaseTestSuiteWithAccount) PrepareEthTx(msgEthereumTx *types.MsgEthe
 	return bz
 }
 
-func (suite *BaseTestSuiteWithAccount) CheckTx(tx []byte) abci.ResponseCheckTx {
-	res, err := suite.App.CheckTx(&abci.RequestCheckTx{Tx: tx})
+func (suite *BaseTestSuiteWithAccount) CheckTx(tx []byte) abci.CheckTxResponse {
+	res, err := suite.App.CheckTx(&abci.CheckTxRequest{Tx: tx})
 	if err != nil {
 		panic(err)
 	}
@@ -232,7 +232,7 @@ func (suite *BaseTestSuiteWithAccount) CheckTx(tx []byte) abci.ResponseCheckTx {
 func (suite *BaseTestSuiteWithAccount) DeliverTx(tx []byte) *abci.ExecTxResult {
 	txs := [][]byte{tx}
 	height := suite.App.LastBlockHeight() + 1
-	res, err := suite.App.FinalizeBlock(&abci.RequestFinalizeBlock{
+	res, err := suite.App.FinalizeBlock(&abci.FinalizeBlockRequest{
 		ProposerAddress: suite.ConsAddress,
 		Height:          height,
 		Txs:             txs,
@@ -250,7 +250,7 @@ func (suite *BaseTestSuiteWithAccount) DeliverTx(tx []byte) *abci.ExecTxResult {
 // Commit and begin new block
 func (suite *BaseTestSuiteWithAccount) Commit(t require.TestingT) {
 	jumpTime := time.Second * 0
-	_, err := suite.App.FinalizeBlock(&abci.RequestFinalizeBlock{
+	_, err := suite.App.FinalizeBlock(&abci.FinalizeBlockRequest{
 		Height: suite.Ctx.BlockHeight(),
 		Time:   suite.Ctx.BlockTime(),
 	})

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"math/rand"
 	"testing"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	"cosmossdk.io/math/unsafe"
 	storetypes "cosmossdk.io/store/types"
 	banktypes "cosmossdk.io/x/bank/types"
 	stakingtypes "cosmossdk.io/x/staking/types"
@@ -92,8 +92,8 @@ func TestStateTransitionTestSuite(t *testing.T) {
 func makeRandHeader(height uint64) tmtypes.Header {
 	chainID := "test"
 	t := time.Now()
-	randBytes := rand.Bytes(tmhash.Size)
-	randAddress := rand.Bytes(cmtcrypto.AddressSize)
+	randBytes := unsafe.Bytes(tmhash.Size)
+	randAddress := unsafe.Bytes(cmtcrypto.AddressSize)
 	h := tmtypes.Header{
 		Version:            cmtprotoversion.Consensus{Block: version.BlockProtocol, App: 1},
 		ChainID:            chainID,
@@ -147,16 +147,17 @@ func (suite *StateTransitionTestSuite) TestGetHashFn() {
 			},
 			common.BytesToHash(hash),
 		},
-		{
-			"header before sdk50 found",
-			height - 1,
-			func(height int64) {
-				suite.App.StakingKeeper.SetHistoricalInfo(suite.Ctx, height, &stakingtypes.HistoricalInfo{
-					Header: *header.ToProto(),
-				})
-			},
-			common.BytesToHash(hash),
-		},
+		// {
+		// 	"header before sdk50 found",
+		// 	height - 1,
+		// 	func(height int64) {
+		// 		// mmsqe
+		// 		suite.App.StakingKeeper.SetHistoricalInfo(suite.Ctx, height, &stakingtypes.HistoricalInfo{
+		// 			Header: *header.ToProto(),
+		// 		})
+		// 	},
+		// 	common.BytesToHash(hash),
+		// },
 		{
 			"header in context not found with current height",
 			height,

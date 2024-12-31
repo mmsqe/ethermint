@@ -9,6 +9,7 @@ import (
 	"cosmossdk.io/store/metrics"
 	"cosmossdk.io/store/rootmulti"
 	storetypes "cosmossdk.io/store/types"
+	"cosmossdk.io/x/accounts"
 	bankkeeper "cosmossdk.io/x/bank/keeper"
 	banktypes "cosmossdk.io/x/bank/types"
 	govtypes "cosmossdk.io/x/gov/types"
@@ -615,7 +616,7 @@ func (suite *StateDBTestSuite) TestNativeAction() {
 	stateDB.ExecuteNativeAction(contract, eventConverter, func(ctx sdk.Context) error {
 		store := ctx.KVStore(storeKey)
 		store.Set([]byte("success1"), []byte("value"))
-		k.EventService.EventManager(ctx).EmitEvent(sdk.NewEvent("success1"))
+		keeper.EventService.EventManager(ctx).EmitKV("success1")
 
 		objStore := ctx.ObjectStore(objStoreKey)
 		objStore.Set([]byte("transient"), "value")
@@ -625,7 +626,7 @@ func (suite *StateDBTestSuite) TestNativeAction() {
 	stateDB.ExecuteNativeAction(contract, eventConverter, func(ctx sdk.Context) error {
 		store := ctx.KVStore(storeKey)
 		store.Set([]byte("failure1"), []byte("value"))
-		k.EventService.EventManager(ctx).EmitEvent(sdk.NewEvent("failure1"))
+		keeper.EventService.EventManager(ctx).EmitKV("failure1")
 
 		objStore := ctx.ObjectStore(objStoreKey)
 		suite.Require().Equal("value", objStore.Get([]byte("transient")).(string))
@@ -652,13 +653,13 @@ func (suite *StateDBTestSuite) TestNativeAction() {
 	stateDB.ExecuteNativeAction(contract, eventConverter, func(ctx sdk.Context) error {
 		store := ctx.KVStore(storeKey)
 		store.Set([]byte("success2"), []byte("value"))
-		k.EventService.EventManager(ctx).EmitEvent(sdk.NewEvent("success2"))
+		keeper.EventService.EventManager(ctx).EmitKV("success2")
 		return nil
 	})
 	stateDB.ExecuteNativeAction(contract, eventConverter, func(ctx sdk.Context) error {
 		store := ctx.KVStore(storeKey)
 		store.Set([]byte("failure2"), []byte("value"))
-		k.EventService.EventManager(ctx).EmitEvent(sdk.NewEvent("failure2"))
+		keeper.EventService.EventManager(ctx).EmitKV("failure2")
 		return errors.New("failure")
 	})
 
@@ -694,7 +695,7 @@ func (suite *StateDBTestSuite) TestNativeAction() {
 	stateDB.ExecuteNativeAction(contract, eventConverter, func(ctx sdk.Context) error {
 		store := ctx.KVStore(storeKey)
 		store.Set([]byte("success3"), []byte("value"))
-		k.EventService.EventManager(ctx).EmitEvent(sdk.NewEvent("success3"))
+		keeper.EventService.EventManager(ctx).EmitKV("success3")
 		return nil
 	})
 
@@ -721,7 +722,7 @@ func (suite *StateDBTestSuite) TestNativeAction() {
 	suite.Require().Nil(store.Get([]byte("failure2")))
 
 	// check events
-	suite.Require().Equal(sdk.Events{{Type: "success1"}, {Type: "success3"}}, k.EventService.EventManager(ctx).Events())
+	suite.Require().Equal(sdk.Events{{Type: "success1"}, {Type: "success3"}}, ctx.EventManager().Events())
 }
 
 func (suite *StateDBTestSuite) TestSetStorage() {
@@ -788,12 +789,26 @@ func cloneRawState(t *testing.T, cms storetypes.MultiStore) map[string]map[strin
 }
 
 func newTestKeeper(t *testing.T, cms storetypes.MultiStore) (sdk.Context, *evmkeeper.Keeper) {
-	appCodec := config.MakeConfigForTest(nil).Codec
+	encodingConfig := config.MakeConfigForTest(nil)
+	appCodec := encodingConfig.Codec
 	authAddr := authtypes.NewModuleAddress(govtypes.ModuleName).String()
-	accountKeeper := authkeeper.NewAccountKeeper(
+	keys := storetypes.NewKVStoreKeys(
+		authtypes.StoreKey, banktypes.StoreKey, accounts.StoreKey,
+	)
+	accountsKeeper, err := accounts.NewKeeper(
 		appCodec,
-		runtime.NewKVStoreService(testStoreKeys[authtypes.StoreKey]),
+		runtime.NewEnvironment(runtime.NewKVStoreService(keys[accounts.StoreKey]), log.NewNopLogger()),
+		encodingConfig.AddressCodec,
+		appCodec.InterfaceRegistry(),
+		nil,
+	)
+
+	require.NoError(t, err)
+	accountKeeper := authkeeper.NewAccountKeeper(
+		runtime.NewEnvironment(runtime.NewKVStoreService(keys[authtypes.StoreKey]), log.NewNopLogger()),
+		appCodec,
 		ethermint.ProtoAccount,
+		accountsKeeper,
 		map[string][]string{
 			evmtypes.ModuleName: {authtypes.Minter, authtypes.Burner},
 		},
@@ -802,16 +817,16 @@ func newTestKeeper(t *testing.T, cms storetypes.MultiStore) (sdk.Context, *evmke
 		authAddr,
 	)
 	bankKeeper := bankkeeper.NewBaseKeeper(
+		runtime.NewEnvironment(runtime.NewKVStoreService(keys[banktypes.StoreKey]), log.NewNopLogger()),
 		appCodec,
-		runtime.NewKVStoreService(testStoreKeys[banktypes.StoreKey]),
 		testObjKeys[banktypes.ObjectStoreKey],
 		accountKeeper,
 		map[string]bool{},
 		authAddr,
-		log.NewNopLogger(),
 	)
 	evmKeeper := evmkeeper.NewKeeper(
 		appCodec,
+		runtime.NewEnvironment(runtime.NewKVStoreService(keys[evmtypes.StoreKey]), log.NewNopLogger()),
 		testStoreKeys[evmtypes.StoreKey], testObjKeys[evmtypes.ObjectStoreKey], authtypes.NewModuleAddress(govtypes.ModuleName),
 		accountKeeper, bankKeeper, nil, nil,
 		"",

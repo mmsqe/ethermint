@@ -139,8 +139,8 @@ func (suite *EIP712TestSuite) TestEIP712() {
 			title: "Succeeds - Standard MsgSend",
 			msgs: []sdk.Msg{
 				banktypes.NewMsgSend(
-					suite.createTestAddress(),
-					suite.createTestAddress(),
+					suite.createTestAddress().String(),
+					suite.createTestAddress().String(),
 					suite.makeCoins(suite.denom, math.NewInt(1)),
 				),
 			},
@@ -150,7 +150,7 @@ func (suite *EIP712TestSuite) TestEIP712() {
 			title: "Succeeds - Standard MsgVote",
 			msgs: []sdk.Msg{
 				govtypes.NewMsgVote(
-					suite.createTestAddress(),
+					suite.createTestAddress().String(),
 					5,
 					govtypes.OptionNo,
 				),
@@ -198,7 +198,7 @@ func (suite *EIP712TestSuite) TestEIP712() {
 			title: "Succeeds - Single-Signer MsgVote V1 with Omitted Value",
 			msgs: []sdk.Msg{
 				govtypesv1.NewMsgVote(
-					params.address,
+					params.address.String(),
 					5,
 					govtypesv1.VoteOption_VOTE_OPTION_NO,
 					"",
@@ -210,13 +210,13 @@ func (suite *EIP712TestSuite) TestEIP712() {
 			title: "Succeeds - Single-Signer MsgSend + MsgVote",
 			msgs: []sdk.Msg{
 				govtypes.NewMsgVote(
-					params.address,
+					params.address.String(),
 					5,
 					govtypes.OptionNo,
 				),
 				banktypes.NewMsgSend(
-					params.address,
-					suite.createTestAddress(),
+					params.address.String(),
+					suite.createTestAddress().String(),
 					suite.makeCoins(suite.denom, math.NewInt(50)),
 				),
 			},
@@ -226,13 +226,13 @@ func (suite *EIP712TestSuite) TestEIP712() {
 			title: "Succeeds - Single-Signer 2x MsgVoteV1 with Different Schemas",
 			msgs: []sdk.Msg{
 				govtypesv1.NewMsgVote(
-					params.address,
+					params.address.String(),
 					5,
 					govtypesv1.VoteOption_VOTE_OPTION_NO,
 					"",
 				),
 				govtypesv1.NewMsgVote(
-					params.address,
+					params.address.String(),
 					10,
 					govtypesv1.VoteOption_VOTE_OPTION_YES,
 					"Has Metadata",
@@ -244,12 +244,12 @@ func (suite *EIP712TestSuite) TestEIP712() {
 			title: "Fails - Two MsgVotes with Different Signers",
 			msgs: []sdk.Msg{
 				govtypes.NewMsgVote(
-					suite.createTestAddress(),
+					suite.createTestAddress().String(),
 					5,
 					govtypes.OptionNo,
 				),
 				govtypes.NewMsgVote(
-					suite.createTestAddress(),
+					suite.createTestAddress().String(),
 					25,
 					govtypes.OptionAbstain,
 				),
@@ -266,7 +266,7 @@ func (suite *EIP712TestSuite) TestEIP712() {
 			chainID: "invalidchainid",
 			msgs: []sdk.Msg{
 				govtypes.NewMsgVote(
-					suite.createTestAddress(),
+					suite.createTestAddress().String(),
 					5,
 					govtypes.OptionNo,
 				),
@@ -277,7 +277,7 @@ func (suite *EIP712TestSuite) TestEIP712() {
 			title: "Fails - Includes TimeoutHeight",
 			msgs: []sdk.Msg{
 				govtypes.NewMsgVote(
-					suite.createTestAddress(),
+					suite.createTestAddress().String(),
 					5,
 					govtypes.OptionNo,
 				),
@@ -291,21 +291,21 @@ func (suite *EIP712TestSuite) TestEIP712() {
 				&banktypes.MsgMultiSend{
 					Inputs: []banktypes.Input{
 						banktypes.NewInput(
-							suite.createTestAddress(),
+							suite.createTestAddress().String(),
 							suite.makeCoins(suite.denom, math.NewInt(50)),
 						),
 						banktypes.NewInput(
-							suite.createTestAddress(),
+							suite.createTestAddress().String(),
 							suite.makeCoins(suite.denom, math.NewInt(50)),
 						),
 					},
 					Outputs: []banktypes.Output{
 						banktypes.NewOutput(
-							suite.createTestAddress(),
+							suite.createTestAddress().String(),
 							suite.makeCoins(suite.denom, math.NewInt(50)),
 						),
 						banktypes.NewOutput(
-							suite.createTestAddress(),
+							suite.createTestAddress().String(),
 							suite.makeCoins(suite.denom, math.NewInt(50)),
 						),
 					},

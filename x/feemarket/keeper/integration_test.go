@@ -531,7 +531,7 @@ func prepareEthTx(p txParams) []byte {
 	return s.PrepareEthTx(msg, s.PrivKey)
 }
 
-func checkTx(gasPrice *sdkmath.Int, msgs ...sdk.Msg) abci.ResponseCheckTx {
+func checkTx(gasPrice *sdkmath.Int, msgs ...sdk.Msg) abci.CheckTxResponse {
 	return s.CheckTx(prepareCosmosTx(gasPrice, msgs...))
 }
 
