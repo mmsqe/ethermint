@@ -19,6 +19,7 @@ import (
 	"context"
 	"math/big"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/feemarket/types"
 )
@@ -31,8 +32,7 @@ func (k Keeper) GetParams(ctx context.Context) types.Params {
 	}
 	var params types.Params
 	if len(bz) == 0 {
-		// mmsqe
-		// k.ss.GetParamSetIfExists(ctx, &params)
+		k.ss.GetParamSetIfExists(sdk.UnwrapSDKContext(ctx), &params)
 	} else {
 		k.cdc.MustUnmarshal(bz, &params)
 	}

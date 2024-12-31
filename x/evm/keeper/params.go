@@ -18,6 +18,7 @@ package keeper
 import (
 	"context"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	v0types "github.com/evmos/ethermint/x/evm/migrations/v0/types"
 	"github.com/evmos/ethermint/x/evm/types"
 )
@@ -50,7 +51,6 @@ func (k Keeper) SetParams(ctx context.Context, p types.Params) error {
 // GetLegacyParams returns param set for version before migrate
 func (k Keeper) GetLegacyParams(ctx context.Context) types.Params {
 	params := v0types.V0Params{}
-	// mmsqe
-	// k.ss.GetParamSetIfExists(ctx, &params)
+	k.ss.GetParamSetIfExists(sdk.UnwrapSDKContext(ctx), &params)
 	return params.ToParams()
 }
