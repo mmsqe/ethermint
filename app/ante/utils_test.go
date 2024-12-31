@@ -566,6 +566,7 @@ func (suite *AnteTestSuite) RegisterAccount(pubKey cryptotypes.PubKey, balance *
 // createSignerBytes generates sign doc bytes using the given parameters
 func (suite *AnteTestSuite) createSignerBytes(chainId string, signMode signing.SignMode, pubKey cryptotypes.PubKey, txBuilder client.TxBuilder) []byte {
 	acc := sdkante.GetSignerAcc(suite.ctx, suite.app.AuthKeeper, sdk.AccAddress(pubKey.Address()))
+	suite.Require().NotNil(acc)
 	anyPk, err := codectypes.NewAnyWithValue(pubKey)
 	suite.Require().NoError(err)
 	signerInfo := txsigning.SignerData{

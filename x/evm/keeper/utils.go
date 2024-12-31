@@ -16,6 +16,7 @@
 package keeper
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -78,6 +79,9 @@ func (k *Keeper) DeductTxCostsFromUserBalance(
 ) error {
 	// fetch sender account
 	signerAcc := authante.GetSignerAcc(ctx, k.accountKeeper, from.Bytes())
+	if signerAcc == nil {
+		return fmt.Errorf("account not found for sender %s", from)
+	}
 	// deduct the full gas cost from the user balance
 	if err := DeductFees(k.bankKeeper, ctx, signerAcc, fees); err != nil {
 		return errorsmod.Wrapf(err, "failed to deduct full gas cost %s from the user %s balance", fees, from)

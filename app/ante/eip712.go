@@ -33,6 +33,7 @@ import (
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
 	"github.com/cosmos/cosmos-sdk/x/auth/ante/unorderedtx"
+	"github.com/ethereum/go-ethereum/common"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
@@ -158,6 +159,9 @@ func (svd LegacyEip712SigVerificationDecorator) AnteHandle(ctx sdk.Context,
 	sig := sigs[i]
 
 	acc := authante.GetSignerAcc(ctx, svd.ak, signerAddrs[i])
+	if acc == nil {
+		return ctx, fmt.Errorf("account not found for sender %s", common.BytesToAddress(signerAddrs[i]))
+	}
 	// retrieve pubkey
 	pubKey := acc.GetPubKey()
 	if !simulate && pubKey == nil {
