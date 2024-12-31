@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
+	gastestutil "cosmossdk.io/core/testing/gas"
 	sdkmath "cosmossdk.io/math"
-	storetypes "cosmossdk.io/store/types"
 	kmultisig "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/mock/gomock"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256r1"
@@ -408,7 +409,7 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				blockTime := time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)
 				expiresAt := blockTime.Add(time.Hour)
 				msg, err := authz.NewMsgGrant(
-					from, grantee, &banktypes.SendAuthorization{SpendLimit: gasAmount}, &expiresAt,
+					from.String(), grantee.String(), &banktypes.SendAuthorization{SpendLimit: gasAmount}, &expiresAt,
 				)
 				suite.Require().NoError(err)
 				return suite.CreateTestEIP712SingleMessageTxBuilder(privKey, "ethermint_9000-1", gas, gasAmount, msg).GetTx()
@@ -604,8 +605,8 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 			"passes - Single-signer EIP-712",
 			func() sdk.Tx {
 				msg := banktypes.NewMsgSend(
-					sdk.AccAddress(privKey.PubKey().Address()),
-					addr[:],
+					sdk.AccAddress(privKey.PubKey().Address()).String(),
+					addr.String(),
 					sdk.NewCoins(
 						sdk.NewCoin(
 							"photon",
@@ -634,8 +635,8 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				pk := kmultisig.NewLegacyAminoPubKey(numKeys, pubKeys)
 
 				msg := banktypes.NewMsgSend(
-					sdk.AccAddress(pk.Address()),
-					addr[:],
+					sdk.AccAddress(pk.Address()).String(),
+					addr.String(),
 					sdk.NewCoins(
 						sdk.NewCoin(
 							"photon",
@@ -664,8 +665,8 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				pk := kmultisig.NewLegacyAminoPubKey(numKeys, pubKeys)
 
 				msg := banktypes.NewMsgSend(
-					sdk.AccAddress(pk.Address()),
-					addr[:],
+					sdk.AccAddress(pk.Address()).String(),
+					addr.String(),
 					sdk.NewCoins(
 						sdk.NewCoin(
 							"photon",
@@ -694,7 +695,7 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				pk := kmultisig.NewLegacyAminoPubKey(numKeys, pubKeys)
 
 				msg := govtypes.NewMsgVote(
-					sdk.AccAddress(pk.Address()),
+					sdk.AccAddress(pk.Address()).String(),
 					1,
 					govtypes.OptionYes,
 				)
@@ -719,8 +720,8 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				pk := kmultisig.NewLegacyAminoPubKey(numKeys, pubKeys)
 
 				msg := banktypes.NewMsgSend(
-					sdk.AccAddress(pk.Address()),
-					addr[:],
+					sdk.AccAddress(pk.Address()).String(),
+					addr.String(),
 					sdk.NewCoins(
 						sdk.NewCoin(
 							"photon",
@@ -749,8 +750,8 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				pk := kmultisig.NewLegacyAminoPubKey(numKeys, pubKeys)
 
 				msg := banktypes.NewMsgSend(
-					sdk.AccAddress(pk.Address()),
-					addr[:],
+					sdk.AccAddress(pk.Address()).String(),
+					addr.String(),
 					sdk.NewCoins(
 						sdk.NewCoin(
 							"photon",
@@ -779,8 +780,8 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				pk := kmultisig.NewLegacyAminoPubKey(numKeys, pubKeys)
 
 				msg := banktypes.NewMsgSend(
-					sdk.AccAddress(pk.Address()),
-					addr[:],
+					sdk.AccAddress(pk.Address()).String(),
+					addr.String(),
 					sdk.NewCoins(
 						sdk.NewCoin(
 							"photon",
@@ -809,8 +810,8 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				pk := kmultisig.NewLegacyAminoPubKey(numKeys, pubKeys)
 
 				msg := banktypes.NewMsgSend(
-					sdk.AccAddress(pk.Address()),
-					addr[:],
+					sdk.AccAddress(pk.Address()).String(),
+					addr.String(),
 					sdk.NewCoins(
 						sdk.NewCoin(
 							"photon",
@@ -842,8 +843,8 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				pk := kmultisig.NewLegacyAminoPubKey(numKeys, pubKeys)
 
 				msg := banktypes.NewMsgSend(
-					sdk.AccAddress(pk.Address()),
-					addr[:],
+					sdk.AccAddress(pk.Address()).String(),
+					addr.String(),
 					sdk.NewCoins(
 						sdk.NewCoin(
 							"photon",
@@ -871,8 +872,8 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 			"Fails - Single-Signer EIP-712 with messages added after signing",
 			func() sdk.Tx {
 				msg := banktypes.NewMsgSend(
-					sdk.AccAddress(privKey.PubKey().Address()),
-					addr[:],
+					sdk.AccAddress(privKey.PubKey().Address()).String(),
+					addr.String(),
 					sdk.NewCoins(
 						sdk.NewCoin(
 							"photon",
@@ -913,7 +914,7 @@ func (suite *AnteTestSuite) TestAnteHandler() {
 				ethTx.From = addr.Bytes()
 
 				msg := authz.NewMsgExec(
-					sdk.AccAddress(privKey.PubKey().Address()),
+					sdk.AccAddress(privKey.PubKey().Address()).String(),
 					[]sdk.Msg{ethTx},
 				)
 
@@ -1351,7 +1352,7 @@ func (suite *AnteTestSuite) TestAnteHandlerWithParams() {
 	suite.evmParamsOption = nil
 }
 
-func (suite *AnteTestSuite) TestConsumeSignatureVerificationGas() {
+func (suite *AnteTestSuite) TestConsumeSignatureVerificationGas(t *testing.T) {
 	params := authtypes.DefaultParams()
 	msg := []byte{1, 2, 3, 4}
 	cdc := amino.NewLegacyAmino()
@@ -1363,7 +1364,6 @@ func (suite *AnteTestSuite) TestConsumeSignatureVerificationGas() {
 
 	multisigKey1 := kmultisig.NewLegacyAminoPubKey(2, pkSet1)
 	multisignature1 := multisig.NewMultisig(len(pkSet1))
-	expectedCost1 := expectedGasCostByKeys(pkSet1)
 
 	for i := 0; i < len(pkSet1); i++ {
 		stdSig := legacytx.StdSignature{PubKey: pkSet1[i], Signature: sigSet1[i]}
@@ -1374,36 +1374,67 @@ func (suite *AnteTestSuite) TestConsumeSignatureVerificationGas() {
 	}
 
 	type args struct {
-		meter  storetypes.GasMeter
-		sig    signing.SignatureData
-		pubkey cryptotypes.PubKey
-		params authtypes.Params
+		sig      signing.SignatureData
+		pubkey   cryptotypes.PubKey
+		params   authtypes.Params
+		malleate func(*gastestutil.MockMeter)
 	}
 	tests := []struct {
-		name        string
-		args        args
-		gasConsumed uint64
-		shouldErr   bool
+		name      string
+		args      args
+		shouldErr bool
 	}{
-		{"PubKeyEd25519", args{storetypes.NewInfiniteGasMeter(), nil, ed25519.GenPrivKey().PubKey(), params}, p.SigVerifyCostED25519, true},
-		{"PubKeyEthSecp256k1", args{storetypes.NewInfiniteGasMeter(), nil, pkSet1[0], params}, 21_000, false},
-		{"PubKeySecp256r1", args{storetypes.NewInfiniteGasMeter(), nil, skR1.PubKey(), params}, p.SigVerifyCostSecp256r1(), false},
-		{"Multisig", args{storetypes.NewInfiniteGasMeter(), multisignature1, multisigKey1, params}, expectedCost1, false},
-		{"unknown key", args{storetypes.NewInfiniteGasMeter(), nil, nil, params}, 0, true},
+		{
+			"PubKeyEd25519",
+			args{nil, ed25519.GenPrivKey().PubKey(), params, func(mm *gastestutil.MockMeter) {
+				mm.EXPECT().Consume(p.SigVerifyCostED25519, "ante verify: ed25519").Times(1)
+			}},
+			true,
+		},
+		{
+			"PubKeyEthSecp256k1",
+			args{nil, skR1.PubKey(), params, func(mm *gastestutil.MockMeter) {
+				mm.EXPECT().Consume(21_000, "ante verify: eth_secp256k1").Times(1)
+			}},
+			false,
+		},
+		{
+			"PubKeySecp256r1",
+			args{nil, skR1.PubKey(), params, func(mm *gastestutil.MockMeter) {
+				mm.EXPECT().Consume(p.SigVerifyCostSecp256r1(), "ante verify: secp256r1").Times(1)
+			}},
+			false,
+		},
+		{
+			"Multisig",
+			args{multisignature1, multisigKey1, params, func(mm *gastestutil.MockMeter) {
+				// 5 signatures
+				mm.EXPECT().Consume(p.SigVerifyCostSecp256k1, "ante verify: secp256k1").Times(5)
+			}},
+			false,
+		},
+		{
+			"unknown key",
+			args{nil, nil, params, func(mm *gastestutil.MockMeter) {}},
+			true,
+		},
 	}
 	for _, tt := range tests {
+
 		sigV2 := signing.SignatureV2{
 			PubKey:   tt.args.pubkey,
 			Data:     tt.args.sig,
 			Sequence: 0, // Arbitrary account sequence
 		}
-		err := ante.DefaultSigVerificationGasConsumer(tt.args.meter, sigV2, tt.args.params)
+		ctrl := gomock.NewController(t)
+		mockMeter := gastestutil.NewMockMeter(ctrl)
+		tt.args.malleate(mockMeter)
+		err := ante.DefaultSigVerificationGasConsumer(mockMeter, sigV2, tt.args.params)
 
 		if tt.shouldErr {
 			suite.Require().NotNil(err)
 		} else {
 			suite.Require().Nil(err)
-			suite.Require().Equal(tt.gasConsumed, tt.args.meter.GasConsumed(), fmt.Sprintf("%d != %d", tt.gasConsumed, tt.args.meter.GasConsumed()))
 		}
 	}
 }
