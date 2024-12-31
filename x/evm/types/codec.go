@@ -25,6 +25,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	proto "github.com/cosmos/gogoproto/proto"
+	gogoprotoany "github.com/cosmos/gogoproto/types/any"
 )
 
 var (
@@ -77,7 +78,7 @@ func RegisterInterfaces(registry coreregistry.InterfaceRegistrar) {
 // PackTxData constructs a new Any packed with the given tx data value. It returns
 // an error if the client state can't be casted to a protobuf message or if the concrete
 // implementation is not registered to the protobuf codec.
-func PackTxData(txData TxData) (*codectypes.Any, error) {
+func PackTxData(txData TxData) (*gogoprotoany.Any, error) {
 	msg, ok := txData.(proto.Message)
 	if !ok {
 		return nil, errorsmod.Wrapf(errortypes.ErrPackAny, "cannot proto marshal %T", txData)
@@ -93,7 +94,7 @@ func PackTxData(txData TxData) (*codectypes.Any, error) {
 
 // UnpackTxData unpacks an Any into a TxData. It returns an error if the
 // client state can't be unpacked into a TxData.
-func UnpackTxData(codecAny *codectypes.Any) (TxData, error) {
+func UnpackTxData(codecAny *gogoprotoany.Any) (TxData, error) {
 	if codecAny == nil {
 		return nil, errorsmod.Wrap(errortypes.ErrUnpackAny, "protobuf Any message cannot be nil")
 	}

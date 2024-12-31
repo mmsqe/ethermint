@@ -25,7 +25,6 @@ import (
 
 	errorsmod "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
@@ -364,7 +363,7 @@ func jsonNameFromTag(tag reflect.StructTag) string {
 
 // Unpack the given Any value with Type/Value deconstruction
 func unpackAny(cdc gogoprotoany.AnyUnpacker, field reflect.Value) (reflect.Type, reflect.Value, error) {
-	anyData, ok := field.Interface().(*codectypes.Any)
+	anyData, ok := field.Interface().(*gogoprotoany.Any)
 	if !ok {
 		return nil, reflect.Value{}, errorsmod.Wrapf(errortypes.ErrPackAny, "%T", field.Interface())
 	}
@@ -390,7 +389,7 @@ var (
 	cosmIntType   = reflect.TypeOf(sdkmath.Int{})
 	cosmDecType   = reflect.TypeOf(sdkmath.LegacyDec{})
 	timeType      = reflect.TypeOf(time.Time{})
-	cosmosAnyType = reflect.TypeOf(&codectypes.Any{})
+	cosmosAnyType = reflect.TypeOf(&gogoprotoany.Any{})
 	edType        = reflect.TypeOf(ed25519.PubKey{})
 )
 

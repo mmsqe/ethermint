@@ -8,6 +8,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
+	gogoprotoany "github.com/cosmos/gogoproto/types/any"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/libs/bytes"
@@ -196,7 +197,7 @@ func RegisterBlockResultsWithEventLog(client *mocks.Client, height int64) (*tmrp
 	if err != nil {
 		return nil, err
 	}
-	data, err := proto.Marshal(&sdk.TxMsgData{MsgResponses: []*codectypes.Any{any}})
+	data, err := proto.Marshal(&sdk.TxMsgData{MsgResponses: []*gogoprotoany.Any{any}})
 	if err != nil {
 		return nil, err
 	}

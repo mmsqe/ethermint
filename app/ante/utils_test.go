@@ -9,6 +9,7 @@ import (
 	"cosmossdk.io/core/transaction"
 	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
+	gogoprotoany "github.com/cosmos/gogoproto/types/any"
 	"github.com/stretchr/testify/suite"
 	protov2 "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -212,7 +213,7 @@ func (suite *AnteTestSuite) CreateTestTxBuilder(
 	msg *evmtypes.MsgEthereumTx, priv cryptotypes.PrivKey, accNum uint64, signCosmosTx bool,
 	unsetExtensionOptions ...bool,
 ) client.TxBuilder {
-	var option *codectypes.Any
+	var option *gogoprotoany.Any
 	var err error
 	if len(unsetExtensionOptions) == 0 {
 		option, err = codectypes.NewAnyWithValue(&evmtypes.ExtensionOptionsEthereumTx{})

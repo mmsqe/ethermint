@@ -3,13 +3,13 @@ package types
 import (
 	"testing"
 
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	gogoprotoany "github.com/cosmos/gogoproto/types/any"
 	"github.com/stretchr/testify/require"
 )
 
 type caseAny struct {
 	name    string
-	any     *codectypes.Any
+	any     *gogoprotoany.Any
 	expPass bool
 }
 

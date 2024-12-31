@@ -16,11 +16,11 @@
 package types
 
 import (
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	gogoprotoany "github.com/cosmos/gogoproto/types/any"
 )
 
 // HasDynamicFeeExtensionOption returns true if the tx implements the `ExtensionOptionDynamicFeeTx` extension option.
-func HasDynamicFeeExtensionOption(codecAny *codectypes.Any) bool {
-	_, ok := codecAny.GetCachedValue().(*ExtensionOptionDynamicFeeTx)
+func HasDynamicFeeExtensionOption(protoAny *gogoprotoany.Any) bool {
+	_, ok := protoAny.GetCachedValue().(*ExtensionOptionDynamicFeeTx)
 	return ok
 }
