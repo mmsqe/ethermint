@@ -181,6 +181,7 @@ func newCosmosAnteHandler(ctx context.Context, options HandlerOptions, extra ...
 		ante.NewExtensionOptionsDecorator(options.ExtensionOptionChecker),
 		ante.NewValidateBasicDecorator(options.Environment),
 		ante.NewTxTimeoutHeightDecorator(options.Environment),
+		ante.NewUnorderedTxDecorator(unorderedtx.DefaultMaxTimeoutDuration, options.UnorderedTxManager, options.Environment, ante.DefaultSha256Cost),
 		NewMinGasPriceDecorator(options.FeeMarketKeeper, evmDenom, &feemarketParams),
 		ante.NewValidateMemoDecorator(options.AccountKeeper),
 		ante.NewConsumeGasForTxSizeDecorator(options.AccountKeeper),

@@ -27,10 +27,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	"github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
+	"github.com/cosmos/cosmos-sdk/x/auth/ante/unorderedtx"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
@@ -68,6 +70,7 @@ func NewLegacyCosmosAnteHandlerEip712(ctx context.Context, options HandlerOption
 		authante.NewSetUpContextDecorator(options.Environment, options.ConsensusKeeper),
 		authante.NewValidateBasicDecorator(options.Environment),
 		authante.NewTxTimeoutHeightDecorator(options.Environment),
+		authante.NewUnorderedTxDecorator(unorderedtx.DefaultMaxTimeoutDuration, options.UnorderedTxManager, options.Environment, ante.DefaultSha256Cost),
 		NewMinGasPriceDecorator(options.FeeMarketKeeper, evmDenom, &feemarketParams),
 		authante.NewValidateMemoDecorator(options.AccountKeeper),
 		authante.NewConsumeGasForTxSizeDecorator(options.AccountKeeper),
