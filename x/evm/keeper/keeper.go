@@ -302,6 +302,9 @@ func (k Keeper) AddTransientGasUsed(ctx sdk.Context, gasUsed uint64) (uint64, er
 // SetHeaderHash stores the hash of the current block header in the store.
 func (k Keeper) SetHeaderHash(ctx context.Context) {
 	header := k.HeaderService.HeaderInfo(ctx)
+	if len(header.Hash) == 0 {
+		return
+	}
 	height, err := ethermint.SafeUint64(header.Height)
 	if err != nil {
 		panic(err)
