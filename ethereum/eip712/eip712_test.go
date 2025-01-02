@@ -67,7 +67,7 @@ func TestEIP712TestSuite(t *testing.T) {
 }
 
 func (suite *EIP712TestSuite) SetupTest() {
-	suite.config = testutilconfig.MakeConfigForTest(nil)
+	suite.config = testutilconfig.MakeConfigForTest(nil, nil)
 	suite.clientCtx = client.Context{}.WithTxConfig(suite.config.TxConfig)
 	suite.denom = evmtypes.DefaultEVMDenom
 

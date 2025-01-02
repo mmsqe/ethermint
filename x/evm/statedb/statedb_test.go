@@ -789,7 +789,7 @@ func cloneRawState(t *testing.T, cms storetypes.MultiStore) map[string]map[strin
 }
 
 func newTestKeeper(t *testing.T, cms storetypes.MultiStore) (sdk.Context, *evmkeeper.Keeper) {
-	encodingConfig := config.MakeConfigForTest(nil)
+	encodingConfig := config.MakeConfigForTest(nil, nil)
 	appCodec := encodingConfig.Codec
 	authAddr := authtypes.NewModuleAddress(govtypes.ModuleName).String()
 	keys := storetypes.NewKVStoreKeys(

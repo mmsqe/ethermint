@@ -163,7 +163,13 @@ func (svd LegacyEip712SigVerificationDecorator) AnteHandle(ctx sdk.Context,
 		return ctx, fmt.Errorf("account not found for sender %s", common.BytesToAddress(signerAddrs[i]))
 	}
 	// retrieve pubkey
-	pubKey := acc.GetPubKey()
+	// mmsqe
+	// pubKey := acc.GetPubKey()
+	pubKeys, err := authSignTx.GetPubKeys()
+	if err != nil {
+		return ctx, err
+	}
+	pubKey := pubKeys[0]
 	if !simulate && pubKey == nil {
 		return ctx, errorsmod.Wrap(errortypes.ErrInvalidPubKey, "pubkey on account is not set")
 	}
