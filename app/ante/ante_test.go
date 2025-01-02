@@ -1352,7 +1352,7 @@ func (suite *AnteTestSuite) TestAnteHandlerWithParams() {
 	suite.evmParamsOption = nil
 }
 
-func (suite *AnteTestSuite) TestConsumeSignatureVerificationGas(t *testing.T) {
+func (suite *AnteTestSuite) TestConsumeSignatureVerificationGas() {
 	params := authtypes.DefaultParams()
 	msg := []byte{1, 2, 3, 4}
 	cdc := amino.NewLegacyAmino()
@@ -1393,8 +1393,8 @@ func (suite *AnteTestSuite) TestConsumeSignatureVerificationGas(t *testing.T) {
 		},
 		{
 			"PubKeyEthSecp256k1",
-			args{nil, skR1.PubKey(), params, func(mm *gastestutil.MockMeter) {
-				mm.EXPECT().Consume(21_000, "ante verify: eth_secp256k1").Times(1)
+			args{nil, pkSet1[0], params, func(mm *gastestutil.MockMeter) {
+				mm.EXPECT().Consume(ante.Secp256k1VerifyCost, "ante verify: eth_secp256k1").Times(1)
 			}},
 			false,
 		},
@@ -1409,7 +1409,7 @@ func (suite *AnteTestSuite) TestConsumeSignatureVerificationGas(t *testing.T) {
 			"Multisig",
 			args{multisignature1, multisigKey1, params, func(mm *gastestutil.MockMeter) {
 				// 5 signatures
-				mm.EXPECT().Consume(p.SigVerifyCostSecp256k1, "ante verify: secp256k1").Times(5)
+				mm.EXPECT().Consume(ante.Secp256k1VerifyCost, "ante verify: eth_secp256k1").Times(5)
 			}},
 			false,
 		},
@@ -1420,13 +1420,12 @@ func (suite *AnteTestSuite) TestConsumeSignatureVerificationGas(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-
 		sigV2 := signing.SignatureV2{
 			PubKey:   tt.args.pubkey,
 			Data:     tt.args.sig,
 			Sequence: 0, // Arbitrary account sequence
 		}
-		ctrl := gomock.NewController(t)
+		ctrl := gomock.NewController(suite.T())
 		mockMeter := gastestutil.NewMockMeter(ctrl)
 		tt.args.malleate(mockMeter)
 		err := ante.DefaultSigVerificationGasConsumer(mockMeter, sigV2, tt.args.params)
