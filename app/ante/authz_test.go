@@ -24,6 +24,12 @@ import (
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 
+func (suite *AnteTestSuite) addressToString(addr []byte) string {
+	r, err := suite.app.AppAddressCodec().BytesToString(addr)
+	suite.Require().NoError(err)
+	return r
+}
+
 func (suite *AnteTestSuite) TestAuthzLimiterDecorator() {
 	_, testAddresses, err := generatePrivKeyAddressPairs(5)
 	suite.Require().NoError(err)
@@ -80,7 +86,9 @@ func (suite *AnteTestSuite) TestAuthzLimiterDecorator() {
 		{
 			"enabled msg - blocked msg not wrapped in MsgExec",
 			[]sdk.Msg{
-				&stakingtypes.MsgUndelegate{},
+				&stakingtypes.MsgUndelegate{
+					DelegatorAddress: suite.addressToString(suite.priv.PubKey().Address()),
+				},
 			},
 			nil,
 		},
