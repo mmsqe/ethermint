@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"cosmossdk.io/core/transaction"
+	"cosmossdk.io/log"
 	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
 	gogoprotoany "github.com/cosmos/gogoproto/types/any"
@@ -24,6 +25,7 @@ import (
 	"github.com/evmos/ethermint/testutil"
 	"github.com/evmos/ethermint/testutil/config"
 	utiltx "github.com/evmos/ethermint/testutil/tx"
+	ethermint "github.com/evmos/ethermint/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -36,6 +38,7 @@ import (
 	kmultisig "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
@@ -136,17 +139,25 @@ func (suite *AnteTestSuite) SetupTest() {
 	suite.clientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig)
 
 	anteHandler, err := ante.NewAnteHandler(ante.HandlerOptions{
-		AccountKeeper:   suite.app.AuthKeeper,
-		BankKeeper:      suite.app.BankKeeper,
-		EvmKeeper:       suite.app.EvmKeeper,
-		FeegrantKeeper:  suite.app.FeeGrantKeeper,
-		FeeMarketKeeper: suite.app.FeeMarketKeeper,
-		SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
-		SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
+		Environment:              runtime.NewEnvironment(nil, log.NewNopLogger(), runtime.EnvWithMsgRouterService(suite.app.MsgServiceRouter()), runtime.EnvWithQueryRouterService(suite.app.GRPCQueryRouter())), // nil is set as the kvstoreservice to avoid module access
+		ConsensusKeeper:          suite.app.ConsensusParamsKeeper,
+		AccountKeeper:            suite.app.AuthKeeper,
+		AccountAbstractionKeeper: suite.app.AccountsKeeper,
+		BankKeeper:               suite.app.BankKeeper,
+		FeeMarketKeeper:          suite.app.FeeMarketKeeper,
+		EvmKeeper:                suite.app.EvmKeeper,
+		FeegrantKeeper:           suite.app.FeeGrantKeeper,
+		SignModeHandler:          encodingConfig.TxConfig.SignModeHandler(),
+		SigGasConsumer:           ante.DefaultSigVerificationGasConsumer,
+		MaxTxGasWanted:           0,
+		ExtensionOptionChecker:   ethermint.HasDynamicFeeExtensionOption,
 		DisabledAuthzMsgs: []string{
 			sdk.MsgTypeURL(&evmtypes.MsgEthereumTx{}),
 			sdk.MsgTypeURL(&vestingtypes.BaseVestingAccount{}),
+			sdk.MsgTypeURL(&vestingtypes.PermanentLockedAccount{}),
+			sdk.MsgTypeURL(&vestingtypes.PeriodicVestingAccount{}),
 		},
+		UnorderedTxManager: suite.app.UnorderedTxManager,
 	})
 	suite.Require().NoError(err)
 
