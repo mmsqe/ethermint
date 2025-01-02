@@ -101,14 +101,9 @@ func (dfd DeductFeeDecorator) checkDeductFee(ctx sdk.Context, sdkTx sdk.Tx, fee 
 		deductFeesFrom = feeGranterAddr
 	}
 
-	deductFeesFromAcc := dfd.accountKeeper.GetAccount(ctx, deductFeesFrom)
-	if deductFeesFromAcc == nil {
-		return sdkerrors.ErrUnknownAddress.Wrapf("fee payer address: %s does not exist", deductFeesFrom)
-	}
-
 	// deduct the fees
 	if !fee.IsZero() {
-		err := evmkeeper.DeductFees(dfd.bankKeeper, ctx, deductFeesFromAcc, fee)
+		err := evmkeeper.DeductFees(dfd.bankKeeper, ctx, deductFeesFrom, fee)
 		if err != nil {
 			return err
 		}

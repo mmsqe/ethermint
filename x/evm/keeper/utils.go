@@ -16,7 +16,6 @@
 package keeper
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -28,7 +27,6 @@ import (
 	stakingtypes "cosmossdk.io/x/staking/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
-	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	"github.com/evmos/ethermint/x/evm/types"
@@ -77,16 +75,10 @@ func (k *Keeper) DeductTxCostsFromUserBalance(
 	fees sdk.Coins,
 	from common.Address,
 ) error {
-	// fetch sender account
-	signerAcc := authante.GetSignerAcc(ctx, k.accountKeeper, from.Bytes())
-	if signerAcc == nil {
-		return fmt.Errorf("account not found for sender %s", from)
-	}
 	// deduct the full gas cost from the user balance
-	if err := DeductFees(k.bankKeeper, ctx, signerAcc, fees); err != nil {
+	if err := DeductFees(k.bankKeeper, ctx, from.Bytes(), fees); err != nil {
 		return errorsmod.Wrapf(err, "failed to deduct full gas cost %s from the user %s balance", fees, from)
 	}
-
 	return nil
 }
 
@@ -163,12 +155,12 @@ func CheckSenderBalance(
 }
 
 // DeductFees deducts fees from the given account.
-func DeductFees(bankKeeper types.BankKeeper, ctx sdk.Context, acc sdk.AccountI, fees sdk.Coins) error {
+func DeductFees(bankKeeper types.BankKeeper, ctx sdk.Context, acc []byte, fees sdk.Coins) error {
 	if !fees.IsValid() {
 		return errorsmod.Wrapf(errortypes.ErrInsufficientFee, "invalid fee amount: %s", fees)
 	}
 	if ctx.BlockHeight() > 0 {
-		if err := bankKeeper.SendCoinsFromAccountToModuleVirtual(ctx, acc.GetAddress(), authtypes.FeeCollectorName, fees); err != nil {
+		if err := bankKeeper.SendCoinsFromAccountToModuleVirtual(ctx, acc, authtypes.FeeCollectorName, fees); err != nil {
 			return errorsmod.Wrap(errortypes.ErrInsufficientFunds, err.Error())
 		}
 	}
