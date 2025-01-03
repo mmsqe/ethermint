@@ -54,7 +54,7 @@ var params = EIP712FuzzTestParams{
 // tests as they are.
 func (suite *EIP712TestSuite) TestRandomPayloadFlattening() {
 	// Re-seed rand generator
-	rand.Seed(rand.Int64())
+	rand.Seed(rand.Int63())
 
 	for i := 0; i < params.numTestObjects; i++ {
 		suite.Run(fmt.Sprintf("%v%d", fuzzTestName, i), func() {

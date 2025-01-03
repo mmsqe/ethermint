@@ -25,6 +25,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	"github.com/evmos/ethermint/cmd/config"
+	cmdcfg "github.com/evmos/ethermint/cmd/config"
 	"github.com/evmos/ethermint/ethereum/eip712"
 	"github.com/evmos/ethermint/testutil"
 	testutilconfig "github.com/evmos/ethermint/testutil/config"
@@ -67,7 +68,8 @@ func TestEIP712TestSuite(t *testing.T) {
 }
 
 func (suite *EIP712TestSuite) SetupTest() {
-	suite.config = testutilconfig.MakeConfigForTest(nil, nil)
+	cmdcfg.SetBech32Prefixes(sdk.GetConfig())
+	suite.config = testutilconfig.MakeConfigForTest()
 	suite.clientCtx = client.Context{}.WithTxConfig(suite.config.TxConfig)
 	suite.denom = evmtypes.DefaultEVMDenom
 

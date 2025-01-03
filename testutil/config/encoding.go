@@ -18,27 +18,23 @@ import (
 	"github.com/evmos/ethermint/x/feemarket"
 )
 
-func MakeConfigForTest(a *app.EthermintApp, moduleManager *module.Manager) types.EncodingConfig {
-	if a == nil {
-		a = app.NewEthermintApp(
-			cmtlog.NewNopLogger(), dbm.NewMemDB(), nil, true,
-			simtestutil.NewAppOptionsWithFlagHome(app.DefaultNodeHome),
-		)
-	}
+func MakeConfigForTest() types.EncodingConfig {
+	a := app.NewEthermintApp(
+		cmtlog.NewNopLogger(), dbm.NewMemDB(), nil, true,
+		simtestutil.NewAppOptionsWithFlagHome(app.DefaultNodeHome),
+	)
 	encodingConfig := encoding.MakeConfig()
 	appCodec := encodingConfig.Codec
-	if moduleManager == nil {
-		moduleManager = module.NewManager(
-			auth.NewAppModule(appCodec, a.AuthKeeper, a.AccountsKeeper, authsims.RandomGenesisAccounts, nil),
-			bank.NewAppModule(appCodec, a.BankKeeper, a.AuthKeeper),
-			distr.NewAppModule(appCodec, a.DistrKeeper, a.StakingKeeper),
-			gov.NewAppModule(appCodec, &a.GovKeeper, a.AuthKeeper, a.BankKeeper, a.PoolKeeper),
-			staking.NewAppModule(appCodec, a.StakingKeeper),
-			// Ethermint modules
-			evm.NewAppModule(appCodec, a.EvmKeeper, a.AuthKeeper, a.AuthKeeper.Accounts, nil),
-			feemarket.NewAppModule(appCodec, a.FeeMarketKeeper, nil),
-		)
-	}
+	moduleManager := module.NewManager(
+		auth.NewAppModule(appCodec, a.AuthKeeper, a.AccountsKeeper, authsims.RandomGenesisAccounts, nil),
+		bank.NewAppModule(appCodec, a.BankKeeper, a.AuthKeeper),
+		distr.NewAppModule(appCodec, a.DistrKeeper, a.StakingKeeper),
+		gov.NewAppModule(appCodec, &a.GovKeeper, a.AuthKeeper, a.BankKeeper, a.PoolKeeper),
+		staking.NewAppModule(appCodec, a.StakingKeeper),
+		// Ethermint modules
+		evm.NewAppModule(appCodec, a.EvmKeeper, a.AuthKeeper, a.AuthKeeper.Accounts, nil),
+		feemarket.NewAppModule(appCodec, a.FeeMarketKeeper, nil),
+	)
 	moduleManager.RegisterLegacyAminoCodec(encodingConfig.Amino)
 	moduleManager.RegisterInterfaces(encodingConfig.InterfaceRegistry)
 	return encodingConfig

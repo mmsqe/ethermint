@@ -132,7 +132,7 @@ type Config struct {
 // DefaultConfig returns a sane default configuration suitable for nearly all
 // testing requirements.
 func DefaultConfig() Config {
-	encCfg := testutilconfig.MakeConfigForTest(nil, nil)
+	encCfg := testutilconfig.MakeConfigForTest()
 	chainID := fmt.Sprintf("ethermint_%d-1", rand.Int63n(9999999999999)+1)
 	return Config{
 		Codec:             encCfg.Codec,

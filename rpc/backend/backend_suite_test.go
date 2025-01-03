@@ -70,7 +70,7 @@ func (suite *BackendTestSuite) SetupTest() {
 	suite.Require().NoError(err)
 	suite.signerAddress = sdk.AccAddress(priv.PubKey().Address().Bytes())
 
-	encodingConfig := config.MakeConfigForTest(nil, nil)
+	encodingConfig := config.MakeConfigForTest()
 	clientCtx := client.Context{}.WithChainID(ChainID).
 		WithHeight(1).
 		WithTxConfig(encodingConfig.TxConfig).

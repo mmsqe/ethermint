@@ -21,9 +21,9 @@ import (
 	govv1 "cosmossdk.io/x/gov/types/v1"
 	stakingtypes "cosmossdk.io/x/staking/types"
 	"github.com/evmos/ethermint/app"
+	cmdcfg "github.com/evmos/ethermint/cmd/config"
 	"github.com/evmos/ethermint/ethereum/eip712"
 	"github.com/evmos/ethermint/testutil"
-	"github.com/evmos/ethermint/testutil/config"
 	utiltx "github.com/evmos/ethermint/testutil/tx"
 	ethermint "github.com/evmos/ethermint/types"
 
@@ -85,6 +85,7 @@ func (suite *AnteTestSuite) StateDB() *statedb.StateDB {
 }
 
 func (suite *AnteTestSuite) SetupTest() {
+	cmdcfg.SetBech32Prefixes(sdk.GetConfig())
 	checkTx := false
 	priv, err := ethsecp256k1.GenerateKey()
 	suite.Require().NoError(err)
@@ -131,7 +132,7 @@ func (suite *AnteTestSuite) SetupTest() {
 	acc := suite.app.AuthKeeper.NewAccountWithAddress(suite.ctx, addr)
 	suite.app.AuthKeeper.SetAccount(suite.ctx, acc)
 
-	encodingConfig := config.MakeConfigForTest(suite.app, suite.app.ModuleManager)
+	encodingConfig := suite.app.EncodingConfig()
 	// We're using TestMsg amino encoding in some tests, so register it here.
 	encodingConfig.Amino.RegisterConcrete(&testdata.TestMsg{}, "testdata.TestMsg")
 	eip712.SetEncodingConfig(encodingConfig)

@@ -24,8 +24,8 @@ var execTypes = []struct {
 func (s *AnteTestSuite) TestMinGasPriceDecorator() {
 	denom := evmtypes.DefaultEVMDenom
 	testMsg := banktypes.MsgSend{
-		FromAddress: "evmos1x8fhpj9nmhqk8z9kpgjt95ck2xwyue0ptzkucp",
-		ToAddress:   "evmos1dx67l23hz9l0k9hcher8xz04uj7wf3yu26l2yn",
+		FromAddress: "ethm16z0herz998946wr659lr84c8c556da55pg9pxt",
+		ToAddress:   "ethm1q04jewhxw4xxu3vlg3rc85240h9q7ns6mctk75",
 		Amount:      sdk.Coins{sdk.Coin{Amount: sdkmath.NewInt(10), Denom: denom}},
 	}
 
@@ -167,8 +167,8 @@ func (s *AnteTestSuite) TestEthMinGasPriceDecorator() {
 				params.MinGasPrice = sdkmath.LegacyNewDec(10)
 				s.app.FeeMarketKeeper.SetParams(s.ctx, params)
 				testMsg := banktypes.MsgSend{
-					FromAddress: "evmos1x8fhpj9nmhqk8z9kpgjt95ck2xwyue0ptzkucp",
-					ToAddress:   "evmos1dx67l23hz9l0k9hcher8xz04uj7wf3yu26l2yn",
+					FromAddress: "ethm16z0herz998946wr659lr84c8c556da55pg9pxt",
+					ToAddress:   "ethm1q04jewhxw4xxu3vlg3rc85240h9q7ns6mctk75",
 					Amount:      sdk.Coins{sdk.Coin{Amount: sdkmath.NewInt(10), Denom: denom}},
 				}
 				txBuilder := s.CreateTestCosmosTxBuilder(sdkmath.NewInt(0), denom, &testMsg)
