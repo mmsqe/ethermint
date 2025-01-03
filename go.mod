@@ -11,18 +11,19 @@ require (
 	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/log v1.5.0
 	cosmossdk.io/math v1.4.0
+	cosmossdk.io/simapp v0.0.0-20241219173010-150f2d6b3a73
 	cosmossdk.io/store v1.10.0-rc.1.0.20241218084712-ca559989da43
 	cosmossdk.io/tools/confix v0.1.2
 	cosmossdk.io/x/accounts v0.0.0-20241218110910-47409028a73d
 	cosmossdk.io/x/accounts/defaults/base v0.0.0-20241218091011-61390f600a40
-	cosmossdk.io/x/accounts/defaults/lockup v0.0.0-00010101000000-000000000000
+	cosmossdk.io/x/accounts/defaults/lockup v0.0.0-20240417181816-5e7aae0db1f5
 	cosmossdk.io/x/accounts/defaults/multisig v0.0.0-00010101000000-000000000000
 	cosmossdk.io/x/authz v0.0.0-00010101000000-000000000000
 	cosmossdk.io/x/bank v0.0.0-20241218110910-47409028a73d
 	cosmossdk.io/x/consensus v0.0.0-00010101000000-000000000000
 	cosmossdk.io/x/distribution v0.0.0-20240906090851-36d9b25e8981
-	cosmossdk.io/x/evidence v0.0.0-00010101000000-000000000000
-	cosmossdk.io/x/feegrant v0.0.0-00010101000000-000000000000
+	cosmossdk.io/x/evidence v0.0.0-20230613133644-0a778132a60f
+	cosmossdk.io/x/feegrant v0.0.0-20230613133644-0a778132a60f
 	cosmossdk.io/x/gov v0.0.0-20231113122742-912390d5fc4a
 	cosmossdk.io/x/mint v0.0.0-20240909082436-01c0e9ba3581
 	cosmossdk.io/x/params v0.0.0-00010101000000-000000000000
@@ -83,8 +84,13 @@ require (
 	cloud.google.com/go/iam v1.1.13 // indirect
 	cloud.google.com/go/storage v1.43.0 // indirect
 	cosmossdk.io/depinject v1.1.0 // indirect
+	cosmossdk.io/indexer/postgres v0.0.0-20241128094659-bd76b47e1d8b // indirect
 	cosmossdk.io/schema v1.0.0 // indirect
+	cosmossdk.io/tools/benchmark v0.0.0-00010101000000-000000000000 // indirect
+	cosmossdk.io/x/circuit v0.0.0-20230613133644-0a778132a60f // indirect
 	cosmossdk.io/x/epochs v0.0.0-20240522060652-a1ae4c3e0337 // indirect
+	cosmossdk.io/x/group v0.0.0-00010101000000-000000000000 // indirect
+	cosmossdk.io/x/nft v0.0.0-20230613133644-0a778132a60f // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.2 // indirect
@@ -108,6 +114,7 @@ require (
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
+	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
 	github.com/cockroachdb/errors v1.11.3 // indirect
 	github.com/cockroachdb/fifo v0.0.0-20240816210425-c5d0cb0b6fc0 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
@@ -120,8 +127,8 @@ require (
 	github.com/cosmos/iavl v1.3.4 // indirect
 	github.com/cosmos/ics23/go v0.11.0 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.13.3 // indirect
-	github.com/creachadair/atomicfile v0.3.1 // indirect
-	github.com/creachadair/tomledit v0.0.24 // indirect
+	github.com/creachadair/atomicfile v0.3.6 // indirect
+	github.com/creachadair/tomledit v0.0.26 // indirect
 	github.com/danieljoos/wincred v1.2.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
@@ -181,6 +188,10 @@ require (
 	github.com/huin/goupnp v1.0.3 // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/pgx/v5 v5.7.1 // indirect
+	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
@@ -272,31 +283,33 @@ require (
 
 replace (
 	// release/v0.52.x
-	cosmossdk.io/client/v2 => github.com/mmsqe/cosmos-sdk/client/v2 v2.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/core => github.com/mmsqe/cosmos-sdk/core v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/store => github.com/mmsqe/cosmos-sdk/store v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/accounts => github.com/mmsqe/cosmos-sdk/x/accounts v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/accounts/defaults/lockup => github.com/mmsqe/cosmos-sdk/x/accounts/defaults/lockup v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/accounts/defaults/multisig => github.com/mmsqe/cosmos-sdk/x/accounts/defaults/multisig v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/authz => github.com/mmsqe/cosmos-sdk/x/authz v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/bank => github.com/mmsqe/cosmos-sdk/x/bank v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/circuit => github.com/mmsqe/cosmos-sdk/x/circuit v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/consensus => github.com/mmsqe/cosmos-sdk/x/consensus v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/distribution => github.com/mmsqe/cosmos-sdk/x/distribution v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/epochs => github.com/mmsqe/cosmos-sdk/x/epochs v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/evidence => github.com/mmsqe/cosmos-sdk/x/evidence v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/feegrant => github.com/mmsqe/cosmos-sdk/x/feegrant v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/gov => github.com/mmsqe/cosmos-sdk/x/gov v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/group => github.com/mmsqe/cosmos-sdk/x/group v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/mint => github.com/mmsqe/cosmos-sdk/x/mint v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/nft => github.com/mmsqe/cosmos-sdk/x/nft v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/params => github.com/mmsqe/cosmos-sdk/x/params v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/protocolpool => github.com/mmsqe/cosmos-sdk/x/protocolpool v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/slashing => github.com/mmsqe/cosmos-sdk/x/slashing v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/staking => github.com/mmsqe/cosmos-sdk/x/staking v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/tx => github.com/mmsqe/cosmos-sdk/x/tx v0.0.0-20250102081326-4d837aa8d473
-	cosmossdk.io/x/upgrade => github.com/mmsqe/cosmos-sdk/x/upgrade v0.0.0-20250102081326-4d837aa8d473
-	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.0-beta2.0.20250102081326-4d837aa8d473
+	cosmossdk.io/client/v2 => github.com/mmsqe/cosmos-sdk/client/v2 v2.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/core => github.com/mmsqe/cosmos-sdk/core v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/simapp => github.com/mmsqe/cosmos-sdk/simapp v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/store => github.com/mmsqe/cosmos-sdk/store v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/tools/benchmark => github.com/mmsqe/cosmos-sdk/tools/benchmark v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/accounts => github.com/mmsqe/cosmos-sdk/x/accounts v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/accounts/defaults/lockup => github.com/mmsqe/cosmos-sdk/x/accounts/defaults/lockup v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/accounts/defaults/multisig => github.com/mmsqe/cosmos-sdk/x/accounts/defaults/multisig v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/authz => github.com/mmsqe/cosmos-sdk/x/authz v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/bank => github.com/mmsqe/cosmos-sdk/x/bank v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/circuit => github.com/mmsqe/cosmos-sdk/x/circuit v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/consensus => github.com/mmsqe/cosmos-sdk/x/consensus v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/distribution => github.com/mmsqe/cosmos-sdk/x/distribution v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/epochs => github.com/mmsqe/cosmos-sdk/x/epochs v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/evidence => github.com/mmsqe/cosmos-sdk/x/evidence v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/feegrant => github.com/mmsqe/cosmos-sdk/x/feegrant v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/gov => github.com/mmsqe/cosmos-sdk/x/gov v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/group => github.com/mmsqe/cosmos-sdk/x/group v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/mint => github.com/mmsqe/cosmos-sdk/x/mint v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/nft => github.com/mmsqe/cosmos-sdk/x/nft v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/params => github.com/mmsqe/cosmos-sdk/x/params v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/protocolpool => github.com/mmsqe/cosmos-sdk/x/protocolpool v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/slashing => github.com/mmsqe/cosmos-sdk/x/slashing v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/staking => github.com/mmsqe/cosmos-sdk/x/staking v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/tx => github.com/mmsqe/cosmos-sdk/x/tx v0.0.0-20250103014041-79cc386fe744
+	cosmossdk.io/x/upgrade => github.com/mmsqe/cosmos-sdk/x/upgrade v0.0.0-20250103014041-79cc386fe744
+	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.0-beta2.0.20250103014041-79cc386fe744
 )
 
 replace (
