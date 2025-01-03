@@ -73,7 +73,7 @@ func (suite *GenesisTestSuite) TestInitGenesis() {
 					},
 				},
 			},
-			true,
+			false, // mmsqe
 		},
 		{
 			"invalid account type",
@@ -161,13 +161,13 @@ func (suite *GenesisTestSuite) TestInitGenesis() {
 			if tc.expPanic {
 				suite.Require().Panics(
 					func() {
-						_ = evm.InitGenesis(suite.Ctx, suite.App.EvmKeeper, suite.App.AuthKeeper, *tc.genState)
+						_ = evm.InitGenesis(suite.Ctx, suite.App.EvmKeeper, suite.App.AuthKeeper, suite.App.BankKeeper, *tc.genState)
 					},
 				)
 			} else {
 				suite.Require().NotPanics(
 					func() {
-						_ = evm.InitGenesis(suite.Ctx, suite.App.EvmKeeper, suite.App.AuthKeeper, *tc.genState)
+						_ = evm.InitGenesis(suite.Ctx, suite.App.EvmKeeper, suite.App.AuthKeeper, suite.App.BankKeeper, *tc.genState)
 					},
 				)
 			}

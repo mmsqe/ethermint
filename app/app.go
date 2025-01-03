@@ -608,7 +608,7 @@ func NewEthermintApp(
 		protocolpool.NewAppModule(appCodec, app.PoolKeeper, app.AuthKeeper, app.BankKeeper),
 		// Ethermint app modules
 		feemarket.NewAppModule(appCodec, app.FeeMarketKeeper, feeMarketSs),
-		evm.NewAppModule(appCodec, app.EvmKeeper, app.AuthKeeper, app.AuthKeeper.Accounts, evmSs),
+		evm.NewAppModule(appCodec, app.EvmKeeper, app.AuthKeeper, app.BankKeeper, app.AuthKeeper.Accounts, evmSs),
 	)
 
 	app.ModuleManager.RegisterLegacyAminoCodec(cdc)

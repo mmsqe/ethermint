@@ -114,17 +114,19 @@ type AppModule struct {
 	cdc      codec.Codec
 	keeper   *keeper.Keeper
 	ak       types.AccountKeeper
+	bk       types.BankKeeper
 	accounts *collections.IndexedMap[sdk.AccAddress, sdk.AccountI, authkeeper.AccountsIndexes]
 	// legacySubspace is used solely for migration of x/params managed parameters
 	legacySubspace types.Subspace
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(cdc codec.Codec, k *keeper.Keeper, ak types.AccountKeeper, accounts *collections.IndexedMap[sdk.AccAddress, sdk.AccountI, authkeeper.AccountsIndexes], ss types.Subspace) AppModule {
+func NewAppModule(cdc codec.Codec, k *keeper.Keeper, ak types.AccountKeeper, bk types.BankKeeper, accounts *collections.IndexedMap[sdk.AccAddress, sdk.AccountI, authkeeper.AccountsIndexes], ss types.Subspace) AppModule {
 	return AppModule{
 		cdc:            cdc,
 		keeper:         k,
 		ak:             ak,
+		bk:             bk,
 		accounts:       accounts,
 		legacySubspace: ss,
 	}
@@ -171,7 +173,7 @@ func (am AppModule) EndBlock(ctx context.Context) error {
 func (am AppModule) InitGenesis(ctx context.Context, data json.RawMessage) error {
 	var genesisState types.GenesisState
 	am.cdc.MustUnmarshalJSON(data, &genesisState)
-	InitGenesis(ctx, am.keeper, am.ak, genesisState)
+	InitGenesis(ctx, am.keeper, am.ak, am.bk, genesisState)
 	return nil
 }
 

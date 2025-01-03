@@ -35,6 +35,7 @@ func InitGenesis(
 	ctx context.Context,
 	k *keeper.Keeper,
 	accountKeeper types.AccountKeeper,
+	bankKeeper types.BankKeeper,
 	data types.GenesisState,
 ) []abci.ValidatorUpdate {
 	k.WithChainID(ctx)
@@ -52,12 +53,17 @@ func InitGenesis(
 	for _, account := range data.Accounts {
 		address := common.HexToAddress(account.Address)
 		accAddress := sdk.AccAddress(address.Bytes())
-		// check that the EVM balance the matches the account balance
+		// check that the EVM balance matches the account balance
+		balance := k.GetBalance(ctx, accAddress, data.Params.EvmDenom)
+		coin := bankKeeper.GetBalance(ctx, accAddress, data.Params.EvmDenom)
+		if coin.Amount.BigInt().Cmp(balance) != 0 {
+			// mmsqe
+			panic(fmt.Errorf("EVM balance %s doesn't match the account balance %s", balance, coin.Amount))
+		}
 		acc := accountKeeper.GetAccount(ctx, accAddress)
 		if acc == nil {
-			panic(fmt.Errorf("account not found for address %s", account.Address))
+			acc = accountKeeper.NewAccountWithAddress(ctx, accAddress)
 		}
-
 		ethAcct, ok := acc.(ethermint.EthAccountI)
 		if !ok {
 			panic(

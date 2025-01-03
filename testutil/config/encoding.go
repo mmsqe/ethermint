@@ -32,7 +32,7 @@ func MakeConfigForTest() types.EncodingConfig {
 		gov.NewAppModule(appCodec, &a.GovKeeper, a.AuthKeeper, a.BankKeeper, a.PoolKeeper),
 		staking.NewAppModule(appCodec, a.StakingKeeper),
 		// Ethermint modules
-		evm.NewAppModule(appCodec, a.EvmKeeper, a.AuthKeeper, a.AuthKeeper.Accounts, nil),
+		evm.NewAppModule(appCodec, a.EvmKeeper, a.AuthKeeper, a.BankKeeper, a.AuthKeeper.Accounts, nil),
 		feemarket.NewAppModule(appCodec, a.FeeMarketKeeper, nil),
 	)
 	moduleManager.RegisterLegacyAminoCodec(encodingConfig.Amino)
