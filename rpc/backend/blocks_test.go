@@ -1063,6 +1063,7 @@ func (suite *BackendTestSuite) TestGetEthBlockFromTendermint() {
 			true,
 		},
 	}
+
 	for _, tc := range testCases {
 		suite.Run(fmt.Sprintf("Case %s", tc.name), func() {
 			suite.SetupTest() // reset test and queries
@@ -1072,7 +1073,7 @@ func (suite *BackendTestSuite) TestGetEthBlockFromTendermint() {
 
 			var expBlock map[string]interface{}
 			header := tc.resBlock.Block.Header
-			gasLimit := int64(^uint32(0)) // for `MaxGas = -1` (DefaultConsensusParams)
+			gasLimit := tmtypes.DefaultBlockParams().MaxGas
 			gasUsed := new(big.Int).SetUint64(uint64(tc.blockRes.TxResults[0].GasUsed))
 
 			root := common.Hash{}.Bytes()

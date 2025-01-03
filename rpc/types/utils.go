@@ -107,10 +107,11 @@ func BlockMaxGasFromConsensusParams(goCtx context.Context, clientCtx client.Cont
 	if !ok {
 		panic("incorrect tm rpc client")
 	}
-
+	// https://github.com/cometbft/cometbft/blob/v1.0.0/types/params.go#L160
+	defaultMaxGas := tmtypes.DefaultBlockParams().MaxGas
 	resConsParams, err := tmrpcClient.ConsensusParams(goCtx, &blockHeight)
 	if err != nil {
-		return int64(^uint32(0)), err
+		return defaultMaxGas, err
 	}
 
 	gasLimit := resConsParams.ConsensusParams.Block.MaxGas
@@ -118,7 +119,7 @@ func BlockMaxGasFromConsensusParams(goCtx context.Context, clientCtx client.Cont
 		// Sets gas limit to max uint32 to not error with javascript dev tooling
 		// This -1 value indicating no block gas limit is set to max uint64 with geth hexutils
 		// which errors certain javascript dev tooling which only supports up to 53 bits
-		gasLimit = int64(^uint32(0))
+		gasLimit = defaultMaxGas
 	}
 
 	return gasLimit, nil

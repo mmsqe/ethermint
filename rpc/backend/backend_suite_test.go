@@ -10,6 +10,7 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 
 	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -131,7 +132,7 @@ func (suite *BackendTestSuite) buildFormattedBlock(
 	baseFee *big.Int,
 ) map[string]interface{} {
 	header := resBlock.Block.Header
-	gasLimit := int64(^uint32(0)) // for `MaxGas = -1` (DefaultConsensusParams)
+	gasLimit := cmttypes.DefaultBlockParams().MaxGas
 	gasUsed := new(big.Int).SetUint64(uint64(blockRes.TxResults[0].GasUsed))
 
 	root := common.Hash{}.Bytes()
