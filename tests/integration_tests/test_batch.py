@@ -88,10 +88,6 @@ def test_multisig(ethermint, tmp_path):
     assert rsp["code"] == 0, rsp["raw_log"]
     assert cli.balance(multi_addr, denom=denom) == amt
 
-    acc = cli.account(multi_addr)["account"]["value"]["base_account"]
-    res = cli.account_by_num(acc["account_number"])
-    assert res["account_address"] == multi_addr
-
     m_txt = tmp_path / "m.txt"
     p1_txt = tmp_path / "p1.txt"
     p2_txt = tmp_path / "p2.txt"
@@ -120,8 +116,12 @@ def test_multisig(ethermint, tmp_path):
     assert rsp["code"] == 0, rsp["raw_log"]
     assert (
         cli.account(multi_addr)["account"]["value"]["base_account"]["address"]
-        == acc["address"]
+        == multi_addr
     )
+
+    acc = cli.account(multi_addr)["account"]["value"]["base_account"]
+    res = cli.account_by_num(acc["account_number"])
+    assert res["account_address"] == multi_addr
 
 
 def test_textual(ethermint):
