@@ -10,6 +10,7 @@ import (
 	"cosmossdk.io/store/rootmulti"
 	storetypes "cosmossdk.io/store/types"
 	"cosmossdk.io/x/accounts"
+	authzkeeper "cosmossdk.io/x/authz/keeper"
 	bankkeeper "cosmossdk.io/x/bank/keeper"
 	banktypes "cosmossdk.io/x/bank/types"
 	govtypes "cosmossdk.io/x/gov/types"
@@ -765,8 +766,12 @@ func CollectContractStorage(db vm.StateDB, address common.Address) statedb.Stora
 }
 
 var (
-	testStoreKeys = storetypes.NewKVStoreKeys(authtypes.StoreKey, banktypes.StoreKey, evmtypes.StoreKey, "testnative")
-	testObjKeys   = storetypes.NewObjectStoreKeys(banktypes.ObjectStoreKey, evmtypes.ObjectStoreKey)
+	testStoreKeys = storetypes.NewKVStoreKeys(
+		authtypes.StoreKey, banktypes.StoreKey, evmtypes.StoreKey,
+		accounts.StoreKey,
+		authzkeeper.StoreKey,
+		"testnative")
+	testObjKeys = storetypes.NewObjectStoreKeys(banktypes.ObjectStoreKey, evmtypes.ObjectStoreKey)
 )
 
 func cloneRawState(t *testing.T, cms storetypes.MultiStore) map[string]map[string][]byte {
@@ -792,12 +797,9 @@ func newTestKeeper(t *testing.T, cms storetypes.MultiStore) (sdk.Context, *evmke
 	encodingConfig := config.MakeConfigForTest()
 	appCodec := encodingConfig.Codec
 	authAddr := authtypes.NewModuleAddress(govtypes.ModuleName).String()
-	keys := storetypes.NewKVStoreKeys(
-		authtypes.StoreKey, banktypes.StoreKey, accounts.StoreKey,
-	)
 	accountsKeeper, err := accounts.NewKeeper(
 		appCodec,
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[accounts.StoreKey]), log.NewNopLogger()),
+		runtime.NewEnvironment(runtime.NewKVStoreService(testStoreKeys[accounts.StoreKey]), log.NewNopLogger()),
 		encodingConfig.AddressCodec,
 		appCodec.InterfaceRegistry(),
 		nil,
@@ -805,7 +807,7 @@ func newTestKeeper(t *testing.T, cms storetypes.MultiStore) (sdk.Context, *evmke
 
 	require.NoError(t, err)
 	accountKeeper := authkeeper.NewAccountKeeper(
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[authtypes.StoreKey]), log.NewNopLogger()),
+		runtime.NewEnvironment(runtime.NewKVStoreService(testStoreKeys[authtypes.StoreKey]), log.NewNopLogger()),
 		appCodec,
 		ethermint.ProtoAccount,
 		accountsKeeper,
@@ -817,7 +819,7 @@ func newTestKeeper(t *testing.T, cms storetypes.MultiStore) (sdk.Context, *evmke
 		authAddr,
 	)
 	bankKeeper := bankkeeper.NewBaseKeeper(
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[banktypes.StoreKey]), log.NewNopLogger()),
+		runtime.NewEnvironment(runtime.NewKVStoreService(testStoreKeys[banktypes.StoreKey]), log.NewNopLogger()),
 		appCodec,
 		testObjKeys[banktypes.ObjectStoreKey],
 		accountKeeper,
@@ -826,7 +828,7 @@ func newTestKeeper(t *testing.T, cms storetypes.MultiStore) (sdk.Context, *evmke
 	)
 	evmKeeper := evmkeeper.NewKeeper(
 		appCodec,
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[evmtypes.StoreKey]), log.NewNopLogger()),
+		runtime.NewEnvironment(runtime.NewKVStoreService(testStoreKeys[evmtypes.StoreKey]), log.NewNopLogger()),
 		testStoreKeys[evmtypes.StoreKey], testObjKeys[evmtypes.ObjectStoreKey], authtypes.NewModuleAddress(govtypes.ModuleName),
 		accountKeeper, bankKeeper, nil, nil,
 		"",
