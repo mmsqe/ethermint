@@ -3,7 +3,7 @@
 , rev ? "dirty"
 }:
 let
-  version = "v0.20.0-rc2";
+  version = "sdk52";
   pname = "ethermintd";
   tags = [ "netgo" ];
   ldflags = lib.concatStringsSep "\n" ([

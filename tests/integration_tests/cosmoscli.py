@@ -695,6 +695,35 @@ class CosmosCLI:
                     )
                 )
 
+    def software_upgrade(self, proposer, proposal, **kwargs):
+        kwargs.setdefault("gas_prices", DEFAULT_GAS_PRICE)
+        kwargs.setdefault("gas", DEFAULT_GAS)
+        rsp = json.loads(
+            self.raw(
+                "tx",
+                "upgrade",
+                "software-upgrade",
+                proposal["name"],
+                "-y",
+                "--no-validate",
+                from_=proposer,
+                # content
+                title=proposal.get("title"),
+                note=proposal.get("note"),
+                upgrade_height=proposal.get("upgrade-height"),
+                upgrade_time=proposal.get("upgrade-time"),
+                upgrade_info=proposal.get("upgrade-info"),
+                summary=proposal.get("summary"),
+                deposit=proposal.get("deposit"),
+                # basic
+                home=self.data_dir,
+                **kwargs,
+            )
+        )
+        if rsp["code"] == 0:
+            rsp = self.event_query_tx_for(rsp["txhash"])
+        return rsp
+
     def gov_vote(self, voter, proposal_id, option, **kwargs):
         kwargs.setdefault("gas_prices", DEFAULT_GAS_PRICE)
         kwargs.setdefault("broadcast_mode", "sync")
@@ -812,15 +841,15 @@ class CosmosCLI:
     def build_evm_tx(self, raw_tx: str, **kwargs):
         return json.loads(
             self.raw(
-                "tx",
-                "evm",
-                "raw",
-                raw_tx,
-                "-y",
-                "--generate-only",
-                home=self.data_dir,
-                **kwargs,
-            )
+            "tx",
+            "evm",
+            "raw",
+            raw_tx,
+            "-y",
+            "--generate-only",
+            home=self.data_dir,
+            **kwargs,
+        )
         )
 
     def query_base_fee(self, **kwargs):

@@ -24,17 +24,17 @@ import (
 	"cosmossdk.io/x/accounts"
 	pooltypes "cosmossdk.io/x/protocolpool/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 )
 
 func (app *EthermintApp) RegisterUpgradeHandlers() {
 	planName := "sdk52"
 	app.UpgradeKeeper.SetUpgradeHandler(planName,
 		func(ctx context.Context, _ upgradetypes.Plan, fromVM appmodule.VersionMap) (appmodule.VersionMap, error) {
-			m, err := app.ModuleManager.RunMigrations(ctx, app.configurator, fromVM)
-			if err != nil {
-				return m, err
+			if err := authkeeper.MigrateAccountNumberUnsafe(ctx, &app.AuthKeeper); err != nil {
+				return nil, err
 			}
-			return m, nil
+			return app.ModuleManager.RunMigrations(ctx, app.configurator, fromVM)
 		},
 	)
 
@@ -46,8 +46,8 @@ func (app *EthermintApp) RegisterUpgradeHandlers() {
 		if upgradeInfo.Name == planName {
 			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &corestore.StoreUpgrades{
 				Added: []string{
-					pooltypes.ModuleName,
-					accounts.ModuleName,
+					pooltypes.StoreKey,
+					accounts.StoreKey,
 				},
 				Deleted: []string{"ibc"},
 			}))

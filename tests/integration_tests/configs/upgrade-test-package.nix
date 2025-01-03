@@ -8,9 +8,11 @@ let
     };
   }).defaultNix;
   released = (fetchFlake "crypto-org-chain/ethermint" "b216a320ac6a60b019c1cbe5a6b730856482f071").default;
+  sdk50 = (fetchFlake "crypto-org-chain/ethermint" "21bd7ce300e825f5b58639920df142a84f4c8637").default;
   current = pkgs.callPackage ../../../. { };
 in
 pkgs.linkFarm "upgrade-test-package" [
   { name = "genesis"; path = released; }
-  { name = "sdk50"; path = current; }
+  { name = "sdk50"; path = sdk50; }
+  { name = "sdk52"; path = current; }
 ]
