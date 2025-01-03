@@ -2,6 +2,7 @@ package ante_test
 
 import (
 	"context"
+	"errors"
 	"math"
 	"math/big"
 	"time"
@@ -20,6 +21,7 @@ import (
 	banktypes "cosmossdk.io/x/bank/types"
 	govv1 "cosmossdk.io/x/gov/types/v1"
 	stakingtypes "cosmossdk.io/x/staking/types"
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/evmos/ethermint/app"
 	cmdcfg "github.com/evmos/ethermint/cmd/config"
 	"github.com/evmos/ethermint/ethereum/eip712"
@@ -710,3 +712,5 @@ func (invalidTx) GetMsgs() []sdk.Msg { return []sdk.Msg{nil} }
 func (invalidTx) GetMsgsV2() ([]protov2.Message, error) { return nil, nil }
 
 func (invalidTx) ValidateBasic() error { return nil }
+
+func (invalidTx) AsTx() (*txtypes.Tx, error) { return nil, errors.New("invalid tx") }
