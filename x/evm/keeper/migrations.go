@@ -39,15 +39,15 @@ func NewMigrator(keeper Keeper, legacySubspace types.Subspace) Migrator {
 
 // Migrate3to4 migrates the store from consensus version 3 to 4
 func (m Migrator) Migrate3to4(ctx sdk.Context) error {
-	return v4.MigrateStore(ctx, m.keeper.storeKey, m.legacySubspace, m.keeper.cdc)
+	return v4.MigrateStore(ctx, m.keeper.KVStoreService, m.legacySubspace, m.keeper.cdc)
 }
 
 // Migrate4to5 migrates the store from consensus version 4 to 5
 func (m Migrator) Migrate4to5(ctx sdk.Context) error {
-	return v5.MigrateStore(ctx, m.keeper.storeKey, m.keeper.cdc)
+	return v5.MigrateStore(ctx, m.keeper.KVStoreService, m.keeper.cdc)
 }
 
 // Migrate5to6 migrates the store from consensus version 5 to 6
 func (m Migrator) Migrate5to6(ctx sdk.Context) error {
-	return v6.MigrateStore(ctx, m.keeper.storeKey, m.keeper.cdc)
+	return v6.MigrateStore(ctx, m.keeper.KVStoreService, m.keeper.cdc)
 }

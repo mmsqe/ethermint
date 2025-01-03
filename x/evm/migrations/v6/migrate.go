@@ -1,9 +1,10 @@
 package v6
 
 import (
+	corestore "cosmossdk.io/core/store"
 	sdkmath "cosmossdk.io/math"
-	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	v4types "github.com/evmos/ethermint/x/evm/migrations/v4/types"
 	"github.com/evmos/ethermint/x/evm/types"
@@ -14,14 +15,14 @@ import (
 // ShanghaiTime, CancunTime and PragueTime.
 func MigrateStore(
 	ctx sdk.Context,
-	storeKey storetypes.StoreKey,
+	storeService corestore.KVStoreService,
 	cdc codec.BinaryCodec,
 ) error {
 	var (
 		params    v4types.V4Params
 		newParams types.Params
 	)
-	store := ctx.KVStore(storeKey)
+	store := runtime.KVStoreAdapter(storeService.OpenKVStore(ctx))
 	bz := store.Get(types.KeyPrefixParams)
 	cdc.MustUnmarshal(bz, &params)
 	newParams = params.ToParams()

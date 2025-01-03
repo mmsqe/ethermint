@@ -1,8 +1,9 @@
 package v5
 
 import (
-	storetypes "cosmossdk.io/store/types"
+	corestore "cosmossdk.io/core/store"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	v0types "github.com/evmos/ethermint/x/evm/migrations/v0/types"
 	v4types "github.com/evmos/ethermint/x/evm/migrations/v4/types"
@@ -15,7 +16,7 @@ import (
 // a single params key.
 func MigrateStore(
 	ctx sdk.Context,
-	storeKey storetypes.StoreKey,
+	storeService corestore.KVStoreService,
 	cdc codec.BinaryCodec,
 ) error {
 	var (
@@ -23,7 +24,7 @@ func MigrateStore(
 		extraEIPs   v4types.ExtraEIPs
 		params      v4types.V4Params
 	)
-	store := ctx.KVStore(storeKey)
+	store := runtime.KVStoreAdapter(storeService.OpenKVStore(ctx))
 	chainCfgBz := store.Get(v0types.ParamStoreKeyChainConfig)
 	cdc.MustUnmarshal(chainCfgBz, &chainConfig)
 	params.ChainConfig = chainConfig

@@ -3,7 +3,9 @@ package v4_test
 import (
 	"testing"
 
+	coretesting "cosmossdk.io/core/testing"
 	storetypes "cosmossdk.io/store/types"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/evmos/ethermint/encoding"
@@ -38,10 +40,11 @@ func TestMigrate(t *testing.T) {
 	kvStore := ctx.KVStore(storeKey)
 
 	legacySubspaceEmpty := newMockSubspaceEmpty()
-	require.Error(t, v4.MigrateStore(ctx, storeKey, legacySubspaceEmpty, cdc))
+	env := runtime.NewEnvironment(runtime.NewKVStoreService(storeKey), coretesting.NewNopLogger())
+	require.Error(t, v4.MigrateStore(ctx, env.KVStoreService, legacySubspaceEmpty, cdc))
 
 	legacySubspace := newMockSubspace(types.DefaultParams())
-	require.NoError(t, v4.MigrateStore(ctx, storeKey, legacySubspace, cdc))
+	require.NoError(t, v4.MigrateStore(ctx, env.KVStoreService, legacySubspace, cdc))
 
 	paramsBz := kvStore.Get(types.ParamsKey)
 	var params types.Params
