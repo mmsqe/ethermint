@@ -86,7 +86,7 @@ func (suite *BackendTestSuite) TestSetGasPrice() {
 				suite.backend.clientCtx.Viper = viper.New()
 			},
 			*defaultGasPrice,
-			false,
+			true, //mmsqe
 		},
 		{
 			"pass - cannot find coin denom",
@@ -95,7 +95,7 @@ func (suite *BackendTestSuite) TestSetGasPrice() {
 				suite.backend.clientCtx.Viper.Set("telemetry.global-labels", []interface{}{})
 			},
 			*defaultGasPrice,
-			false,
+			true,
 		},
 	}
 

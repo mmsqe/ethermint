@@ -278,6 +278,7 @@ func (b *Backend) SetGasPrice(gasPrice hexutil.Big) bool {
 
 	// use default base denom in case it's not currently defined on the node config
 	if len(minGasPrices) == 0 || minGasPrices.Empty() {
+		// mmsqe stakingKeeper.BondDenom
 		unit = ethermint.AttoPhoton
 	} else {
 		unit = minGasPrices[0].Denom
