@@ -21,7 +21,6 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 	"github.com/cometbft/cometbft/libs/bytes"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -206,11 +205,7 @@ func (b *Backend) GetTransactionCount(address common.Address, blockNum rpctypes.
 		)
 	}
 	// Get nonce (sequence) from account
-	from := sdk.AccAddress(address.Bytes())
-	accRet := b.clientCtx.AccountRetriever
-
-	err = accRet.EnsureExists(b.clientCtx, from)
-	if err != nil {
+	if err := b.clientCtx.AccountRetriever.EnsureExists(b.clientCtx, address.Bytes()); err != nil {
 		// account doesn't exist yet, return 0
 		return &n, nil
 	}
