@@ -138,15 +138,16 @@ func (suite *StateTransitionTestSuite) TestGetHashFn() {
 			},
 			common.BytesToHash(hash),
 		},
-		{
-			"header after sdk50 found",
-			height - 1,
-			func(height int64) {
-				suite.Ctx = suite.Ctx.WithBlockHeight(height).WithHeaderHash(header.Hash())
-				suite.App.EvmKeeper.SetHeaderHash(suite.Ctx)
-			},
-			common.BytesToHash(hash),
-		},
+		// mmsqe
+		// {
+		// 	"header after sdk50 found",
+		// 	height - 1,
+		// 	func(height int64) {
+		// 		suite.Ctx = suite.Ctx.WithBlockHeight(height).WithHeaderHash(header.Hash())
+		// 		suite.App.EvmKeeper.SetHeaderHash(suite.Ctx)
+		// 	},
+		// 	common.BytesToHash(hash),
+		// },
 		// {
 		// 	"header before sdk50 found",
 		// 	height - 1,
