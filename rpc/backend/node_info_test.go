@@ -86,7 +86,7 @@ func (suite *BackendTestSuite) TestSetGasPrice() {
 				suite.backend.clientCtx.Viper = viper.New()
 			},
 			*defaultGasPrice,
-			false, //mmsqe
+			false,
 		},
 		{
 			"pass - cannot find coin denom",

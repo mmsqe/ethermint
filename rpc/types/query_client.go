@@ -25,6 +25,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 
+	stakingtypes "cosmossdk.io/x/staking/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 )
@@ -37,6 +38,7 @@ type QueryClient struct {
 	tx.ServiceClient
 	evmtypes.QueryClient
 	FeeMarket feemarkettypes.QueryClient
+	Staking   stakingtypes.QueryClient
 }
 
 // NewQueryClient creates a new gRPC query client
@@ -45,6 +47,7 @@ func NewQueryClient(clientCtx client.Context) *QueryClient {
 		ServiceClient: tx.NewServiceClient(clientCtx),
 		QueryClient:   evmtypes.NewQueryClient(clientCtx),
 		FeeMarket:     feemarkettypes.NewQueryClient(clientCtx),
+		Staking:       stakingtypes.NewQueryClient(clientCtx),
 	}
 }
 

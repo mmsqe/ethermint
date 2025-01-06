@@ -23,6 +23,7 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 	distributiontypes "cosmossdk.io/x/distribution/types"
+	stakingtypes "cosmossdk.io/x/staking/types"
 	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -278,8 +279,12 @@ func (b *Backend) SetGasPrice(gasPrice hexutil.Big) bool {
 
 	// use default base denom in case it's not currently defined on the node config
 	if len(minGasPrices) == 0 || minGasPrices.Empty() {
-		// mmsqe stakingKeeper.BondDenom
-		unit = ethermint.AttoPhoton
+		params, err := b.queryClient.Staking.Params(b.ctx, &stakingtypes.QueryParamsRequest{})
+		if err != nil {
+			b.logger.Debug("could not get the denom of smallest unit registered", "error", err.Error())
+			return false
+		}
+		unit = params.Params.GetBondDenom()
 	} else {
 		unit = minGasPrices[0].Denom
 	}
