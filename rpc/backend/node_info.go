@@ -269,7 +269,7 @@ func (b *Backend) NewMnemonic(uid string,
 func (b *Backend) SetGasPrice(gasPrice hexutil.Big) bool {
 	appConf, err := config.GetConfig(b.clientCtx.Viper)
 	if err != nil {
-		b.logger.Debug("could not get the server config", "error", err.Error())
+		b.logger.Error("could not get the server config", "error", err.Error())
 		return false
 	}
 
@@ -287,7 +287,10 @@ func (b *Backend) SetGasPrice(gasPrice hexutil.Big) bool {
 	c := sdk.NewDecCoin(unit, sdkmath.NewIntFromBigInt(gasPrice.ToInt()))
 
 	appConf.SetMinGasPrices(sdk.DecCoins{c})
-	sdkconfig.WriteConfigFile(b.clientCtx.Viper.ConfigFileUsed(), appConf)
+	if err := sdkconfig.WriteConfigFile(b.clientCtx.Viper.ConfigFileUsed(), appConf); err != nil {
+		b.logger.Error("could not set the server config", "error", err.Error())
+		return false
+	}
 	b.logger.Info("Your configuration file was modified. Please RESTART your node.", "gas-price", c.String())
 	return true
 }

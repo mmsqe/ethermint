@@ -86,7 +86,7 @@ func (am AppModule) ValidateGenesis(bz json.RawMessage) error {
 func (AppModule) RegisterRESTRoutes(_ client.Context, _ *mux.Router) {
 }
 
-func (b AppModule) RegisterGRPCGatewayRoutes(c client.Context, serveMux *runtime.ServeMux) {
+func (AppModule) RegisterGRPCGatewayRoutes(c client.Context, serveMux *runtime.ServeMux) {
 	if err := types.RegisterQueryHandlerClient(context.Background(), serveMux, types.NewQueryClient(c)); err != nil {
 		panic(err)
 	}
@@ -121,7 +121,14 @@ type AppModule struct {
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(cdc codec.Codec, k *keeper.Keeper, ak types.AccountKeeper, bk types.BankKeeper, accounts *collections.IndexedMap[sdk.AccAddress, sdk.AccountI, authkeeper.AccountsIndexes], ss types.Subspace) AppModule {
+func NewAppModule(
+	cdc codec.Codec,
+	k *keeper.Keeper,
+	ak types.AccountKeeper,
+	bk types.BankKeeper,
+	accounts *collections.IndexedMap[sdk.AccAddress, sdk.AccountI, authkeeper.AccountsIndexes],
+	ss types.Subspace,
+) AppModule {
 	return AppModule{
 		cdc:            cdc,
 		keeper:         k,
@@ -139,7 +146,7 @@ func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {
 
 // RegisterServices registers a GRPC query service to respond to the
 // module-specific GRPC queries.
-func (am AppModule) RegisterServices(cfg module.Configurator) {
+func (am AppModule) RegisterServices(cfg module.Configurator) { //nolint:staticcheck // SA1019: Configurator is still used in runtime v1.
 	types.RegisterMsgServer(cfg.MsgServer(), am.keeper)
 	types.RegisterQueryServer(cfg.QueryServer(), am.keeper)
 
@@ -180,7 +187,7 @@ func (am AppModule) InitGenesis(ctx context.Context, data json.RawMessage) error
 // ExportGenesis returns the exported genesis state as raw bytes for the evm
 // module.
 func (am AppModule) ExportGenesis(ctx context.Context) (json.RawMessage, error) {
-	gs := ExportGenesis(ctx, am.keeper, am.ak, am.accounts)
+	gs := ExportGenesis(ctx, am.keeper, am.accounts)
 	return am.cdc.MarshalJSON(gs)
 }
 

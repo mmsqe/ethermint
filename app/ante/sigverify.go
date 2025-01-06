@@ -22,7 +22,6 @@ import (
 	txsigning "cosmossdk.io/x/tx/signing"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	secp256k1dcrd "github.com/decred/dcrd/dcrec/secp256k1/v4"
@@ -40,11 +39,11 @@ func VerifyEthSig(msgs []sdk.Msg, signer ethtypes.Signer) error {
 	for _, msg := range msgs {
 		msgEthTx, ok := msg.(*evmtypes.MsgEthereumTx)
 		if !ok {
-			return errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
+			return errorsmod.Wrapf(sdkerrors.ErrUnknownRequest, "invalid message type %T, expected %T", msg, (*evmtypes.MsgEthereumTx)(nil))
 		}
 
 		if err := msgEthTx.VerifySender(signer); err != nil {
-			return errorsmod.Wrapf(errortypes.ErrorInvalidSigner, "signature verification failed: %s", err.Error())
+			return errorsmod.Wrapf(sdkerrors.ErrorInvalidSigner, "signature verification failed: %s", err.Error())
 		}
 	}
 

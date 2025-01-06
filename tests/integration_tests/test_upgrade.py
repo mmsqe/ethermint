@@ -203,7 +203,6 @@ def test_cosmovisor_upgrade(custom_ethermint: Ethermint, tmp_path):
         res = contract.caller.getBlockHash(h).hex()
         assert f"0x{res}" == "0x" + "0" * 64, res
 
-
     target_height = w3.eth.block_number + 10
     print("upgrade height", target_height)
 
@@ -232,7 +231,7 @@ def test_cosmovisor_upgrade(custom_ethermint: Ethermint, tmp_path):
     # block should pass the target height
     wait_for_block(cli, target_height + 1, timeout=480)
     wait_for_port(ports.rpc_port(custom_ethermint.base_port(0)))
-    
+
     # check basic tx works
     receipt = send_transaction(
         custom_ethermint.w3,

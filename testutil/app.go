@@ -21,6 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	gogotypes "github.com/cosmos/gogoproto/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/evmos/ethermint/app"
@@ -102,7 +103,7 @@ func SetupWithDBAndOpts(
 		// Initialize the chain
 		consensusParams := DefaultConsensusParams
 		initialHeight := app.LastBlockHeight() + 1
-		consensusParams.Abci = &cmtproto.ABCIParams{VoteExtensionsEnableHeight: initialHeight}
+		consensusParams.Feature = &cmtproto.FeatureParams{VoteExtensionsEnableHeight: &gogotypes.Int64Value{Value: initialHeight}}
 		if _, err := app.InitChain(
 			&abci.InitChainRequest{
 				ChainId:         ChainID,

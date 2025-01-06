@@ -18,10 +18,11 @@ package network
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/http"
 	"net/url"
 	"os"
@@ -133,7 +134,11 @@ type Config struct {
 // testing requirements.
 func DefaultConfig() Config {
 	encCfg := testutilconfig.MakeConfigForTest()
-	chainID := fmt.Sprintf("ethermint_%d-1", rand.Int63n(9999999999999)+1)
+	i, err := rand.Int(rand.Reader, new(big.Int).SetInt64(int64(9999999999999)))
+	if err != nil {
+		panic(err)
+	}
+	chainID := fmt.Sprintf("ethermint_%d-1", i.Int64()+1)
 	return Config{
 		Codec:             encCfg.Codec,
 		TxConfig:          encCfg.TxConfig,
@@ -497,8 +502,12 @@ func New(l Logger, baseDir string, cfg Config, keyType string) (*Network, error)
 		}
 
 		customAppTemplate, _ := config.AppConfig(ethermint.AttoPhoton)
-		srvconfig.SetConfigTemplate(customAppTemplate)
-		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appCfg)
+		if err := srvconfig.SetConfigTemplate(customAppTemplate); err != nil {
+			return nil, err
+		}
+		if err := srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appCfg); err != nil {
+			return nil, err
+		}
 
 		ctx.Viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 		ctx.Viper.SetConfigFile(filepath.Join(nodeDir, "config/app.toml"))

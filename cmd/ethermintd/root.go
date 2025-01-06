@@ -47,7 +47,6 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	banktypes "cosmossdk.io/x/bank/types"
 	txsigning "cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
@@ -122,9 +121,9 @@ func NewRootCmd() (cmd *cobra.Command, cfg ethermint.EncodingConfig) {
 			// sets the RPC client needed for SIGN_MODE_TEXTUAL. This sign mode
 			// is only available if the client is online.
 			if !initClientCtx.Offline {
-				enabledSignModes := append(tx.DefaultSignModes, signing.SignMode_SIGN_MODE_TEXTUAL)
+				enabledSignModes := tx.DefaultSignModes
 				txConfigOpts := tx.ConfigOptions{
-					EnabledSignModes:           enabledSignModes,
+					EnabledSignModes:           append(enabledSignModes, signing.SignMode_SIGN_MODE_TEXTUAL),
 					TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(initClientCtx),
 					SigningOptions: &txsigning.Options{
 						AddressCodec:          initClientCtx.InterfaceRegistry.SigningContext().AddressCodec(),
@@ -180,7 +179,7 @@ func initRootCmd(
 			genutilcli.InitCmd(moduleManager),
 		),
 		cmtcli.NewCompletionCmd(rootCmd, true),
-		ethermintclient.NewTestnetCmd(*moduleManager, banktypes.GenesisBalancesIterator{}),
+		ethermintclient.NewTestnetCmd(*moduleManager),
 		debug.Cmd(),
 		confixcmd.ConfigCommand(),
 		pruning.Cmd(newApp),
@@ -198,9 +197,7 @@ func initRootCmd(
 		txCommand(),
 		ethermintclient.KeyCommands(app.DefaultNodeHome),
 	)
-
-	rootCmd, err := srvflags.AddGlobalFlags(rootCmd)
-	if err != nil {
+	if _, err := srvflags.AddGlobalFlags(rootCmd); err != nil {
 		panic(err)
 	}
 }

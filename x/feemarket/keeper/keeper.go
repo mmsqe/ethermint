@@ -20,7 +20,6 @@ import (
 	"math/big"
 
 	"cosmossdk.io/core/appmodule"
-	storetypes "cosmossdk.io/store/types"
 	paramstypes "cosmossdk.io/x/params/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -36,8 +35,6 @@ type Keeper struct {
 
 	// Protobuf codec
 	cdc codec.BinaryCodec
-	// Store key required for the Fee Market Prefix KVStore.
-	storeKey storetypes.StoreKey
 	// the address capable of executing a MsgUpdateParams message. Typically, this should be the x/gov module account.
 	authority sdk.AccAddress
 	// Legacy subspace
@@ -68,7 +65,9 @@ func NewKeeper(
 // CONTRACT: this should be only called during EndBlock.
 func (k Keeper) SetBlockGasWanted(ctx context.Context, gas uint64) {
 	gasBz := sdk.Uint64ToBigEndian(gas)
-	k.KVStoreService.OpenKVStore(ctx).Set(types.KeyPrefixBlockGasWanted, gasBz)
+	if err := k.KVStoreService.OpenKVStore(ctx).Set(types.KeyPrefixBlockGasWanted, gasBz); err != nil {
+		panic(err)
+	}
 }
 
 // GetBlockGasWanted returns the last block gas wanted value from the store.

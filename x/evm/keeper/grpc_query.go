@@ -314,7 +314,7 @@ func (k Keeper) EstimateGas(c context.Context, req *types.EthCallRequest) (*type
 		hi = uint64(*args.Gas)
 	} else {
 		// Query block gas limit
-		params := ctx.ConsensusParams()
+		params := ctx.ConsensusParams() //nolint:staticcheck // ignore linting error
 		if params.Block != nil && params.Block.MaxGas > 0 {
 			hi, err = ethermint.SafeUint64(params.Block.MaxGas)
 			if err != nil {

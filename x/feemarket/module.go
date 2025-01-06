@@ -84,7 +84,7 @@ func (am AppModule) ValidateGenesis(bz json.RawMessage) error {
 func (AppModule) RegisterRESTRoutes(_ client.Context, _ *mux.Router) {
 }
 
-func (b AppModule) RegisterGRPCGatewayRoutes(c client.Context, serveMux *runtime.ServeMux) {
+func (AppModule) RegisterGRPCGatewayRoutes(c client.Context, serveMux *runtime.ServeMux) {
 	if err := types.RegisterQueryHandlerClient(context.Background(), serveMux, types.NewQueryClient(c)); err != nil {
 		panic(err)
 	}
@@ -130,7 +130,7 @@ func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
 // RegisterServices registers the GRPC query service and migrator service to respond to the
 // module-specific GRPC queries and handle the upgrade store migration for the module.
-func (am AppModule) RegisterServices(cfg module.Configurator) {
+func (am AppModule) RegisterServices(cfg module.Configurator) { //nolint:staticcheck // SA1019: Configurator is still used in runtime v1.
 	types.RegisterQueryServer(cfg.QueryServer(), am.keeper)
 	types.RegisterMsgServer(cfg.MsgServer(), &am.keeper)
 

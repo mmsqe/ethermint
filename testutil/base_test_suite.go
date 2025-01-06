@@ -154,7 +154,9 @@ func (suite *BaseTestSuiteWithAccount) PostSetupValidator(t require.TestingT) st
 		BaseAccount: authtypes.NewBaseAccount(sdk.AccAddress(suite.Address.Bytes()), nil, 0, 0),
 		CodeHash:    common.BytesToHash(crypto.Keccak256(nil)).String(),
 	}
-	acc.AccountNumber = suite.App.AuthKeeper.NextAccountNumber(suite.Ctx)
+	var err error
+	acc.AccountNumber, err = suite.App.AuthKeeper.AccountsModKeeper.NextAccountNumber(suite.Ctx)
+	require.NoError(t, err)
 	suite.App.AuthKeeper.SetAccount(suite.Ctx, acc)
 	valAddr := sdk.ValAddress(suite.Address.Bytes())
 	validator, err := stakingtypes.NewValidator(valAddr.String(), suite.ConsPubKey, stakingtypes.Description{})

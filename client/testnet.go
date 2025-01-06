@@ -19,15 +19,13 @@ package client
 
 import (
 	"bufio"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net"
 	"os"
 	"path/filepath"
-
-	"github.com/ethereum/go-ethereum/common"
-
-	"math/rand"
 
 	tmconfig "github.com/cometbft/cometbft/config"
 	"github.com/cometbft/cometbft/types"
@@ -53,14 +51,13 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/evmos/ethermint/crypto/hd"
 	"github.com/evmos/ethermint/server/config"
 	srvflags "github.com/evmos/ethermint/server/flags"
+	"github.com/evmos/ethermint/testutil/network"
 	ethermint "github.com/evmos/ethermint/types"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
-
-	"github.com/evmos/ethermint/testutil/network"
 )
 
 var (
@@ -114,7 +111,7 @@ func addTestnetFlagsToCmd(cmd *cobra.Command) {
 
 // NewTestnetCmd creates a root testnet command with subcommands to run an in-process testnet or initialize
 // validator configuration files for running a multi-validator testnet in a separate process
-func NewTestnetCmd(mbm module.Manager, genBalIterator banktypes.GenesisBalancesIterator) *cobra.Command {
+func NewTestnetCmd(mbm module.Manager) *cobra.Command {
 	testnetCmd := &cobra.Command{
 		Use:                        "testnet",
 		Short:                      "subcommands for starting or configuring local testnets",
@@ -124,13 +121,13 @@ func NewTestnetCmd(mbm module.Manager, genBalIterator banktypes.GenesisBalancesI
 	}
 
 	testnetCmd.AddCommand(testnetStartCmd())
-	testnetCmd.AddCommand(testnetInitFilesCmd(mbm, genBalIterator))
+	testnetCmd.AddCommand(testnetInitFilesCmd(mbm))
 
 	return testnetCmd
 }
 
 // get cmd to initialize all files for tendermint testnet and application
-func testnetInitFilesCmd(mbm module.Manager, genBalIterator banktypes.GenesisBalancesIterator) *cobra.Command {
+func testnetInitFilesCmd(mbm module.Manager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init-files",
 		Short: "Initialize config directories & files for a multi-validator testnet running locally via separate processes (e.g. Docker Compose or similar)", //nolint:lll
@@ -164,7 +161,7 @@ Example:
 			args.numValidators, _ = cmd.Flags().GetInt(flagNumValidators)
 			args.algo, _ = cmd.Flags().GetString(flags.FlagKeyType)
 
-			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args)
+			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, args)
 		},
 	}
 
@@ -227,11 +224,14 @@ func initTestnetFiles(
 	cmd *cobra.Command,
 	nodeConfig *tmconfig.Config,
 	mbm module.Manager,
-	genBalIterator banktypes.GenesisBalancesIterator,
 	args initArgs,
 ) error {
 	if args.chainID == "" {
-		args.chainID = fmt.Sprintf("ethermint_%d-1", rand.Int63n(9999999999999)+1)
+		i, err := rand.Int(rand.Reader, new(big.Int).SetInt64(int64(9999999999999)))
+		if err != nil {
+			return err
+		}
+		args.chainID = fmt.Sprintf("ethermint_%d-1", i.Int64()+1)
 	}
 
 	nodeIDs := make([]string, args.numValidators)
@@ -364,12 +364,15 @@ func initTestnetFiles(
 		}
 
 		customAppTemplate, customAppConfig := config.AppConfig(ethermint.AttoPhoton)
-		srvconfig.SetConfigTemplate(customAppTemplate)
+		if err := srvconfig.SetConfigTemplate(customAppTemplate); err != nil {
+			return err
+		}
 		if err := sdkserver.InterceptConfigsPreRunHandler(cmd, customAppTemplate, customAppConfig, tmconfig.DefaultConfig()); err != nil {
 			return err
 		}
-
-		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfig)
+		if err := srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfig); err != nil {
+			return err
+		}
 	}
 
 	if err := initGenFiles(clientCtx, mbm, args.chainID, ethermint.AttoPhoton, genAccounts, genBalances, genFiles, args.numValidators); err != nil {
@@ -378,7 +381,7 @@ func initTestnetFiles(
 
 	err := collectGenFiles(
 		clientCtx, nodeConfig, args.chainID, nodeIDs, valPubKeys, args.numValidators,
-		args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator,
+		args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome,
 	)
 	if err != nil {
 		return err
@@ -465,7 +468,7 @@ func initGenFiles(
 func collectGenFiles(
 	clientCtx client.Context, nodeConfig *tmconfig.Config, chainID string,
 	nodeIDs []string, valPubKeys []cryptotypes.PubKey, numValidators int,
-	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator banktypes.GenesisBalancesIterator,
+	outputDir, nodeDirPrefix, nodeDaemonHome string,
 ) error {
 	var appState json.RawMessage
 	genTime := tmtime.Now()

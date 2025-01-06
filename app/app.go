@@ -173,7 +173,8 @@ var (
 		stakingtypes.BondedPoolName:        {authtypes.Burner, authtypes.Staking},
 		stakingtypes.NotBondedPoolName:     {authtypes.Burner, authtypes.Staking},
 		govtypes.ModuleName:                {authtypes.Burner},
-		evmtypes.ModuleName:                {authtypes.Minter, authtypes.Burner}, // used for secure addition and subtraction of balance using module account
+		// used for secure addition and subtraction of balance using module account
+		evmtypes.ModuleName: {authtypes.Minter, authtypes.Burner},
 	}
 
 	// module accounts that are allowed to receive tokens
@@ -241,7 +242,7 @@ type EthermintApp struct {
 	sm *module.SimulationManager
 
 	// the configurator
-	configurator module.Configurator
+	configurator module.Configurator //nolint:staticcheck // SA1019: Configurator is still used in runtime v1.
 
 	UnorderedTxManager *unorderedtx.Manager
 }
@@ -357,7 +358,11 @@ func NewEthermintApp(
 	// add keepers
 	accountsKeeper, err := accounts.NewKeeper(
 		appCodec,
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[accounts.StoreKey]), logger.With(log.ModuleKey, "x/accounts"), runtime.EnvWithMsgRouterService(app.MsgServiceRouter()), runtime.EnvWithQueryRouterService(app.GRPCQueryRouter())),
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[accounts.StoreKey]), logger.With(log.ModuleKey, "x/accounts"),
+			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()),
+			runtime.EnvWithQueryRouterService(app.GRPCQueryRouter()),
+		),
 		signingCtx.AddressCodec(),
 		appCodec.InterfaceRegistry(),
 		txDecoder,
@@ -439,19 +444,25 @@ func NewEthermintApp(
 		authtypes.FeeCollectorName,
 		authAddr,
 	)
-	if err := app.MintKeeper.SetMintFn(mintkeeper.DefaultMintFn(minttypes.DefaultInflationCalculationFn, app.StakingKeeper, app.MintKeeper)); err != nil {
+	if err := app.MintKeeper.SetMintFn(
+		mintkeeper.DefaultMintFn(minttypes.DefaultInflationCalculationFn, app.StakingKeeper, app.MintKeeper),
+	); err != nil {
 		panic(err)
 	}
 	app.PoolKeeper = poolkeeper.NewKeeper(
 		appCodec,
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[pooltypes.StoreKey]), logger.With(log.ModuleKey, "x/protocolpool")),
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[pooltypes.StoreKey]), logger.With(log.ModuleKey, "x/protocolpool"),
+		),
 		app.AuthKeeper,
 		app.BankKeeper,
 		authAddr,
 	)
 	app.DistrKeeper = distrkeeper.NewKeeper(
 		appCodec,
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[distrtypes.StoreKey]), logger.With(log.ModuleKey, "x/distribution")),
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[distrtypes.StoreKey]), logger.With(log.ModuleKey, "x/distribution"),
+		),
 		app.AuthKeeper,
 		app.BankKeeper,
 		app.StakingKeeper,
@@ -460,13 +471,17 @@ func NewEthermintApp(
 		authAddr,
 	)
 	app.SlashingKeeper = slashingkeeper.NewKeeper(
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[slashingtypes.StoreKey]), logger.With(log.ModuleKey, "x/slashing")),
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[slashingtypes.StoreKey]), logger.With(log.ModuleKey, "x/slashing"),
+		),
 		appCodec, app.LegacyAmino(),
 		app.StakingKeeper,
 		authAddr,
 	)
 	app.FeeGrantKeeper = feegrantkeeper.NewKeeper(
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[feegrant.StoreKey]), logger.With(log.ModuleKey, "x/feegrant")),
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[feegrant.StoreKey]), logger.With(log.ModuleKey, "x/feegrant"),
+		),
 		appCodec,
 		app.AuthKeeper.AddressCodec(),
 	)
@@ -481,8 +496,11 @@ func NewEthermintApp(
 	}
 	// set the governance module account as the authority for conducting upgrades
 	app.UpgradeKeeper = upgradekeeper.NewKeeper(
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[upgradetypes.StoreKey]), logger.With(log.ModuleKey, "x/upgrade"),
-			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()), runtime.EnvWithQueryRouterService(app.GRPCQueryRouter())),
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[upgradetypes.StoreKey]), logger.With(log.ModuleKey, "x/upgrade"),
+			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()),
+			runtime.EnvWithQueryRouterService(app.GRPCQueryRouter()),
+		),
 		skipUpgradeHeights,
 		appCodec,
 		homePath,
@@ -498,9 +516,11 @@ func NewEthermintApp(
 		),
 	)
 	app.AuthzKeeper = authzkeeper.NewKeeper(
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[authzkeeper.StoreKey]), logger.With(log.ModuleKey, "x/authz"),
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[authzkeeper.StoreKey]), logger.With(log.ModuleKey, "x/authz"),
 			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()),
-			runtime.EnvWithQueryRouterService(app.GRPCQueryRouter())),
+			runtime.EnvWithQueryRouterService(app.GRPCQueryRouter()),
+		),
 		appCodec,
 		app.AuthKeeper.AddressCodec(),
 	)
@@ -511,8 +531,11 @@ func NewEthermintApp(
 	feeMarketSs := app.GetSubspace(feemarkettypes.ModuleName)
 	app.FeeMarketKeeper = feemarketkeeper.NewKeeper(
 		appCodec,
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[feemarkettypes.StoreKey]), logger.With(log.ModuleKey, "x/feemarket"),
-			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()), runtime.EnvWithQueryRouterService(app.GRPCQueryRouter())),
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[feemarkettypes.StoreKey]), logger.With(log.ModuleKey, "x/feemarket"),
+			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()),
+			runtime.EnvWithQueryRouterService(app.GRPCQueryRouter()),
+		),
 		authtypes.NewModuleAddress(govtypes.ModuleName),
 		feeMarketSs,
 	)
@@ -521,8 +544,11 @@ func NewEthermintApp(
 	evmSs := app.GetSubspace(evmtypes.ModuleName)
 	app.EvmKeeper = evmkeeper.NewKeeper(
 		appCodec,
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[evmtypes.StoreKey]), logger.With(log.ModuleKey, "x/evm"),
-			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()), runtime.EnvWithQueryRouterService(app.GRPCQueryRouter())),
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[evmtypes.StoreKey]), logger.With(log.ModuleKey, "x/evm"),
+			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()),
+			runtime.EnvWithQueryRouterService(app.GRPCQueryRouter()),
+		),
 		keys[evmtypes.StoreKey], okeys[evmtypes.ObjectStoreKey], authtypes.NewModuleAddress(govtypes.ModuleName),
 		app.AuthKeeper, app.BankKeeper, app.StakingKeeper, app.FeeMarketKeeper,
 		tracer,
@@ -541,9 +567,11 @@ func NewEthermintApp(
 	*/
 	govKeeper := govkeeper.NewKeeper(
 		appCodec,
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[govtypes.StoreKey]), logger.With(log.ModuleKey, "x/gov"),
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[govtypes.StoreKey]), logger.With(log.ModuleKey, "x/gov"),
 			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()),
-			runtime.EnvWithQueryRouterService(app.GRPCQueryRouter())),
+			runtime.EnvWithQueryRouterService(app.GRPCQueryRouter()),
+		),
 		app.AuthKeeper,
 		app.BankKeeper,
 		app.StakingKeeper,
@@ -564,7 +592,11 @@ func NewEthermintApp(
 	// create evidence keeper with router
 	evidenceKeeper := evidencekeeper.NewKeeper(
 		appCodec,
-		runtime.NewEnvironment(runtime.NewKVStoreService(keys[evidencetypes.StoreKey]), logger.With(log.ModuleKey, "x/evidence"), runtime.EnvWithMsgRouterService(app.MsgServiceRouter()), runtime.EnvWithQueryRouterService(app.GRPCQueryRouter())),
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[evidencetypes.StoreKey]), logger.With(log.ModuleKey, "x/evidence"),
+			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()),
+			runtime.EnvWithQueryRouterService(app.GRPCQueryRouter()),
+		),
 		app.StakingKeeper,
 		app.SlashingKeeper,
 		app.ConsensusParamsKeeper,
@@ -819,7 +851,12 @@ func NewEthermintApp(
 // use Ethermint's custom AnteHandler
 func (app *EthermintApp) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64, logger log.Logger) {
 	anteHandler, err := ante.NewAnteHandler(ante.HandlerOptions{
-		Environment:              runtime.NewEnvironment(nil, logger, runtime.EnvWithMsgRouterService(app.MsgServiceRouter()), runtime.EnvWithQueryRouterService(app.GRPCQueryRouter())), // nil is set as the kvstoreservice to avoid module access
+		Environment: runtime.NewEnvironment(
+			nil,
+			logger,
+			runtime.EnvWithMsgRouterService(app.MsgServiceRouter()),
+			runtime.EnvWithQueryRouterService(app.GRPCQueryRouter()),
+		), // nil is set as the kvstoreservice to avoid module access
 		ConsensusKeeper:          app.ConsensusParamsKeeper,
 		AccountKeeper:            app.AuthKeeper,
 		AccountAbstractionKeeper: app.AccountsKeeper,
@@ -894,7 +931,7 @@ func (app *EthermintApp) EndBlocker(ctx sdk.Context) (sdk.EndBlock, error) {
 	return app.ModuleManager.EndBlock(ctx)
 }
 
-func (app *EthermintApp) Configurator() module.Configurator {
+func (app *EthermintApp) Configurator() module.Configurator { //nolint:staticcheck // SA1019: Configurator is still used in runtime v1.
 	return app.configurator
 }
 

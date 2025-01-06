@@ -46,8 +46,7 @@ func (k Keeper) SetParams(ctx context.Context, p types.Params) error {
 	}
 	store := k.KVStoreService.OpenKVStore(ctx)
 	bz := k.cdc.MustMarshal(&p)
-	store.Set(types.ParamsKey, bz)
-	return nil
+	return store.Set(types.ParamsKey, bz)
 }
 
 // ----------------------------------------------------------------------------

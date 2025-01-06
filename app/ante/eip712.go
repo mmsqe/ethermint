@@ -27,7 +27,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
-	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	"github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
@@ -71,7 +70,9 @@ func NewLegacyCosmosAnteHandlerEip712(ctx context.Context, options HandlerOption
 		authante.NewSetUpContextDecorator(options.Environment, options.ConsensusKeeper),
 		authante.NewValidateBasicDecorator(options.Environment),
 		authante.NewTxTimeoutHeightDecorator(options.Environment),
-		authante.NewUnorderedTxDecorator(unorderedtx.DefaultMaxTimeoutDuration, options.UnorderedTxManager, options.Environment, ante.DefaultSha256Cost),
+		authante.NewUnorderedTxDecorator(
+			unorderedtx.DefaultMaxTimeoutDuration, options.UnorderedTxManager, options.Environment, authante.DefaultSha256Cost,
+		),
 		NewMinGasPriceDecorator(options.FeeMarketKeeper, evmDenom, &feemarketParams),
 		authante.NewValidateMemoDecorator(options.AccountKeeper),
 		authante.NewConsumeGasForTxSizeDecorator(options.AccountKeeper),

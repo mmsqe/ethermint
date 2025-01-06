@@ -284,5 +284,5 @@ func WriteFile(name string, dir string, contents []byte) error {
 		return err
 	}
 
-	return os.WriteFile(file, contents, 0o644)
+	return os.WriteFile(file, contents, 0o600)
 }

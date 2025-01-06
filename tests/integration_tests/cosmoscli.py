@@ -841,15 +841,15 @@ class CosmosCLI:
     def build_evm_tx(self, raw_tx: str, **kwargs):
         return json.loads(
             self.raw(
-            "tx",
-            "evm",
-            "raw",
-            raw_tx,
-            "-y",
-            "--generate-only",
-            home=self.data_dir,
-            **kwargs,
-        )
+                "tx",
+                "evm",
+                "raw",
+                raw_tx,
+                "-y",
+                "--generate-only",
+                home=self.data_dir,
+                **kwargs,
+            )
         )
 
     def query_base_fee(self, **kwargs):

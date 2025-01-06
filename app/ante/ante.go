@@ -134,9 +134,7 @@ func DefaultSigVerificationGasConsumer(
 	pubkey := sig.PubKey
 	switch pubkey := pubkey.(type) {
 	case *ethsecp256k1.PubKey:
-		meter.Consume(Secp256k1VerifyCost, "ante verify: eth_secp256k1")
-		return nil
-
+		return meter.Consume(Secp256k1VerifyCost, "ante verify: eth_secp256k1")
 	case multisig.PubKey:
 		// Multisig keys
 		multisignature, ok := sig.Data.(*signing.MultiSignatureData)

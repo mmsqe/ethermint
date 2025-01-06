@@ -22,7 +22,7 @@ import sdk "github.com/cosmos/cosmos-sdk/types"
 // NOTE: see https://github.com/cosmos/cosmos-sdk/issues/9514 for full reference
 func BlockGasLimit(ctx sdk.Context) uint64 {
 	// Otherwise get from the consensus parameters
-	cp := ctx.ConsensusParams()
+	cp := ctx.ConsensusParams() //nolint:staticcheck // ignore linting error
 	if cp.Block == nil {
 		return 0
 	}
