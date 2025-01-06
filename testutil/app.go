@@ -147,22 +147,32 @@ func RandomGenesisAccounts(simState *module.SimulationState) authtypes.GenesisAc
 // TODO: replace secp256k1.GenPrivKeyFromSecret() with similar function in go-ethereum
 func RandomAccounts(r *rand.Rand, n int) []simtypes.Account {
 	accs := make([]simtypes.Account, n)
-
-	for i := 0; i < n; i++ {
+	idx := make(map[string]struct{}, n)
+	var i int
+	for i < n {
 		// don't need that much entropy for simulation
 		privkeySeed := make([]byte, 15)
-		_, _ = r.Read(privkeySeed)
-
+		if _, err := r.Read(privkeySeed); err != nil {
+			panic(err)
+		}
 		prv := secp256k1.GenPrivKeyFromSecret(privkeySeed)
 		ethPrv := &ethsecp256k1.PrivKey{}
 		_ = ethPrv.UnmarshalAmino(prv.Bytes()) // UnmarshalAmino simply copies the bytes and assigns them to ethPrv.Key
-		accs[i].PrivKey = ethPrv
-		accs[i].PubKey = accs[i].PrivKey.PubKey()
-		accs[i].Address = sdk.AccAddress(accs[i].PubKey.Address())
-
-		accs[i].ConsKey = ed25519.GenPrivKeyFromSecret(privkeySeed)
+		pubKey := ethPrv.PubKey()
+		addr := sdk.AccAddress(pubKey.Address())
+		if _, exists := idx[string(addr.Bytes())]; exists {
+			continue
+		}
+		idx[string(addr.Bytes())] = struct{}{}
+		accs[i] = simtypes.Account{
+			Address:       addr,
+			PrivKey:       ethPrv,
+			PubKey:        pubKey,
+			ConsKey:       ed25519.GenPrivKeyFromSecret(privkeySeed),
+			AddressBech32: addr.String(),
+		}
+		i++
 	}
-
 	return accs
 }
 
