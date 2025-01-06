@@ -26,6 +26,7 @@ import (
 	"slices"
 	"sort"
 
+	authmodulev1 "cosmossdk.io/api/cosmos/auth/module/v1"
 	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
 	"cosmossdk.io/client/v2/autocli"
@@ -163,22 +164,31 @@ var (
 	DefaultNodeHome string
 
 	// module account permissions
-	maccPerms = map[string][]string{
-		authtypes.FeeCollectorName:         nil,
-		distrtypes.ModuleName:              nil,
-		pooltypes.ModuleName:               nil,
-		pooltypes.StreamAccount:            nil,
-		pooltypes.ProtocolPoolDistrAccount: nil,
-		minttypes.ModuleName:               {authtypes.Minter},
-		stakingtypes.BondedPoolName:        {authtypes.Burner, authtypes.Staking},
-		stakingtypes.NotBondedPoolName:     {authtypes.Burner, authtypes.Staking},
-		govtypes.ModuleName:                {authtypes.Burner},
+	moduleAccPerms = []*authmodulev1.ModuleAccountPermission{
+		{Account: authtypes.FeeCollectorName},
+		{Account: distrtypes.ModuleName},
+		{Account: pooltypes.ModuleName},
+		{Account: pooltypes.StreamAccount},
+		{Account: pooltypes.ProtocolPoolDistrAccount},
+		{Account: minttypes.ModuleName, Permissions: []string{authtypes.Minter}},
+		{Account: stakingtypes.BondedPoolName, Permissions: []string{authtypes.Burner, stakingtypes.ModuleName}},
+		{Account: stakingtypes.NotBondedPoolName, Permissions: []string{authtypes.Burner, stakingtypes.ModuleName}},
+		{Account: govtypes.ModuleName, Permissions: []string{authtypes.Burner}},
 		// used for secure addition and subtraction of balance using module account
-		evmtypes.ModuleName: {authtypes.Minter, authtypes.Burner},
+		{Account: evmtypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner}},
 	}
 
-	// module accounts that are allowed to receive tokens
-	allowedReceivingModAcc = map[string]bool{}
+	// blocked account addresses
+	blockAccAddrs = []string{
+		authtypes.FeeCollectorName,
+		distrtypes.ModuleName,
+		minttypes.ModuleName,
+		stakingtypes.BondedPoolName,
+		stakingtypes.NotBondedPoolName,
+		// We allow the following module accounts to receive funds:
+		// govtypes.ModuleName
+		// pooltypes.ModuleName
+	}
 )
 
 var (
@@ -386,7 +396,7 @@ func NewEthermintApp(
 		appCodec,
 		ethermint.ProtoAccount,
 		accountsKeeper,
-		maccPerms,
+		GetMaccPerms(),
 		signingCtx.AddressCodec(),
 		sdk.Bech32MainPrefix,
 		authAddr,
@@ -397,7 +407,7 @@ func NewEthermintApp(
 		appCodec,
 		okeys[banktypes.ObjectStoreKey],
 		app.AuthKeeper,
-		app.BlockedAddrs(),
+		app.BlockedAddresses(),
 		authAddr,
 	)
 
@@ -952,25 +962,23 @@ func (app *EthermintApp) LoadHeight(height int64) error {
 	return app.LoadVersion(height)
 }
 
-// ModuleAccountAddrs returns all the app's module account addresses.
-func (app *EthermintApp) ModuleAccountAddrs() map[string]bool {
-	modAccAddrs := make(map[string]bool)
-	for acc := range maccPerms {
-		modAccAddrs[authtypes.NewModuleAddress(acc).String()] = true
+// BlockedAddresses returns all the app's blocked account addresses.
+// This function takes an address.Codec parameter to maintain compatibility
+// with the signature of the same function in appV1.
+func (app *EthermintApp) BlockedAddresses() map[string]bool {
+	result := make(map[string]bool)
+
+	if len(blockAccAddrs) > 0 {
+		for _, addr := range blockAccAddrs {
+			result[addr] = true
+		}
+	} else {
+		for addr := range GetMaccPerms() {
+			result[addr] = true
+		}
 	}
 
-	return modAccAddrs
-}
-
-// BlockedAddrs returns all the app's module account addresses that are not
-// allowed to receive external tokens.
-func (app *EthermintApp) BlockedAddrs() map[string]bool {
-	blockedAddrs := make(map[string]bool)
-	for acc := range maccPerms {
-		blockedAddrs[authtypes.NewModuleAddress(acc).String()] = !allowedReceivingModAcc[acc]
-	}
-
-	return blockedAddrs
+	return result
 }
 
 // LegacyAmino returns EthermintApp's amino codec.
@@ -1168,12 +1176,15 @@ func RegisterSwaggerAPI(_ client.Context, rtr *mux.Router) {
 }
 
 // GetMaccPerms returns a copy of the module account permissions
+//
+// NOTE: This is solely to be used for testing purposes.
 func GetMaccPerms() map[string][]string {
-	dupMaccPerms := make(map[string][]string)
-	for k, v := range maccPerms {
-		dupMaccPerms[k] = v
+	dup := make(map[string][]string)
+	for _, perms := range moduleAccPerms {
+		dup[perms.Account] = perms.Permissions
 	}
-	return dupMaccPerms
+
+	return dup
 }
 
 // initParamsKeeper init params keeper and its subspaces

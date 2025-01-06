@@ -1,9 +1,12 @@
+//go:build sims
+
 package app_test
 
 // TODO: COsmos SDK fix for the simulator issue for custom keys
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"math/rand"
 	"sync"
@@ -21,12 +24,17 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmtproto "github.com/cometbft/cometbft/api/cometbft/types/v1"
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/runtime"
+	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/simsx"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 	"github.com/evmos/ethermint/app"
+	"github.com/evmos/ethermint/app/ante"
 	"github.com/evmos/ethermint/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,25 +63,24 @@ func setupStateFactory(app *app.EthermintApp) simsx.SimStateFactory {
 	return simsx.SimStateFactory{
 		Codec:         app.AppCodec(),
 		AppStateFn:    testutil.StateFn(app),
-		BlockedAddr:   app.BlockedAddrs(),
+		BlockedAddr:   app.BlockedAddresses(),
 		AccountSource: app.AuthKeeper,
 		BalanceSource: app.BankKeeper,
 	}
 }
 
 func TestFullAppSimulation(t *testing.T) {
-	return
 	config := simcli.NewConfigFromFlags()
 	config.ChainID = SimAppChainID
 	config.BlockMaxGas = SimBlockMaxGas
-	simsx.RunWithSeed(
+	simsx.RunWithSeedAndRandAcc(
 		t,
 		config,
-		app.NewEthermintApp,
+		NewSimApp,
 		setupStateFactory,
 		config.Seed,
 		config.FuzzSeed,
-		simtypes.RandomAccounts,
+		testutil.RandomAccounts,
 	)
 }
 
@@ -82,15 +89,54 @@ var (
 	exportWithValidatorSet []string
 )
 
+func NewSimApp(
+	logger log.Logger,
+	db corestore.KVStoreWithBatch,
+	traceStore io.Writer,
+	loadLatest bool,
+	appOpts servertypes.AppOptions,
+	baseAppOptions ...func(*baseapp.BaseApp),
+) *app.EthermintApp {
+	appOptions := make(simtestutil.AppOptionsMap, 0)
+	appOptions[flags.FlagHome] = app.DefaultNodeHome
+	appOptions[server.FlagInvCheckPeriod] = simcli.FlagPeriodValue
+	app := app.NewEthermintApp(logger, db, nil, false, appOptions, baseAppOptions...)
+	// disable feemarket on native tx
+	anteHandler, err := ante.NewAnteHandler(ante.HandlerOptions{
+		Environment: runtime.NewEnvironment(
+			nil,
+			logger,
+		), // nil is set as the kvstoreservice to avoid module access
+		ConsensusKeeper:          app.ConsensusParamsKeeper,
+		AccountKeeper:            app.AuthKeeper,
+		AccountAbstractionKeeper: app.AccountsKeeper,
+		BankKeeper:               app.BankKeeper,
+		SignModeHandler:          app.TxConfig().SignModeHandler(),
+		FeegrantKeeper:           app.FeeGrantKeeper,
+		SigGasConsumer:           ante.DefaultSigVerificationGasConsumer,
+		EvmKeeper:                app.EvmKeeper,
+		FeeMarketKeeper:          app.FeeMarketKeeper,
+		MaxTxGasWanted:           0,
+	})
+	if err != nil {
+		panic(err)
+	}
+	app.SetAnteHandler(anteHandler)
+	if err := app.LoadLatestVersion(); err != nil {
+		panic(err)
+	}
+	return app
+}
+
 func TestAppImportExport(t *testing.T) {
 	return
 	config := simcli.NewConfigFromFlags()
 	config.ChainID = SimAppChainID
 	config.BlockMaxGas = SimBlockMaxGas
-	simsx.RunWithSeed(
+	simsx.RunWithSeedAndRandAcc(
 		t,
 		config,
-		app.NewEthermintApp,
+		NewSimApp,
 		setupStateFactory,
 		config.Seed,
 		config.FuzzSeed,
@@ -102,11 +148,14 @@ func TestAppImportExport(t *testing.T) {
 			require.NoError(t, err)
 
 			t.Log("importing genesis...\n")
-			newTestInstance := simsx.NewSimulationAppInstance(t, ti.Cfg, app.NewEthermintApp)
+			newTestInstance := simsx.NewSimulationAppInstance(t, ti.Cfg, NewSimApp)
 			newApp := newTestInstance.App
 			var genesisState map[string]json.RawMessage
 			require.NoError(t, json.Unmarshal(exported.AppState, &genesisState))
-			ctxB := newApp.NewContextLegacy(true, cmtproto.Header{Height: a.LastBlockHeight()})
+			ctxB := newApp.NewContextLegacy(true, cmtproto.Header{
+				Height:  a.LastBlockHeight(),
+				ChainID: config.ChainID,
+			})
 			_, err = newApp.ModuleManager.InitGenesis(ctxB, genesisState)
 			if simapp.IsEmptyValidatorSetErr(err) {
 				t.Skip("Skipping simulation as all validators have been unbonded")
@@ -135,10 +184,10 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	config := simcli.NewConfigFromFlags()
 	config.ChainID = SimAppChainID
 	config.BlockMaxGas = SimBlockMaxGas
-	simsx.RunWithSeed(
+	simsx.RunWithSeedAndRandAcc(
 		t,
 		config,
-		app.NewEthermintApp,
+		NewSimApp,
 		setupStateFactory,
 		config.Seed,
 		config.FuzzSeed,
@@ -158,7 +207,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 
 						_, err = a.InitChain(&abci.InitChainRequest{
 							AppStateBytes: exported.AppState,
-							ChainId:       simsx.SimAppChainID,
+							ChainId:       config.ChainID,
 							InitialHeight: exported.Height,
 							Time:          genesisTimestamp,
 						})
@@ -170,18 +219,17 @@ func TestAppSimulationAfterImport(t *testing.T) {
 						// use accounts from initial run
 						return exported.AppState, accs, config.ChainID, genesisTimestamp
 					},
-					BlockedAddr:   a.BlockedAddrs(),
+					BlockedAddr:   a.BlockedAddresses(),
 					AccountSource: a.AuthKeeper,
 					BalanceSource: a.BankKeeper,
 				}
 			}
 			ti.Cfg.InitialBlockHeight = int(exported.Height)
-			simsx.RunWithSeed(t, ti.Cfg, app.NewEthermintApp, importGenesisStateFactory, ti.Cfg.Seed, ti.Cfg.FuzzSeed, testutil.RandomAccounts)
+			simsx.RunWithSeedAndRandAcc(t, ti.Cfg, NewSimApp, importGenesisStateFactory, ti.Cfg.Seed, ti.Cfg.FuzzSeed, testutil.RandomAccounts)
 		})
 }
 
 func TestAppStateDeterminism(t *testing.T) {
-	return
 	const numTimesToRunPerSeed = 3
 	var seeds []int64
 	if s := simcli.NewConfigFromFlags().Seed; s != simcli.DefaultSeedValue {
@@ -214,7 +262,7 @@ func TestAppStateDeterminism(t *testing.T) {
 				return others.Get(k)
 			})
 		}
-		return app.NewEthermintApp(logger, db, nil, true, appOpts, append(baseAppOptions, interBlockCacheOpt())...)
+		return NewSimApp(logger, db, nil, true, appOpts, append(baseAppOptions, interBlockCacheOpt())...)
 	}
 	var mx sync.Mutex
 	appHashResults := make(map[int64][][]byte)
@@ -245,13 +293,23 @@ func TestAppStateDeterminism(t *testing.T) {
 		}
 	}
 	// run simulations
-	simsx.RunWithSeeds(
-		t,
-		interBlockCachingAppFactory,
-		setupStateFactory,
-		seeds,
-		[]byte{},
-		testutil.RandomAccounts,
-		captureAndCheckHash,
-	)
+	cfg := simcli.NewConfigFromFlags()
+	cfg.ChainID = SimAppChainID
+	for i := range seeds {
+		seed := seeds[i]
+		t.Run(fmt.Sprintf("seed: %d", seed), func(t *testing.T) {
+			t.Parallel()
+			simsx.RunWithSeedAndRandAcc(
+				t,
+				cfg,
+				interBlockCachingAppFactory,
+				setupStateFactory,
+				seed,
+				[]byte{},
+				testutil.RandomAccounts,
+				captureAndCheckHash,
+			)
+		})
+	}
+
 }

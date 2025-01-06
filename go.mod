@@ -283,33 +283,33 @@ require (
 
 replace (
 	// release/v0.52.x
-	cosmossdk.io/client/v2 => github.com/mmsqe/cosmos-sdk/client/v2 v2.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/core => github.com/mmsqe/cosmos-sdk/core v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/simapp => github.com/mmsqe/cosmos-sdk/simapp v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/store => github.com/mmsqe/cosmos-sdk/store v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/tools/benchmark => github.com/mmsqe/cosmos-sdk/tools/benchmark v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/accounts => github.com/mmsqe/cosmos-sdk/x/accounts v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/accounts/defaults/lockup => github.com/mmsqe/cosmos-sdk/x/accounts/defaults/lockup v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/accounts/defaults/multisig => github.com/mmsqe/cosmos-sdk/x/accounts/defaults/multisig v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/authz => github.com/mmsqe/cosmos-sdk/x/authz v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/bank => github.com/mmsqe/cosmos-sdk/x/bank v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/circuit => github.com/mmsqe/cosmos-sdk/x/circuit v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/consensus => github.com/mmsqe/cosmos-sdk/x/consensus v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/distribution => github.com/mmsqe/cosmos-sdk/x/distribution v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/epochs => github.com/mmsqe/cosmos-sdk/x/epochs v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/evidence => github.com/mmsqe/cosmos-sdk/x/evidence v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/feegrant => github.com/mmsqe/cosmos-sdk/x/feegrant v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/gov => github.com/mmsqe/cosmos-sdk/x/gov v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/group => github.com/mmsqe/cosmos-sdk/x/group v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/mint => github.com/mmsqe/cosmos-sdk/x/mint v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/nft => github.com/mmsqe/cosmos-sdk/x/nft v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/params => github.com/mmsqe/cosmos-sdk/x/params v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/protocolpool => github.com/mmsqe/cosmos-sdk/x/protocolpool v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/slashing => github.com/mmsqe/cosmos-sdk/x/slashing v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/staking => github.com/mmsqe/cosmos-sdk/x/staking v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/tx => github.com/mmsqe/cosmos-sdk/x/tx v0.0.0-20250103014041-79cc386fe744
-	cosmossdk.io/x/upgrade => github.com/mmsqe/cosmos-sdk/x/upgrade v0.0.0-20250103014041-79cc386fe744
-	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.0-beta2.0.20250103014041-79cc386fe744
+	cosmossdk.io/client/v2 => github.com/mmsqe/cosmos-sdk/client/v2 v2.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/core => github.com/mmsqe/cosmos-sdk/core v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/simapp => github.com/mmsqe/cosmos-sdk/simapp v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/store => github.com/mmsqe/cosmos-sdk/store v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/tools/benchmark => github.com/mmsqe/cosmos-sdk/tools/benchmark v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/accounts => github.com/mmsqe/cosmos-sdk/x/accounts v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/accounts/defaults/lockup => github.com/mmsqe/cosmos-sdk/x/accounts/defaults/lockup v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/accounts/defaults/multisig => github.com/mmsqe/cosmos-sdk/x/accounts/defaults/multisig v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/authz => github.com/mmsqe/cosmos-sdk/x/authz v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/bank => github.com/mmsqe/cosmos-sdk/x/bank v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/circuit => github.com/mmsqe/cosmos-sdk/x/circuit v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/consensus => github.com/mmsqe/cosmos-sdk/x/consensus v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/distribution => github.com/mmsqe/cosmos-sdk/x/distribution v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/epochs => github.com/mmsqe/cosmos-sdk/x/epochs v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/evidence => github.com/mmsqe/cosmos-sdk/x/evidence v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/feegrant => github.com/mmsqe/cosmos-sdk/x/feegrant v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/gov => github.com/mmsqe/cosmos-sdk/x/gov v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/group => github.com/mmsqe/cosmos-sdk/x/group v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/mint => github.com/mmsqe/cosmos-sdk/x/mint v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/nft => github.com/mmsqe/cosmos-sdk/x/nft v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/params => github.com/mmsqe/cosmos-sdk/x/params v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/protocolpool => github.com/mmsqe/cosmos-sdk/x/protocolpool v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/slashing => github.com/mmsqe/cosmos-sdk/x/slashing v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/staking => github.com/mmsqe/cosmos-sdk/x/staking v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/tx => github.com/mmsqe/cosmos-sdk/x/tx v0.0.0-20250106094112-adc770ab4c60
+	cosmossdk.io/x/upgrade => github.com/mmsqe/cosmos-sdk/x/upgrade v0.0.0-20250106094112-adc770ab4c60
+	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.0-beta2.0.20250106094112-adc770ab4c60
 )
 
 replace (
