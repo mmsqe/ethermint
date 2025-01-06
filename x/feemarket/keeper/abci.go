@@ -43,10 +43,14 @@ func (k *Keeper) BeginBlock(ctx sdk.Context) error {
 	}()
 
 	// Store current base fee in event
-	k.EventService.EventManager(ctx).EmitKV(
+	if err := k.EventService.EventManager(ctx).EmitKV(
 		types.EventTypeFeeMarket,
 		event.NewAttribute(types.AttributeKeyBaseFee, baseFee.String()),
-	)
+	); err != nil {
+		// mmsqe
+		k.Logger.Error("couldn't emit event", "error", err.Error())
+		return nil
+	}
 	return nil
 }
 
@@ -77,10 +81,14 @@ func (k *Keeper) EndBlock(ctx sdk.Context) error {
 		telemetry.SetGauge(float32(gasWanted), "feemarket", "block_gas")
 	}()
 
-	k.EventService.EventManager(ctx).EmitKV(
+	if err := k.EventService.EventManager(ctx).EmitKV(
 		"block_gas",
 		event.NewAttribute("height", fmt.Sprintf("%d", ctx.BlockHeight())),
 		event.NewAttribute("amount", fmt.Sprintf("%d", gasWanted)),
-	)
+	); err != nil {
+		// mmsqe
+		k.Logger.Error("couldn't emit event", "error", err.Error())
+		return nil
+	}
 	return nil
 }

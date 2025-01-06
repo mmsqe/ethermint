@@ -119,17 +119,21 @@ func (k *Keeper) EthereumTx(goCtx context.Context, msg *types.MsgEthereumTx) (*t
 	}
 
 	// emit events
-	k.EventService.EventManager(ctx).EmitKV(
+	if err := k.EventService.EventManager(ctx).EmitKV(
 		types.EventTypeEthereumTx,
 		attrs...,
-	)
-	k.EventService.EventManager(ctx).EmitKV(
+	); err != nil {
+		// mmsqe events
+		k.Logger.Error("couldn't emit event", "error", err.Error())
+	}
+	if err := k.EventService.EventManager(ctx).EmitKV(
 		sdk.EventTypeMessage,
 		event.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
 		event.NewAttribute(sdk.AttributeKeySender, types.HexAddress(msg.From)),
 		event.NewAttribute(types.AttributeKeyTxType, strconv.Itoa(int(tx.Type()))),
-	)
-
+	); err != nil {
+		k.Logger.Error("couldn't emit event", "error", err.Error())
+	}
 	return response, nil
 }
 
