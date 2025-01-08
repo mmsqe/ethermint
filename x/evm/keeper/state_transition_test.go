@@ -148,17 +148,6 @@ func (suite *StateTransitionTestSuite) TestGetHashFn() {
 		// 	},
 		// 	common.BytesToHash(hash),
 		// },
-		// {
-		// 	"header before sdk50 found",
-		// 	height - 1,
-		// 	func(height int64) {
-		// 		// mmsqe
-		// 		suite.App.StakingKeeper.SetHistoricalInfo(suite.Ctx, height, &stakingtypes.HistoricalInfo{
-		// 			Header: *header.ToProto(),
-		// 		})
-		// 	},
-		// 	common.BytesToHash(hash),
-		// },
 		{
 			"header in context not found with current height",
 			height,
