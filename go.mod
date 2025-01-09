@@ -286,13 +286,13 @@ require (
 
 replace (
 	// release/v0.52.x
-	cosmossdk.io/client/v2 => github.com/mmsqe/cosmos-sdk/client/v2 v2.0.0-20250109074151-821656007fdc
-	cosmossdk.io/simapp => github.com/mmsqe/cosmos-sdk/simapp v0.0.0-20250109074151-821656007fdc
-	cosmossdk.io/store => github.com/mmsqe/cosmos-sdk/store v0.0.0-20250108013751-d0a525082217
-	cosmossdk.io/x/bank => github.com/mmsqe/cosmos-sdk/x/bank v0.0.0-20250109074151-821656007fdc
-	cosmossdk.io/x/staking => github.com/mmsqe/cosmos-sdk/x/staking v0.0.0-20250109074151-821656007fdc
-	cosmossdk.io/x/upgrade => github.com/mmsqe/cosmos-sdk/x/upgrade v0.0.0-20250109074151-821656007fdc
-	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.0-beta2.0.20250109074151-821656007fdc
+	cosmossdk.io/client/v2 => github.com/mmsqe/cosmos-sdk/client/v2 v2.0.0-20250109074513-7792400bb279
+	cosmossdk.io/simapp => github.com/mmsqe/cosmos-sdk/simapp v0.0.0-20250109074513-7792400bb279
+	cosmossdk.io/store => github.com/mmsqe/cosmos-sdk/store v0.0.0-20250109074651-585074421ab9
+	cosmossdk.io/x/bank => github.com/mmsqe/cosmos-sdk/x/bank v0.0.0-20250109074513-7792400bb279
+	cosmossdk.io/x/staking => github.com/mmsqe/cosmos-sdk/x/staking v0.0.0-20250109074513-7792400bb279
+	cosmossdk.io/x/upgrade => github.com/mmsqe/cosmos-sdk/x/upgrade v0.0.0-20250109074513-7792400bb279
+	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.0-beta2.0.20250109074513-7792400bb279
 )
 
 replace (

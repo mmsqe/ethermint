@@ -29,7 +29,7 @@ schema = 3
     version = "v0.8.0"
     hash = "sha256-Eyz74lMy2L8ayZ414kWyRWa5yF3HIyUKG5R9BAa9Hvo="
   [mod."cosmossdk.io/client/v2"]
-    version = "v2.0.0-20250109074151-821656007fdc"
+    version = "v2.0.0-20250109074513-7792400bb279"
     hash = "sha256-EtD5sp9iizl2wOYrJ5aPCNmcneXE5wnpWf+eXYuPWPo="
     replaced = "github.com/mmsqe/cosmos-sdk/client/v2"
   [mod."cosmossdk.io/collections"]
@@ -46,7 +46,7 @@ schema = 3
     hash = "sha256-ZDRZ8OthHOjiRfcvSVnw28j8SLOuQT3t7BEel92JcVI="
   [mod."cosmossdk.io/errors"]
     version = "v1.0.1"
-    hash = "sha256-MgTocXkBzri9FKkNtkARJXPmxRrRO/diQJS5ZzvYrJY="
+    hash = "sha256-u0TlqbhEJZZcwbXBVQYyYsjt8+Pq/bEzqjljjwTaFhU="
   [mod."cosmossdk.io/indexer/postgres"]
     version = "v0.1.0"
     hash = "sha256-QVf13Gvn9i19gxQ3+PVecIns0ZjX15jCP8unUmkDC+0="
@@ -60,12 +60,12 @@ schema = 3
     version = "v1.0.0"
     hash = "sha256-hSjL0eodgKu/+hZxTmdiXtdOf9Z3TZK5TW8aNHzcG7g="
   [mod."cosmossdk.io/simapp"]
-    version = "v0.0.0-20250109074151-821656007fdc"
-    hash = "sha256-ND5dRRGGWT6HZ1tGPHAtGnOnT1cqg+sPuhxiojD5E58="
+    version = "v0.0.0-20250109074513-7792400bb279"
+    hash = "sha256-Nr+joSwu0XWspTbxTaBx6oUkNNEP5yUdpYzfNUacV3E="
     replaced = "github.com/mmsqe/cosmos-sdk/simapp"
   [mod."cosmossdk.io/store"]
-    version = "v0.0.0-20250108013751-d0a525082217"
-    hash = "sha256-wLqgbnsTYaXxzMVllT60zrlxd2hbRShOC7542qRaFns="
+    version = "v0.0.0-20250109074651-585074421ab9"
+    hash = "sha256-mXj8pLFlABMN18+385DCUTD3FRHT94El8+aAngSvwGU="
     replaced = "github.com/mmsqe/cosmos-sdk/store"
   [mod."cosmossdk.io/tools/benchmark"]
     version = "v0.2.0-rc.1"
@@ -89,8 +89,8 @@ schema = 3
     version = "v0.2.0-rc.1"
     hash = "sha256-ZwFGJ8hEJuGKJaOYRmpSU/fxztjJeMqXZKT/tg3c0Dw="
   [mod."cosmossdk.io/x/bank"]
-    version = "v0.0.0-20250109074151-821656007fdc"
-    hash = "sha256-WWM/6bR0mAnRojFIu2J52RjSukh91V7F+VCm/kAjHjs="
+    version = "v0.0.0-20250109074513-7792400bb279"
+    hash = "sha256-eU8WoWLZcKfn/AW1CI0rIhEgZxE2y2DmQKRkeQdXZGw="
     replaced = "github.com/mmsqe/cosmos-sdk/x/bank"
   [mod."cosmossdk.io/x/circuit"]
     version = "v0.2.0-rc.1"
@@ -132,14 +132,14 @@ schema = 3
     version = "v0.2.0-rc.1"
     hash = "sha256-8TRwisWtGGbgn0KXFXnHpmarGGfrl7gJuWD5Ig/C5DA="
   [mod."cosmossdk.io/x/staking"]
-    version = "v0.0.0-20250109074151-821656007fdc"
+    version = "v0.0.0-20250109074513-7792400bb279"
     hash = "sha256-jRuVKzByvMJrkvpExSKMdWa1BbSXBYFnEQ7XO7/JFjs="
     replaced = "github.com/mmsqe/cosmos-sdk/x/staking"
   [mod."cosmossdk.io/x/tx"]
     version = "v1.0.0"
     hash = "sha256-weiTo2NDRjsxyHgfuIi5xf6vQkmW5N+xdG3plSjgGBA="
   [mod."cosmossdk.io/x/upgrade"]
-    version = "v0.0.0-20250109074151-821656007fdc"
+    version = "v0.0.0-20250109074513-7792400bb279"
     hash = "sha256-1a5Nnf0Y/sQhZHOTQ6OfuXLPyXo9UNfUCriPOe+AAtk="
     replaced = "github.com/mmsqe/cosmos-sdk/x/upgrade"
   [mod."filippo.io/edwards25519"]
@@ -258,8 +258,8 @@ schema = 3
     version = "v1.0.0-beta.5"
     hash = "sha256-Fy/PbsOsd6iq0Njy3DVWK6HqWsogI+MkE8QslHGWyVg="
   [mod."github.com/cosmos/cosmos-sdk"]
-    version = "v0.46.0-beta2.0.20250109074151-821656007fdc"
-    hash = "sha256-+U4n8bmbrQbaDE1dyokfAqw3lfOu0UIeQulipfffDlw="
+    version = "v0.46.0-beta2.0.20250109074513-7792400bb279"
+    hash = "sha256-YPispLHUfx/Wz1jPqlHelvnZINCXOLc1K5+TX8u9Nhk="
     replaced = "github.com/mmsqe/cosmos-sdk"
   [mod."github.com/cosmos/go-bip39"]
     version = "v1.0.0"
@@ -332,7 +332,7 @@ schema = 3
     hash = "sha256-X7aNKLKZ7pJBG/wdP+TWuQnlNLNdbUDd+kC5kF4uBtU="
   [mod."github.com/ethereum/go-ethereum"]
     version = "v1.10.20-0.20241030073450-b9cc632bc183"
-    hash = "sha256-5nh0HZOZwlZBMmHv08BELlNfDZyq5zwq65ByyMzOetA="
+    hash = "sha256-VV7pJcUZDPOQWWCvWLieuL3O1JPyMgDLAIah1ivjglI="
     replaced = "github.com/crypto-org-chain/go-ethereum"
   [mod."github.com/fatih/color"]
     version = "v1.18.0"
