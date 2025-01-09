@@ -508,7 +508,7 @@ func NewEthermintApp(
 			runtime.NewKVStoreService(keys[feegrant.StoreKey]), logger.With(log.ModuleKey, "x/feegrant"),
 		),
 		appCodec,
-		app.AuthKeeper.AddressCodec(),
+		app.AuthKeeper,
 	)
 	// get skipUpgradeHeights from the app options
 	skipUpgradeHeights := map[int64]bool{}
@@ -547,7 +547,7 @@ func NewEthermintApp(
 			runtime.EnvWithQueryRouterService(app.GRPCQueryRouter()),
 		),
 		appCodec,
-		app.AuthKeeper.AddressCodec(),
+		app.AuthKeeper,
 	)
 
 	// Create IBC Keeper
@@ -658,7 +658,6 @@ func NewEthermintApp(
 		app.SlashingKeeper,
 		app.ConsensusParamsKeeper,
 		app.AuthKeeper.AddressCodec(),
-		app.StakingKeeper.ConsensusAddressCodec(),
 	)
 
 	// If evidence needs to be handled for the app, set routes in router here and seal

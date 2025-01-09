@@ -1,11 +1,11 @@
 module github.com/evmos/ethermint
 
-go 1.23.3
+go 1.23.4
 
 require (
 	cosmossdk.io/api v0.8.0
-	cosmossdk.io/client/v2 v2.0.0-beta.6
-	cosmossdk.io/collections v1.0.0-rc.1
+	cosmossdk.io/client/v2 v2.10.0-beta.1
+	cosmossdk.io/collections v1.0.0
 	cosmossdk.io/core v1.0.0
 	cosmossdk.io/core/testing v0.0.1
 	cosmossdk.io/errors v1.0.1
@@ -13,25 +13,25 @@ require (
 	cosmossdk.io/math v1.5.0
 	cosmossdk.io/simapp v0.0.0-20241219173010-150f2d6b3a73
 	cosmossdk.io/store v1.10.0-rc.1.0.20241218084712-ca559989da43
-	cosmossdk.io/tools/confix v0.1.2
-	cosmossdk.io/x/accounts v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/accounts/defaults/base v0.0.0-20241218104812-cb56c6e47f76
-	cosmossdk.io/x/accounts/defaults/lockup v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/accounts/defaults/multisig v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/authz v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/bank v0.0.0-20241218110910-47409028a73d
-	cosmossdk.io/x/consensus v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/distribution v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/evidence v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/feegrant v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/gov v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/mint v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/tools/confix v0.2.0-rc.1
+	cosmossdk.io/x/accounts v0.2.0-rc.1
+	cosmossdk.io/x/accounts/defaults/base v0.2.0-rc.1
+	cosmossdk.io/x/accounts/defaults/lockup v0.2.0-rc.1
+	cosmossdk.io/x/accounts/defaults/multisig v0.2.0-rc.1
+	cosmossdk.io/x/authz v0.2.0-rc.1
+	cosmossdk.io/x/bank v0.2.0-rc.1
+	cosmossdk.io/x/consensus v0.2.0-rc.1
+	cosmossdk.io/x/distribution v0.2.0-rc.1
+	cosmossdk.io/x/evidence v0.2.0-rc.1
+	cosmossdk.io/x/feegrant v0.2.0-rc.1
+	cosmossdk.io/x/gov v0.2.0-rc.1
+	cosmossdk.io/x/mint v0.2.0-rc.1
 	cosmossdk.io/x/params v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/protocolpool v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/slashing v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/staking v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/protocolpool v0.2.0-rc.1
+	cosmossdk.io/x/slashing v0.2.0-rc.1
+	cosmossdk.io/x/staking v0.2.0-rc.1
 	cosmossdk.io/x/tx v1.0.0
-	cosmossdk.io/x/upgrade v0.1.4
+	cosmossdk.io/x/upgrade v0.2.0-rc.1
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/cometbft/cometbft v1.0.0
@@ -85,13 +85,13 @@ require (
 	cloud.google.com/go/iam v1.1.13 // indirect
 	cloud.google.com/go/storage v1.43.0 // indirect
 	cosmossdk.io/depinject v1.1.0 // indirect
-	cosmossdk.io/indexer/postgres v0.0.0-20241128094659-bd76b47e1d8b // indirect
+	cosmossdk.io/indexer/postgres v0.1.0 // indirect
 	cosmossdk.io/schema v1.0.0 // indirect
-	cosmossdk.io/tools/benchmark v0.0.0-20241213081318-957e24171608 // indirect
-	cosmossdk.io/x/circuit v0.0.0-20241213081318-957e24171608 // indirect
-	cosmossdk.io/x/epochs v0.0.0-20241213081318-957e24171608 // indirect
-	cosmossdk.io/x/group v0.0.0-20241213081318-957e24171608 // indirect
-	cosmossdk.io/x/nft v0.0.0-20241213081318-957e24171608 // indirect
+	cosmossdk.io/tools/benchmark v0.2.0-rc.1 // indirect
+	cosmossdk.io/x/circuit v0.2.0-rc.1 // indirect
+	cosmossdk.io/x/epochs v0.2.0-rc.1 // indirect
+	cosmossdk.io/x/group v0.2.0-rc.1 // indirect
+	cosmossdk.io/x/nft v0.2.0-rc.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.2 // indirect
@@ -125,7 +125,7 @@ require (
 	github.com/cometbft/cometbft-db v1.0.1 // indirect
 	github.com/cosmos/btcutil v1.0.5 // indirect
 	github.com/cosmos/gogogateway v1.2.0 // indirect
-	github.com/cosmos/iavl v1.3.4 // indirect
+	github.com/cosmos/iavl v1.3.5 // indirect
 	github.com/cosmos/ics23/go v0.11.0 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.14.0 // indirect
 	github.com/creachadair/atomicfile v0.3.6 // indirect
@@ -286,13 +286,13 @@ require (
 
 replace (
 	// release/v0.52.x
-	cosmossdk.io/client/v2 => github.com/mmsqe/cosmos-sdk/client/v2 v2.0.0-20250109013406-adddd07c310c
-	cosmossdk.io/simapp => github.com/mmsqe/cosmos-sdk/simapp v0.0.0-20250109013406-adddd07c310c
+	cosmossdk.io/client/v2 => github.com/mmsqe/cosmos-sdk/client/v2 v2.0.0-20250109074151-821656007fdc
+	cosmossdk.io/simapp => github.com/mmsqe/cosmos-sdk/simapp v0.0.0-20250109074151-821656007fdc
 	cosmossdk.io/store => github.com/mmsqe/cosmos-sdk/store v0.0.0-20250108013751-d0a525082217
-	cosmossdk.io/x/bank => github.com/mmsqe/cosmos-sdk/x/bank v0.0.0-20250109013406-adddd07c310c
-	cosmossdk.io/x/staking => github.com/mmsqe/cosmos-sdk/x/staking v0.0.0-20250109013406-adddd07c310c
-	cosmossdk.io/x/upgrade => github.com/mmsqe/cosmos-sdk/x/upgrade v0.0.0-20250109013406-adddd07c310c
-	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.0-beta2.0.20250109013406-adddd07c310c
+	cosmossdk.io/x/bank => github.com/mmsqe/cosmos-sdk/x/bank v0.0.0-20250109074151-821656007fdc
+	cosmossdk.io/x/staking => github.com/mmsqe/cosmos-sdk/x/staking v0.0.0-20250109074151-821656007fdc
+	cosmossdk.io/x/upgrade => github.com/mmsqe/cosmos-sdk/x/upgrade v0.0.0-20250109074151-821656007fdc
+	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.0-beta2.0.20250109074151-821656007fdc
 )
 
 replace (
