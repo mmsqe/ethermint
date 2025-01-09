@@ -49,7 +49,6 @@ func (app *EthermintApp) RegisterUpgradeHandlers() {
 					pooltypes.StoreKey,
 					accounts.StoreKey,
 				},
-				Deleted: []string{"ibc"},
 			}))
 		}
 	}

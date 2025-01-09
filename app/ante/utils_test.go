@@ -150,6 +150,7 @@ func (suite *AnteTestSuite) SetupTest() {
 		FeeMarketKeeper:          suite.app.FeeMarketKeeper,
 		EvmKeeper:                suite.app.EvmKeeper,
 		FeegrantKeeper:           suite.app.FeeGrantKeeper,
+		IBCKeeper:                suite.app.IBCKeeper,
 		SignModeHandler:          encodingConfig.TxConfig.SignModeHandler(),
 		SigGasConsumer:           ante.DefaultSigVerificationGasConsumer,
 		MaxTxGasWanted:           0,

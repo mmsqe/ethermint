@@ -114,6 +114,7 @@ func NewSimApp(
 		SignModeHandler:          app.TxConfig().SignModeHandler(),
 		FeegrantKeeper:           app.FeeGrantKeeper,
 		SigGasConsumer:           ante.DefaultSigVerificationGasConsumer,
+		IBCKeeper:                app.IBCKeeper,
 		EvmKeeper:                app.EvmKeeper,
 		FeeMarketKeeper:          app.FeeMarketKeeper,
 		MaxTxGasWanted:           0,

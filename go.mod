@@ -3,10 +3,10 @@ module github.com/evmos/ethermint
 go 1.23.3
 
 require (
-	cosmossdk.io/api v0.8.0-rc.3
+	cosmossdk.io/api v0.8.0
 	cosmossdk.io/client/v2 v2.0.0-beta.6
 	cosmossdk.io/collections v1.0.0-rc.1
-	cosmossdk.io/core v1.0.0-alpha.6
+	cosmossdk.io/core v1.0.0
 	cosmossdk.io/core/testing v0.0.1
 	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/log v1.5.0
@@ -15,7 +15,7 @@ require (
 	cosmossdk.io/store v1.10.0-rc.1.0.20241218084712-ca559989da43
 	cosmossdk.io/tools/confix v0.1.2
 	cosmossdk.io/x/accounts v0.0.0-20241213081318-957e24171608
-	cosmossdk.io/x/accounts/defaults/base v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/accounts/defaults/base v0.0.0-20241218104812-cb56c6e47f76
 	cosmossdk.io/x/accounts/defaults/lockup v0.0.0-20241213081318-957e24171608
 	cosmossdk.io/x/accounts/defaults/multisig v0.0.0-20241213081318-957e24171608
 	cosmossdk.io/x/authz v0.0.0-20241213081318-957e24171608
@@ -31,16 +31,17 @@ require (
 	cosmossdk.io/x/slashing v0.0.0-20241213081318-957e24171608
 	cosmossdk.io/x/staking v0.0.0-20241213081318-957e24171608
 	cosmossdk.io/x/tx v1.0.0
-	cosmossdk.io/x/upgrade v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/upgrade v0.1.4
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/cometbft/cometbft v1.0.0
 	github.com/cometbft/cometbft/api v1.0.0
-	github.com/cosmos/cosmos-db v1.1.0
+	github.com/cosmos/cosmos-db v1.1.1
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5
 	github.com/cosmos/cosmos-sdk v0.53.0
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.7.0
+	github.com/cosmos/ibc-go/v9 v9.0.0-20241219164157-3b54ed61102b
 	github.com/crypto-org-chain/go-block-stm v0.0.0-20241213061541-7afe924fb4a6
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
@@ -56,7 +57,7 @@ require (
 	github.com/onsi/gomega v1.28.1
 	github.com/pkg/errors v0.9.1
 	github.com/rs/cors v1.11.1
-	github.com/spf13/cast v1.7.0
+	github.com/spf13/cast v1.7.1
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/status-im/keycard-go v0.3.3
@@ -75,8 +76,8 @@ require (
 )
 
 require (
-	buf.build/gen/go/cometbft/cometbft/protocolbuffers/go v1.36.0-20241120201313-68e42a58b301.1 // indirect
-	buf.build/gen/go/cosmos/gogo-proto/protocolbuffers/go v1.36.0-20240130113600-88ef6483f90f.1 // indirect
+	buf.build/gen/go/cometbft/cometbft/protocolbuffers/go v1.36.1-20241120201313-68e42a58b301.1 // indirect
+	buf.build/gen/go/cosmos/gogo-proto/protocolbuffers/go v1.36.1-20240130113600-88ef6483f90f.1 // indirect
 	cloud.google.com/go v0.115.1 // indirect
 	cloud.google.com/go/auth v0.8.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.4 // indirect
@@ -96,7 +97,7 @@ require (
 	github.com/99designs/keyring v1.2.2 // indirect
 	github.com/DataDog/datadog-go v4.8.3+incompatible // indirect
 	github.com/DataDog/zstd v1.5.6 // indirect
-	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
 	github.com/aws/aws-sdk-go v1.55.5 // indirect
@@ -137,7 +138,7 @@ require (
 	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/dop251/goja v0.0.0-20230122112309-96b1610dd4f7 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
+	github.com/dvsekhvalnov/jose2go v1.7.0 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/emicklei/dot v1.6.2 // indirect
 	github.com/fatih/color v1.18.0 // indirect
@@ -177,6 +178,7 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-plugin v1.6.2 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
+	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
@@ -230,7 +232,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/rs/zerolog v1.33.0 // indirect
-	github.com/sagikazarmark/locafero v0.4.0 // indirect
+	github.com/sagikazarmark/locafero v0.6.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.5 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
@@ -248,6 +250,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
+	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/zondax/hid v0.9.2 // indirect
 	github.com/zondax/ledger-go v1.0.0 // indirect
@@ -264,7 +267,6 @@ require (
 	golang.org/x/arch v0.12.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
-	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/oauth2 v0.24.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/term v0.27.0 // indirect

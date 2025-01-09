@@ -123,9 +123,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
-	"github.com/evmos/ethermint/client/docs"
+	"github.com/cosmos/ibc-go/v9/modules/apps/transfer"
+	ibctransferkeeper "github.com/cosmos/ibc-go/v9/modules/apps/transfer/keeper"
+	ibctransfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
+	ibc "github.com/cosmos/ibc-go/v9/modules/core"
+	ibcclienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
+	ibcconnectiontypes "github.com/cosmos/ibc-go/v9/modules/core/03-connection/types"
+	porttypes "github.com/cosmos/ibc-go/v9/modules/core/05-port/types"
+	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/exported"
+	ibckeeper "github.com/cosmos/ibc-go/v9/modules/core/keeper"
+	ibctm "github.com/cosmos/ibc-go/v9/modules/light-clients/07-tendermint"
 
 	"github.com/evmos/ethermint/app/ante"
+	"github.com/evmos/ethermint/client/docs"
 	"github.com/evmos/ethermint/encoding"
 	"github.com/evmos/ethermint/ethereum/eip712"
 	srvconfig "github.com/evmos/ethermint/server/config"
@@ -174,6 +184,7 @@ var (
 		{Account: stakingtypes.BondedPoolName, Permissions: []string{authtypes.Burner, stakingtypes.ModuleName}},
 		{Account: stakingtypes.NotBondedPoolName, Permissions: []string{authtypes.Burner, stakingtypes.ModuleName}},
 		{Account: govtypes.ModuleName, Permissions: []string{authtypes.Burner}},
+		{Account: ibctransfertypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner}},
 		// used for secure addition and subtraction of balance using module account
 		{Account: evmtypes.ModuleName, Permissions: []string{authtypes.Minter, authtypes.Burner}},
 	}
@@ -237,7 +248,9 @@ type EthermintApp struct {
 	ParamsKeeper          paramskeeper.Keeper
 	FeeGrantKeeper        feegrantkeeper.Keeper
 	AuthzKeeper           authzkeeper.Keeper
+	IBCKeeper             *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	EvidenceKeeper        evidencekeeper.Keeper
+	TransferKeeper        ibctransferkeeper.Keeper
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
 	PoolKeeper            poolkeeper.Keeper
 
@@ -320,6 +333,8 @@ func NewEthermintApp(
 		govtypes.StoreKey, paramstypes.StoreKey, upgradetypes.StoreKey,
 		evidencetypes.StoreKey, consensusparamtypes.StoreKey, pooltypes.StoreKey, accounts.StoreKey,
 		feegrant.StoreKey, authzkeeper.StoreKey,
+		// ibc keys
+		ibcexported.StoreKey, ibctransfertypes.StoreKey,
 		// ethermint keys
 		evmtypes.StoreKey, feemarkettypes.StoreKey,
 	)
@@ -535,6 +550,16 @@ func NewEthermintApp(
 		app.AuthKeeper.AddressCodec(),
 	)
 
+	// Create IBC Keeper
+	app.IBCKeeper = ibckeeper.NewKeeper(
+		appCodec,
+		runtime.NewKVStoreService(keys[ibcexported.StoreKey]),
+		app.GetSubspace(ibcexported.ModuleName),
+		app.UpgradeKeeper,
+		// scopedIBCKeeper,
+		authAddr,
+	)
+
 	tracer := cast.ToString(appOpts.Get(srvflags.EVMTracer))
 
 	// Create Ethermint keepers
@@ -599,6 +624,28 @@ func NewEthermintApp(
 		),
 	)
 
+	// Create Transfer Keepers
+	app.TransferKeeper = ibctransferkeeper.NewKeeper(
+		appCodec,
+		runtime.NewEnvironment(
+			runtime.NewKVStoreService(keys[ibctransfertypes.StoreKey]),
+			logger.With(log.ModuleKey, fmt.Sprintf("x/%s-%s", ibcexported.ModuleName, ibctransfertypes.ModuleName)),
+		),
+		app.GetSubspace(ibctransfertypes.ModuleName),
+		app.IBCKeeper.ChannelKeeper,
+		app.IBCKeeper.ChannelKeeper,
+		app.AuthKeeper,
+		app.BankKeeper,
+		authAddr,
+	)
+	transferModule := transfer.NewAppModule(appCodec, app.TransferKeeper)
+	transferIBCModule := transfer.NewIBCModule(app.TransferKeeper)
+
+	// Create static IBC router, add transfer route, then set and seal it
+	ibcRouter := porttypes.NewRouter()
+	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferIBCModule)
+	app.IBCKeeper.SetRouter(ibcRouter)
+
 	// create evidence keeper with router
 	evidenceKeeper := evidencekeeper.NewKeeper(
 		appCodec,
@@ -628,6 +675,7 @@ func NewEthermintApp(
 		auth.NewAppModule(appCodec, app.AuthKeeper, app.AccountsKeeper, authsims.RandomGenesisAccounts, nil),
 		vesting.NewAppModule(app.AuthKeeper, app.BankKeeper),
 		bank.NewAppModule(appCodec, app.BankKeeper, app.AuthKeeper),
+		// capability.NewAppModule(appCodec, *app.CapabilityKeeper, false),
 		feegrantmodule.NewAppModule(appCodec, app.FeeGrantKeeper, app.interfaceRegistry),
 		gov.NewAppModule(appCodec, &app.GovKeeper, app.AuthKeeper, app.BankKeeper, app.PoolKeeper),
 		mint.NewAppModule(appCodec, app.MintKeeper, app.AuthKeeper),
@@ -648,6 +696,10 @@ func NewEthermintApp(
 		authzmodule.NewAppModule(appCodec, app.AuthzKeeper, app.interfaceRegistry),
 		consensus.NewAppModule(appCodec, app.ConsensusParamsKeeper),
 		protocolpool.NewAppModule(appCodec, app.PoolKeeper, app.AuthKeeper, app.BankKeeper),
+		// ibc modules
+		ibc.NewAppModule(appCodec, app.IBCKeeper),
+		ibctm.AppModule{},
+		transferModule,
 		// Ethermint app modules
 		feemarket.NewAppModule(appCodec, app.FeeMarketKeeper, feeMarketSs),
 		evm.NewAppModule(appCodec, app.EvmKeeper, app.AuthKeeper, app.BankKeeper, app.AuthKeeper.Accounts, evmSs),
@@ -667,6 +719,7 @@ func NewEthermintApp(
 	// NOTE: staking module is required if HistoricalEntries param > 0
 	// NOTE: capability module's beginblocker must come before any modules using capabilities (e.g. IBC)
 	app.ModuleManager.SetOrderBeginBlockers(
+		// capabilitytypes.ModuleName,
 		feemarkettypes.ModuleName,
 		evmtypes.ModuleName,
 		minttypes.ModuleName,
@@ -674,7 +727,9 @@ func NewEthermintApp(
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
 		stakingtypes.ModuleName,
+		ibcexported.ModuleName,
 		// no-op modules
+		ibctransfertypes.ModuleName,
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		govtypes.ModuleName,
@@ -695,6 +750,9 @@ func NewEthermintApp(
 		evmtypes.ModuleName,
 		feemarkettypes.ModuleName,
 		// no-op modules
+		// capabilitytypes.ModuleName,
+		ibcexported.ModuleName,
+		ibctransfertypes.ModuleName,
 		authtypes.ModuleName,
 		distrtypes.ModuleName,
 		slashingtypes.ModuleName,
@@ -717,6 +775,7 @@ func NewEthermintApp(
 	// can do so safely.
 	genesisModuleOrder := []string{
 		// SDK modules
+		// capabilitytypes.ModuleName,
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		distrtypes.ModuleName,
@@ -724,6 +783,7 @@ func NewEthermintApp(
 		slashingtypes.ModuleName,
 		govtypes.ModuleName,
 		minttypes.ModuleName,
+		ibcexported.ModuleName,
 		// evm module denomination is used by the feemarket module, in AnteHandle
 		evmtypes.ModuleName,
 		// NOTE: feemarket need to be initialized before genutil module:
@@ -731,6 +791,7 @@ func NewEthermintApp(
 		feemarkettypes.ModuleName,
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
+		ibctransfertypes.ModuleName,
 		authz.ModuleName,
 		feegrant.ModuleName,
 		paramstypes.ModuleName,
@@ -874,6 +935,7 @@ func (app *EthermintApp) setAnteHandler(txConfig client.TxConfig, maxGasWanted u
 		FeegrantKeeper:           app.FeeGrantKeeper,
 		SignModeHandler:          txConfig.SignModeHandler(),
 		SigGasConsumer:           ante.DefaultSigVerificationGasConsumer,
+		IBCKeeper:                app.IBCKeeper,
 		MaxTxGasWanted:           maxGasWanted,
 		ExtensionOptionChecker:   ethermint.HasDynamicFeeExtensionOption,
 		DynamicFeeChecker:        true,
@@ -1190,6 +1252,11 @@ func GetMaccPerms() map[string][]string {
 // initParamsKeeper init params keeper and its subspaces
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
+	// register the key tables for legacy param subspaces
+	keyTable := ibcclienttypes.ParamKeyTable()
+	keyTable.RegisterParamSet(&ibcconnectiontypes.Params{})
+	paramsKeeper.Subspace(ibcexported.ModuleName).WithKeyTable(keyTable)
+	paramsKeeper.Subspace(ibctransfertypes.ModuleName).WithKeyTable(ibctransfertypes.ParamKeyTable())
 	// ethermint subspaces
 	paramsKeeper.Subspace(evmtypes.ModuleName).WithKeyTable(v0evmtypes.ParamKeyTable()) //nolint: staticcheck
 	paramsKeeper.Subspace(feemarkettypes.ModuleName).WithKeyTable(feemarkettypes.ParamKeyTable())

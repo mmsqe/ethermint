@@ -30,6 +30,7 @@ import (
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	"github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	ibcante "github.com/cosmos/ibc-go/v9/modules/core/ante"
 
 	"github.com/cosmos/cosmos-sdk/x/auth/ante/unorderedtx"
 	"github.com/ethereum/go-ethereum/common"
@@ -80,6 +81,7 @@ func NewLegacyCosmosAnteHandlerEip712(ctx context.Context, options HandlerOption
 		authante.NewValidateSigCountDecorator(options.AccountKeeper),
 		// Note: signature verification uses EIP instead of the cosmos signature validator
 		NewLegacyEip712SigVerificationDecorator(options.AccountKeeper, options.SignModeHandler),
+		ibcante.NewRedundantRelayDecorator(options.IBCKeeper),
 	}
 	decorators = append(decorators, extra...)
 	return sdk.ChainAnteDecorators(decorators...)

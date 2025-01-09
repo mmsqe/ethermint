@@ -27,6 +27,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/ante/unorderedtx"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
+	ibcante "github.com/cosmos/ibc-go/v9/modules/core/ante"
+	ibckeeper "github.com/cosmos/ibc-go/v9/modules/core/keeper"
+
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 )
 
@@ -40,6 +43,7 @@ type HandlerOptions struct {
 	AccountKeeper            evmtypes.AccountKeeper
 	AccountAbstractionKeeper ante.AccountAbstractionKeeper
 	BankKeeper               evmtypes.BankKeeper
+	IBCKeeper                *ibckeeper.Keeper
 	FeeMarketKeeper          FeeMarketKeeper
 	EvmKeeper                EVMKeeper
 	FeegrantKeeper           ante.FeegrantKeeper
@@ -187,6 +191,7 @@ func newCosmosAnteHandler(ctx context.Context, options HandlerOptions, extra ...
 		NewDeductFeeDecorator(options.AccountKeeper, options.BankKeeper, options.FeegrantKeeper, txFeeChecker),
 		ante.NewValidateSigCountDecorator(options.AccountKeeper),
 		NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler, options.SigGasConsumer, options.AccountAbstractionKeeper),
+		ibcante.NewRedundantRelayDecorator(options.IBCKeeper),
 	}
 	decorators = append(decorators, extra...)
 	return sdk.ChainAnteDecorators(decorators...)
