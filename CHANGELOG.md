@@ -79,6 +79,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (rpc) [#559](https://github.com/crypto-org-chain/ethermint/pull/559) Use basefee of transaction height instead of minus one height when `debug_traceTransaction`.
 * (ante) [#560](https://github.com/crypto-org-chain/ethermint/pull/560) Check gasWanted only in checkTx mode.
 * (rpc) [#562](https://github.com/crypto-org-chain/ethermint/pull/562) Fix nil pointer panic with legacy transaction format.
+* (evm) [#567](https://github.com/crypto-org-chain/ethermint/pull/567) Fix nonce management in batch transaction.
 
 ### Improvements
 
@@ -107,6 +108,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * [#551](https://github.com/crypto-org-chain/ethermint/pull/551) Start event stream on demand.
 * [#555](https://github.com/crypto-org-chain/ethermint/pull/555) Update cometbft to 0.38.14 and rocksdb to 9.7.4.
 * [#565](https://github.com/crypto-org-chain/ethermint/pull/565) Add back CacheWrapWithTrace api.
+* [#563](https://github.com/crypto-org-chain/ethermint/pull/563) Bump ibc-go to v9.0.2.
 
 ## v0.21.x-cronos
 

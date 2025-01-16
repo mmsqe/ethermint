@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/release-25.05";
     flake-utils.url = "github:numtide/flake-utils";
     gomod2nix = {
       url = "github:obreitwi/gomod2nix/fix/go_mod_vendor";
@@ -57,9 +57,11 @@
         }
       )
     ) // {
-      overlay = final: super: {
-        go = super.go_1_23;
-        test-env = final.callPackage ./nix/testenv.nix { };
-      };
+      overlays.default = [
+        (import ./nix/build_overlay.nix)
+        (final: super: {
+          test-env = final.callPackage ./nix/testenv.nix { };
+        })
+      ];
     };
 }
