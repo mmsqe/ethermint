@@ -645,6 +645,11 @@ func NewEthermintApp(
 	ibcRouter := porttypes.NewRouter()
 	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferIBCModule)
 	app.IBCKeeper.SetRouter(ibcRouter)
+	clientKeeper := app.IBCKeeper.ClientKeeper
+	storeProvider := clientKeeper.GetStoreProvider()
+
+	tmLightClientModule := ibctm.NewLightClientModule(appCodec, storeProvider)
+	clientKeeper.AddRoute(ibctm.ModuleName, &tmLightClientModule)
 
 	// create evidence keeper with router
 	evidenceKeeper := evidencekeeper.NewKeeper(
@@ -697,7 +702,8 @@ func NewEthermintApp(
 		protocolpool.NewAppModule(appCodec, app.PoolKeeper, app.AuthKeeper, app.BankKeeper),
 		// ibc modules
 		ibc.NewAppModule(appCodec, app.IBCKeeper),
-		ibctm.AppModule{},
+		// IBC light clients
+		ibctm.NewAppModule(tmLightClientModule),
 		transferModule,
 		// Ethermint app modules
 		feemarket.NewAppModule(appCodec, app.FeeMarketKeeper, feeMarketSs),
