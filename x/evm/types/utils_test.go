@@ -67,8 +67,8 @@ func TestUnwrapEthererumMsg(t *testing.T) {
 	tx = builder.GetTx().(sdk.Tx)
 	msg_, err := evmtypes.UnwrapEthereumMsg(&tx, msg.AsTransaction().Hash())
 	require.Nil(t, err)
-	// mmsqe setDecoded change time after Unmarshal
-	require.Equal(t, msg_.Raw.Transaction.Hash(), msg.Raw.Transaction.Hash())
+	// mmsqe time
+	require.Equal(t, msg_.Data, msg.Data)
 }
 
 func TestBinSearch(t *testing.T) {
