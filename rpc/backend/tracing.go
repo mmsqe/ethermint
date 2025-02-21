@@ -113,7 +113,7 @@ func (b *Backend) TraceTransaction(hash common.Hash, config *rpctypes.TraceConfi
 	}
 
 	// minus one to get the context of block beginning
-	contextHeight := transaction.Height - 1
+	contextHeight := transaction.Height
 	if contextHeight < 1 {
 		// 0 is a special value in `ContextWithHeight`
 		contextHeight = 1
