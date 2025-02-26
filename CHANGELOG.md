@@ -109,6 +109,7 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * [#555](https://github.com/crypto-org-chain/ethermint/pull/555) Update cometbft to 0.38.14 and rocksdb to 9.7.4.
 * [#565](https://github.com/crypto-org-chain/ethermint/pull/565) Add back CacheWrapWithTrace api.
 * [#563](https://github.com/crypto-org-chain/ethermint/pull/563) Bump ibc-go to v9.0.2.
+* [#573](https://github.com/crypto-org-chain/ethermint/pull/573) Bump ibc-go to v10.0.x.
 
 ## v0.21.x-cronos
 
