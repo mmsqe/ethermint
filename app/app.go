@@ -310,7 +310,6 @@ func NewEthermintApp(
 
 	// Add the EVM transient store key
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
-	memKeys := storetypes.NewMemoryStoreKeys()
 	okeys := storetypes.NewObjectStoreKeys(banktypes.ObjectStoreKey, evmtypes.ObjectStoreKey)
 
 	// load state streaming if enabled
@@ -328,7 +327,6 @@ func NewEthermintApp(
 		invCheckPeriod:    invCheckPeriod,
 		keys:              keys,
 		tkeys:             tkeys,
-		memKeys:           memKeys,
 		okeys:             okeys,
 	}
 
@@ -747,7 +745,6 @@ func NewEthermintApp(
 	// initialize stores
 	app.MountKVStores(keys)
 	app.MountTransientStores(tkeys)
-	app.MountMemoryStores(memKeys)
 	app.MountObjectStores(okeys)
 
 	// initialize BaseApp
