@@ -46,6 +46,9 @@ TEST_CONTRACTS = {
     "TestBlockTxProperties": "TestBlockTxProperties.sol",
     "FeeCollector": "FeeCollector.sol",
     "SelfDestruct": "SelfDestruct.sol",
+    "TokenDistributor": "TokenDistributor.sol",
+    "BonusDistributor": "BonusDistributor.sol",
+    "BonusMultiplier": "BonusMultiplier.sol"
 }
 
 

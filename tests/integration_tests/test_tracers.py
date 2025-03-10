@@ -12,6 +12,7 @@ from .expected_constants import (
     EXPECTED_DEFAULT_GASCAP,
     EXPECTED_JS_TRACERS,
     EXPECTED_STRUCT_TRACER,
+    EXPECTED_TRACE_INTERNAL_TX,
 )
 from .utils import (
     ADDRS,
@@ -241,6 +242,74 @@ def test_destruct(ethermint):
         )
         print(tx_hash, res)
         assert "insufficient funds" not in res, res
+
+
+def test_trace_internal_tx(ethermint):
+    method = "debug_traceTransaction"
+    tracer = {"tracer": "callTracer"}
+    receiver = "0x0F0cb39319129BA867227e5Aae1abe9e7dd5f861"
+    acc = derive_new_account(12)
+    w3 = ethermint.w3
+    fund_acc(w3, acc, fund=100000000000000000000)
+    sender = acc.address
+    erc20, _ = deploy_contract(w3, CONTRACTS["TestERC20A"], key=acc.key)
+    bonus_token, _ = deploy_contract(w3, CONTRACTS["TestERC20A"], key=acc.key)
+    token_distributor, _ = deploy_contract(
+        w3, CONTRACTS["TokenDistributor"], (erc20.address,), key=acc.key
+    )
+    bonus_distributor, _ = deploy_contract(
+        w3, CONTRACTS["BonusDistributor"], (bonus_token.address,), key=acc.key
+    )
+    bonus_multiplier, _ = deploy_contract(
+        w3, CONTRACTS["BonusMultiplier"], (bonus_token.address,), key=acc.key
+    )
+    data = {"from": sender}
+    tx = token_distributor.functions.setBonusDistributor(
+        bonus_distributor.address
+    ).build_transaction(data)
+    receipt = send_transaction(w3, tx, acc.key)
+    assert receipt.status == 1
+    tx = bonus_distributor.functions.setBonusMultiplier(
+        bonus_multiplier.address
+    ).build_transaction(data)
+    receipt = send_transaction(w3, tx, acc.key)
+    assert receipt.status == 1
+
+    token_amt = 100
+    tx = erc20.functions.transfer(
+        token_distributor.address, token_amt
+    ).build_transaction(data)
+    receipt = send_transaction(w3, tx, acc.key)
+    assert receipt.status == 1
+    tx = bonus_token.functions.transfer(
+        bonus_multiplier.address, token_amt
+    ).build_transaction(data)
+    receipt = send_transaction(w3, tx, acc.key)
+    assert receipt.status == 1
+    balance = w3.eth.get_balance(receiver)
+    balance_erc20 = erc20.caller.balanceOf(receiver)
+    balance_bonus = bonus_token.caller.balanceOf(receiver)
+    amt = 25000000000000000000
+    tx = token_distributor.functions.distributeTokens(
+        [receiver], [token_amt]
+    ).build_transaction(
+        {
+            "from": sender,
+            "nonce": w3.eth.get_transaction_count(sender),
+            "gas": 1705533,
+            "gasPrice": 5001500000000,
+            "value": amt,
+        }
+    )
+    receipt = send_transaction(w3, tx, acc.key)
+    res = w3.provider.make_request(
+        method,
+        [receipt["transactionHash"], tracer],
+    )
+    assert res["result"] == EXPECTED_TRACE_INTERNAL_TX
+    assert w3.eth.get_balance(receiver) == balance + amt
+    assert erc20.caller.balanceOf(receiver) == balance_erc20 + token_amt
+    assert bonus_token.caller.balanceOf(receiver) == balance_bonus + token_amt * 0.2
 
 
 def test_tracecall_insufficient_funds(ethermint, geth):
