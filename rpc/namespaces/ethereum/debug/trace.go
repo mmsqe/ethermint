@@ -66,12 +66,12 @@ func (a *API) StartGoTrace(file string) error {
 		return errors.New("path traversal attempt detected")
 	}
 
-	if err := os.MkdirAll(filepath.Dir(canonicalPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(canonicalPath), 0o750); err != nil {
 		a.logger.Debug("failed to create directory", "error", err.Error())
 		return err
 	}
 
-	f, err := os.OpenFile(canonicalPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	f, err := os.OpenFile(canonicalPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		if os.IsExist(err) {
 			a.logger.Debug("trace file already exists, refusing to overwrite", "file", canonicalPath)
