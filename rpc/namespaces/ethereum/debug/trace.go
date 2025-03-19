@@ -73,7 +73,7 @@ func (a *API) StartGoTrace(file string) error {
 	var f *os.File
 	if restrictUserInput {
 		// Create the file with O_EXCL to ensure that the file does not exist.
-		f, err = os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+		f, err = os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o666)
 	} else {
 		f, err = os.Create(file)
 	}
