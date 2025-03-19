@@ -303,6 +303,7 @@ func DefaultJSONRPCConfig() *JSONRPCConfig {
 		MetricsAddress:           DefaultJSONRPCMetricsAddress,
 		FixRevertGasRefundHeight: DefaultFixRevertGasRefundHeight,
 		ReturnDataLimit:          DefaultReturnDataLimit,
+		RestrictUserInput:        false,
 	}
 }
 
@@ -438,6 +439,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			MetricsAddress:           v.GetString("json-rpc.metrics-address"),
 			FixRevertGasRefundHeight: v.GetInt64("json-rpc.fix-revert-gas-refund-height"),
 			ReturnDataLimit:          v.GetInt64("json-rpc.return-data-limit"),
+			RestrictUserInput:        v.GetBool("json-rpc.restrict-user-input"),
 		},
 		TLS: TLSConfig{
 			CertificatePath: v.GetString("tls.certificate-path"),
