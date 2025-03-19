@@ -182,6 +182,9 @@ type JSONRPCConfig struct {
 	FixRevertGasRefundHeight int64 `mapstructure:"fix-revert-gas-refund-height"`
 	// ReturnDataLimit defines maximum number of bytes returned from `eth_call` or similar invocations
 	ReturnDataLimit int64 `mapstructure:"return-data-limit"`
+	// RestrictUserInput will restrict some user input to the JSON-RPC debug apis,
+	// must be set to true if serving debug namespace to the public.
+	RestrictUserInput bool `mapstructure:"restrict-user-input"`
 }
 
 // TLSConfig defines the certificate and matching private key for the server.

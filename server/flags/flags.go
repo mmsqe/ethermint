@@ -66,6 +66,7 @@ const (
 	JSONRPCMaxOpenConnections  = "json-rpc.max-open-connections"
 	JSONRPCEnableIndexer       = "json-rpc.enable-indexer"
 	JSONRPCAllowIndexerGap     = "json-rpc.allow-indexer-gap"
+	JSONRPCRestrictUserInput   = "json-rpc.restrict-user-input"
 	// JSONRPCEnableMetrics enables EVM RPC metrics server.
 	// Set to `metrics` which is hardcoded flag from go-ethereum.
 	// https://github.com/ethereum/go-ethereum/blob/master/metrics/metrics.go#L35-L55
