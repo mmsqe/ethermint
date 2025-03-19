@@ -26,8 +26,22 @@ import (
 	"runtime/trace"
 	"strings"
 
+	srvflags "github.com/evmos/ethermint/server/flags"
 	stderrors "github.com/pkg/errors"
 )
+
+func (a *API) startTrace(f *os.File) error {
+	if err := trace.Start(f); err != nil {
+		a.logger.Debug("Go tracing already started", "error", err.Error())
+		if closeErr := f.Close(); closeErr != nil {
+			a.logger.Debug("failed to close trace file", "error", closeErr.Error())
+			return stderrors.Wrap(closeErr, "failed to close trace file")
+		}
+		return err
+	}
+	a.handler.traceFile = f
+	return nil
+}
 
 // StartGoTrace turns on tracing, writing to the given file.
 func (a *API) StartGoTrace(file string) error {
@@ -38,6 +52,25 @@ func (a *API) StartGoTrace(file string) error {
 	if a.handler.traceFile != nil {
 		a.logger.Debug("trace already in progress")
 		return errors.New("trace already in progress")
+	}
+	allowAny := a.ctx.Viper.GetBool(srvflags.JSONRPCAllowDebugTraceAnyFolder)
+	if allowAny {
+		fp, err := ExpandHome(file)
+		if err != nil {
+			a.logger.Debug("failed to get filepath for the CPU profile file", "error", err.Error())
+			return err
+		}
+		f, err := os.Create(fp)
+		if err != nil {
+			a.logger.Debug("failed to create go trace file", "error", err.Error())
+			return err
+		}
+		if err := a.startTrace(f); err != nil {
+			return err
+		}
+		a.handler.traceFilename = file
+		a.logger.Info("Go tracing started", "dump", a.handler.traceFilename)
+		return nil
 	}
 
 	if file == ".." || file == "/" || file == "\\" || filepath.IsAbs(file) {
@@ -80,16 +113,9 @@ func (a *API) StartGoTrace(file string) error {
 		a.logger.Debug("failed to create go trace file", "error", err.Error())
 		return err
 	}
-
-	if err := trace.Start(f); err != nil {
-		a.logger.Debug("Go tracing already started", "error", err.Error())
-		if closeErr := f.Close(); closeErr != nil {
-			a.logger.Debug("failed to close trace file", "error", closeErr.Error())
-			return stderrors.Wrap(closeErr, "failed to close trace file")
-		}
+	if err := a.startTrace(f); err != nil {
 		return err
 	}
-	a.handler.traceFile = f
 	a.handler.traceFilename = canonicalPath
 	a.logger.Info("Go tracing started", "dump", a.handler.traceFilename)
 	return nil
