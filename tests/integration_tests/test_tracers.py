@@ -3,6 +3,8 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
+from eth_utils import abi, to_checksum_address
+from hexbytes import HexBytes
 from web3 import Web3
 
 from .expected_constants import (
@@ -21,6 +23,7 @@ from .utils import (
     deploy_contract,
     derive_new_account,
     derive_random_account,
+    get_contract,
     send_raw_transactions,
     send_transaction,
     send_txs,
@@ -242,6 +245,124 @@ def test_destruct(ethermint):
         )
         print(tx_hash, res)
         assert "insufficient funds" not in res, res
+
+
+def test_pack(ethermint):
+    acc0 = derive_new_account(11)  # ethm13c2n7geavjfsqcan290mq74kajjlxehyzhly4p
+    sender = acc0.address
+    acc1 = derive_new_account(12)
+    recipient = acc1.address
+    print("mm-sender", sender)
+    print("mm-recipient", recipient)
+
+    w3 = ethermint.w3
+    fund_acc(w3, acc0, fund=3077735635376769427)
+    fund_acc(w3, acc1, fund=3077735635376769427)
+
+    weth, _ = deploy_contract(w3, CONTRACTS["WETH9"], key=acc0.key)
+    print("mm-weth", weth.address)
+
+    pack, _ = deploy_contract(w3, CONTRACTS["Pack"], (weth.address,), key=acc0.key)
+    print("mm-pack", pack.address)
+
+    test_pack, _ = deploy_contract(w3, CONTRACTS["TestPack"], key=acc0.key)
+    print("mm-test_pack", test_pack.address)
+
+    erc20, _ = deploy_contract(w3, CONTRACTS["MockERC20"], key=acc0.key)
+    print("mm-erc20", erc20.address)
+
+    erc721, _ = deploy_contract(w3, CONTRACTS["MockERC721"], key=acc0.key)
+    print("mm-erc721", erc721.address)
+
+    erc1155, _ = deploy_contract(w3, CONTRACTS["MockERC1155"], key=acc0.key)
+    print("mm-erc1155", erc1155.address)
+
+    forwarder, _ = deploy_contract(w3, CONTRACTS["Forwarder"], key=acc0.key)
+    print("mm-forwarder", forwarder.address)
+
+    registry, _ = deploy_contract(
+        w3, CONTRACTS["TWRegistry"], (forwarder.address,), key=acc0.key
+    )
+    print("mm-registry", registry.address)
+
+    factory, _ = deploy_contract(
+        w3,
+        CONTRACTS["TWFactory"],
+        (
+            forwarder.address,
+            registry.address,
+        ),
+        key=acc0.key,
+    )
+    print("mm-factory", factory.address)
+
+    role = registry.caller.OPERATOR_ROLE()
+    tx = registry.functions.grantRole(
+        role,
+        factory.address,
+    ).build_transaction(
+        {
+            "from": sender,
+        }
+    )
+    receipt = send_transaction(w3, tx, acc0.key)
+    assert receipt.status == 1
+
+    tx = factory.functions.addImplementation(
+        pack.address,
+    ).build_transaction(
+        {
+            "from": sender,
+        }
+    )
+    receipt = send_transaction(w3, tx, acc0.key)
+    assert receipt.status == 1
+
+    tx = test_pack.functions.setUp(
+        erc20.address,
+        erc721.address,
+        erc1155.address,
+        weth.address,
+        forwarder.address,
+        registry.address,
+        factory.address,
+        recipient,
+    ).build_transaction(
+        {
+            "from": sender,
+        }
+    )
+    receipt = send_transaction(w3, tx, acc0.key)
+    assert receipt.status == 1
+
+    pack = get_contract(w3, get_proxy_addr(receipt.logs), CONTRACTS["Pack"])
+    pack_id = 0
+    balance = pack.caller.balanceOf(recipient, pack_id)
+    packs_to_open = 1
+    tx = pack.functions.openPack(
+        pack_id,
+        packs_to_open,
+    ).build_transaction(
+        {
+            "from": recipient,
+        }
+    )
+    receipt = send_transaction(w3, tx, acc1.key)
+    print("mm-receipt", receipt)
+    assert receipt.status == 1
+    assert pack.caller.balanceOf(recipient, pack_id) == balance - packs_to_open
+
+
+def get_proxy_addr(logs):
+    target = HexBytes(abi.event_signature_to_log_topic("ProxyAddress(address)"))
+    return next(
+        (
+            to_checksum_address("0x" + log.topics[1].hex()[-40:])
+            for log in logs
+            if log.topics[0] == target
+        ),
+        None,
+    )
 
 
 def test_trace_internal_tx(ethermint):
