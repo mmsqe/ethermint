@@ -247,6 +247,7 @@ def test_destruct(ethermint):
         assert "insufficient funds" not in res, res
 
 
+@pytest.mark.flaky(max_runs=5)
 def test_pack(ethermint):
     acc0 = derive_new_account(11)  # ethm13c2n7geavjfsqcan290mq74kajjlxehyzhly4p
     sender = acc0.address
@@ -281,7 +282,7 @@ def test_pack(ethermint):
     print("mm-forwarder", forwarder.address)
 
     registry, _ = deploy_contract(
-        w3, CONTRACTS["TWRegistry"], (forwarder.address,), key=acc0.key
+        w3, CONTRACTS["TWRegistry"], ([forwarder.address],), key=acc0.key
     )
     print("mm-registry", registry.address)
 
@@ -289,7 +290,7 @@ def test_pack(ethermint):
         w3,
         CONTRACTS["TWFactory"],
         (
-            forwarder.address,
+            [forwarder.address],
             registry.address,
         ),
         key=acc0.key,

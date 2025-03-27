@@ -15,7 +15,7 @@
     "@openzeppelin/contracts": "^4.8.0",
     "@openzeppelin/contracts-upgradeable": "^4.3.1",
     "@openzeppelin/hardhat-upgrades": "^1.21.0",
-    "@thirdweb-dev/contracts": "^3.15.0",
+    "@thirdweb-dev/contracts": "git+https://github.com/mmsqe/contracts#fix_suffix_len",
     "@typechain/ethers-v5": "^5.0.0",
     "@uniswap/v3-periphery": "^1.4.4",
     "forge-std": "^1.1.2",

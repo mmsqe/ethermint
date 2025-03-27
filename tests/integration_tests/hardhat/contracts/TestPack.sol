@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import { Pack } from "@thirdweb-dev/contracts/prebuilts/pack/Pack.sol";
-import { ITokenBundle } from "@thirdweb-dev/contracts/extension/interface/ITokenBundle.sol";
+import { Pack } from "@thirdweb-dev/contracts/contracts/prebuilts/pack/Pack.sol";
+import { ITokenBundle } from "@thirdweb-dev/contracts/contracts/extension/interface/ITokenBundle.sol";
 
 import { Wallet } from "./utils/Wallet.sol";
 import "./mocks/MockERC20.sol";
@@ -11,9 +11,9 @@ import "./mocks/MockERC721.sol";
 import "./mocks/MockERC1155.sol";
 import "./mocks/WETH9.sol";
 
-import { Forwarder } from "@thirdweb-dev/contracts/infra/forwarder/Forwarder.sol";
-import { TWRegistry } from "@thirdweb-dev/contracts/infra/TWRegistry.sol";
-import { TWFactory } from "@thirdweb-dev/contracts/infra/TWFactory.sol";
+import { Forwarder } from "@thirdweb-dev/contracts/contracts/infra/forwarder/Forwarder.sol";
+import { TWRegistry } from "@thirdweb-dev/contracts/contracts/infra/TWRegistry.sol";
+import { TWFactory } from "@thirdweb-dev/contracts/contracts/infra/TWFactory.sol";
 
 
 contract TestPack is Wallet {

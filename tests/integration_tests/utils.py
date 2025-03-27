@@ -54,11 +54,11 @@ TEST_CONTRACTS = {
     "MockERC721": "contracts/mocks/MockERC721.sol",
     "MockERC1155": "contracts/mocks/MockERC1155.sol",
     "WETH9": "contracts/mocks/WETH9.sol",
-    "Forwarder": "@thirdweb-dev/contracts/infra/forwarder/Forwarder.sol",
-    "TWRegistry": "@thirdweb-dev/contracts/infra/TWRegistry.sol",
-    "TWFactory": "@thirdweb-dev/contracts/infra/TWFactory.sol",
-    "TWFactory": "@thirdweb-dev/contracts/infra/TWFactory.sol",
-    "Pack": "@thirdweb-dev/contracts/prebuilts/pack/Pack.sol",
+    "Forwarder": "@thirdweb-dev/contracts/contracts/infra/forwarder/Forwarder.sol",
+    "TWRegistry": "@thirdweb-dev/contracts/contracts/infra/TWRegistry.sol",
+    "TWFactory": "@thirdweb-dev/contracts/contracts/infra/TWFactory.sol",
+    "TWFactory": "@thirdweb-dev/contracts/contracts/infra/TWFactory.sol",
+    "Pack": "@thirdweb-dev/contracts/contracts/prebuilts/pack/Pack.sol",
     "Wallet": "contracts/utils/Wallet.sol",
 }
 
