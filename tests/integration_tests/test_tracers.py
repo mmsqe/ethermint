@@ -257,8 +257,8 @@ def test_pack(ethermint):
     print("mm-recipient", recipient)
 
     w3 = ethermint.w3
-    fund_acc(w3, acc0, fund=3077735635376769427)
-    fund_acc(w3, acc1, fund=3077735635376769427)
+    fund_acc(w3, acc0, fund=90000000000000000000)
+    fund_acc(w3, acc1, fund=90000000000000000000)
 
     weth, _ = deploy_contract(w3, CONTRACTS["WETH9"], key=acc0.key)
     print("mm-weth", weth.address)
@@ -268,15 +268,6 @@ def test_pack(ethermint):
 
     test_pack, _ = deploy_contract(w3, CONTRACTS["TestPack"], key=acc0.key)
     print("mm-test_pack", test_pack.address)
-
-    erc20, _ = deploy_contract(w3, CONTRACTS["MockERC20"], key=acc0.key)
-    print("mm-erc20", erc20.address)
-
-    erc721, _ = deploy_contract(w3, CONTRACTS["MockERC721"], key=acc0.key)
-    print("mm-erc721", erc721.address)
-
-    erc1155, _ = deploy_contract(w3, CONTRACTS["MockERC1155"], key=acc0.key)
-    print("mm-erc1155", erc1155.address)
 
     forwarder, _ = deploy_contract(w3, CONTRACTS["Forwarder"], key=acc0.key)
     print("mm-forwarder", forwarder.address)
@@ -320,17 +311,13 @@ def test_pack(ethermint):
     assert receipt.status == 1
 
     tx = test_pack.functions.setUp(
-        erc20.address,
-        erc721.address,
-        erc1155.address,
-        weth.address,
         forwarder.address,
-        registry.address,
         factory.address,
         recipient,
     ).build_transaction(
         {
             "from": sender,
+            "value": 20000000000000000000,
         }
     )
     receipt = send_transaction(w3, tx, acc0.key)
