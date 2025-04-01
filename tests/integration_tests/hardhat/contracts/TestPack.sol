@@ -19,8 +19,6 @@ contract TestPack is Wallet {
 
     Pack internal pack;
     Wallet internal tokenOwner;
-    ITokenBundle.Token[] internal packContents;
-    uint256[] internal numOfRewardUnits;
 
     event ProxyAddress(address indexed proxyAddress);
 
@@ -45,15 +43,24 @@ contract TestPack is Wallet {
         pack = Pack(payable(proxyAddress));
         tokenOwner = Wallet(address(this));
 
-        packContents.push(
-            ITokenBundle.Token({
-                assetContract: NATIVE_TOKEN,
-                tokenType: ITokenBundle.TokenType.ERC20,
-                tokenId: 0,
-                totalAmount: 20 ether
-            })
+        createPackWithNativeTokens(_recipient, 20 ether, 20);
+        createPackWithNativeTokens(_recipient, 2 ether, 2);
+    }
+
+    function createPackWithNativeTokens(address recipient, uint256 amount, uint256 numOfRewardUnit) internal {
+        ITokenBundle.Token[] memory packContents = new ITokenBundle.Token[](1);
+        packContents[0] = ITokenBundle.Token(NATIVE_TOKEN, ITokenBundle.TokenType.ERC20, 0, amount);
+
+        uint256[] memory numOfRewardUnits = new uint256[](1);
+        numOfRewardUnits[0] = numOfRewardUnit;
+
+        pack.createPack{ value: amount}(
+            packContents,
+            numOfRewardUnits,
+            packUri,
+            0,
+            1,
+            recipient
         );
-        numOfRewardUnits.push(20);
-        pack.createPack{ value: 20 ether }(packContents, numOfRewardUnits, packUri, 0, 1, _recipient);
     }
 }

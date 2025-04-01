@@ -251,7 +251,7 @@ def test_destruct(ethermint):
 def test_pack(ethermint):
     acc0 = derive_new_account(11)  # ethm13c2n7geavjfsqcan290mq74kajjlxehyzhly4p
     sender = acc0.address
-    acc1 = derive_new_account(12)
+    acc1 = derive_new_account(12)  # ethm1fxvp52wdkqeznl25ss05l3rt07kqmshl0z3a9x
     recipient = acc1.address
     print("mm-sender", sender)
     print("mm-recipient", recipient)
@@ -317,14 +317,15 @@ def test_pack(ethermint):
     ).build_transaction(
         {
             "from": sender,
-            "value": 20000000000000000000,
+            "value": 22000000000000000000,
         }
     )
     receipt = send_transaction(w3, tx, acc0.key)
     assert receipt.status == 1
 
     pack = get_contract(w3, get_proxy_addr(receipt.logs), CONTRACTS["Pack"])
-    pack_id = 0
+    print("mm-pack2", pack.address)
+    pack_id = 1
     balance = pack.caller.balanceOf(recipient, pack_id)
     packs_to_open = 1
     tx = pack.functions.openPack(
@@ -339,6 +340,14 @@ def test_pack(ethermint):
     print("mm-receipt", receipt)
     assert receipt.status == 1
     assert pack.caller.balanceOf(recipient, pack_id) == balance - packs_to_open
+    method = "debug_traceTransaction"
+    tracer = {"tracer": "callTracer"}
+    tx_hash = receipt["transactionHash"].hex()
+    res = w3.provider.make_request(
+        method,
+        [tx_hash, tracer],
+    )
+    print(tx_hash, res)
 
 
 def get_proxy_addr(logs):
