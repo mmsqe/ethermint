@@ -29,10 +29,9 @@ import (
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	"github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
-	ibcante "github.com/cosmos/ibc-go/v8/modules/core/ante"
+	ibcante "github.com/cosmos/ibc-go/v9/modules/core/ante"
 
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 	"github.com/evmos/ethermint/ethereum/eip712"
@@ -301,7 +300,7 @@ func VerifySignature(
 			feePayerSig[ethcrypto.RecoveryIDOffset] -= 27
 		}
 
-		feePayerPubkey, err := secp256k1.RecoverPubkey(sigHash, feePayerSig)
+		feePayerPubkey, err := ethcrypto.Ecrecover(sigHash, feePayerSig)
 		if err != nil {
 			return errorsmod.Wrap(err, "failed to recover delegated fee payer from sig")
 		}
@@ -327,7 +326,7 @@ func VerifySignature(
 
 		// VerifySignature of ethsecp256k1 accepts 64 byte signature [R||S]
 		// WARNING! Under NO CIRCUMSTANCES try to use pubKey.VerifySignature there
-		if !secp256k1.VerifySignature(pubKey.Bytes(), sigHash, feePayerSig[:len(feePayerSig)-1]) {
+		if !ethcrypto.VerifySignature(pubKey.Bytes(), sigHash, feePayerSig[:len(feePayerSig)-1]) {
 			return errorsmod.Wrap(errortypes.ErrorInvalidSigner, "unable to verify signer signature of EIP712 typed data")
 		}
 

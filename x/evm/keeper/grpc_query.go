@@ -41,6 +41,7 @@ import (
 
 	rpctypes "github.com/evmos/ethermint/rpc/types"
 	ethermint "github.com/evmos/ethermint/types"
+	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 )
 
@@ -421,9 +422,11 @@ func execTrace[T traceRequest](
 	c context.Context,
 	req T,
 	k Keeper,
+	baseFee *big.Int,
 	msgCb func(
 		ctx sdk.Context,
 		cfg *EVMConfig,
+		traceConfig *types.TraceConfig,
 	) (*core.Message, error),
 ) ([]byte, error) {
 	var zero T
@@ -456,7 +459,7 @@ func execTrace[T traceRequest](
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to load evm config: %s", err.Error())
 	}
-	msg, err := msgCb(ctx, cfg)
+	msg, err := msgCb(ctx, cfg, req.GetTraceConfig())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -479,11 +482,16 @@ func execTrace[T traceRequest](
 // executes the given message in the provided environment. The return value will
 // be tracer dependent.
 func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*types.QueryTraceTxResponse, error) {
+	var baseFee *big.Int
+	if req != nil && req.BaseFee != nil {
+		baseFee = big.NewInt(req.BaseFee.Int64())
+	}
 	resultData, err := execTrace(
 		c,
 		req,
 		k,
-		func(ctx sdk.Context, cfg *EVMConfig) (*core.Message, error) {
+		baseFee,
+		func(ctx sdk.Context, cfg *EVMConfig, traceConfig *types.TraceConfig) (*core.Message, error) {
 			var blockTime uint64
 			var err error
 			if !req.BlockTime.IsZero() {
@@ -493,7 +501,12 @@ func (k Keeper) TraceTx(c context.Context, req *types.QueryTraceTxRequest) (*typ
 				}
 			}
 			signer := ethtypes.MakeSigner(cfg.ChainConfig, big.NewInt(ctx.BlockHeight()), blockTime)
-			cfg.Tracer = types.NewNoOpTracer()
+			tracer, err := newTacer(&logger.Config{}, cfg.TxConfig, traceConfig)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			cfg.Tracer = tracer
+			cfg.DebugTrace = true
 			for i, tx := range req.Predecessors {
 				ethTx := tx.AsTransaction()
 				msg, err := core.TransactionToMessage(ethTx, signer, cfg.BaseFee)
@@ -615,7 +628,8 @@ func (k Keeper) TraceCall(c context.Context, req *types.QueryTraceCallRequest) (
 		c,
 		req,
 		k,
-		func(ctx sdk.Context, cfg *EVMConfig) (*core.Message, error) {
+		nil,
+		func(ctx sdk.Context, cfg *EVMConfig, _ *types.TraceConfig) (*core.Message, error) {
 			var args types.TransactionArgs
 			err := json.Unmarshal(req.Args, &args)
 			if err != nil {
@@ -640,6 +654,31 @@ func (k Keeper) TraceCall(c context.Context, req *types.QueryTraceCallRequest) (
 	return &types.QueryTraceCallResponse{
 		Data: resultData,
 	}, nil
+}
+
+func newTacer(logConfig *logger.Config, txConfig statedb.TxConfig, traceConfig *types.TraceConfig) (tracers.Tracer, error) {
+	tracer := logger.NewStructLogger(logConfig)
+	if traceConfig != nil && traceConfig.Tracer != "" {
+		txIndex, err := ethermint.SafeInt(txConfig.TxIndex)
+		if err != nil {
+			return nil, err
+		}
+		tCtx := &tracers.Context{
+			BlockHash: txConfig.BlockHash,
+			TxIndex:   txIndex,
+			TxHash:    txConfig.TxHash,
+		}
+		var cfg json.RawMessage
+		if traceConfig.TracerJsonConfig != "" {
+			cfg = json.RawMessage(traceConfig.TracerJsonConfig)
+		}
+		tracer, err := tracers.DefaultDirectory.New(traceConfig.Tracer, tCtx, cfg)
+		if err != nil {
+			return nil, err
+		}
+		return tracer, nil
+	}
+	return tracer, nil
 }
 
 // prepareTrace prepare trace on one Ethereum message, it returns a tuple: (traceResult, nextLogIndex, error).
@@ -677,26 +716,9 @@ func (k *Keeper) prepareTrace(
 		Overrides:        overrides,
 	}
 
-	tracer = logger.NewStructLogger(&logConfig)
-
-	txIndex, err := ethermint.SafeInt(txConfig.TxIndex)
+	tracer, err = newTacer(&logConfig, txConfig, traceConfig)
 	if err != nil {
 		return nil, 0, status.Error(codes.Internal, err.Error())
-	}
-
-	tCtx := &tracers.Context{
-		BlockHash: txConfig.BlockHash,
-		TxIndex:   txIndex,
-		TxHash:    txConfig.TxHash,
-	}
-	if traceConfig.Tracer != "" {
-		var cfg json.RawMessage
-		if traceConfig.TracerJsonConfig != "" {
-			cfg = json.RawMessage(traceConfig.TracerJsonConfig)
-		}
-		if tracer, err = tracers.DefaultDirectory.New(traceConfig.Tracer, tCtx, cfg); err != nil {
-			return nil, 0, status.Error(codes.Internal, err.Error())
-		}
 	}
 
 	// Define a meaningful timeout of a single transaction trace
@@ -740,12 +762,6 @@ func (k *Keeper) prepareTrace(
 	res, err := k.ApplyMessageWithConfig(ctx, msg, cfg, commitMessage)
 	if err != nil {
 		return nil, 0, status.Error(codes.Internal, err.Error())
-	}
-
-	if res.VmError != "" {
-		if res.VmError == vm.ErrInsufficientBalance.Error() {
-			return nil, 0, status.Error(codes.Internal, res.VmError)
-		}
 	}
 
 	var result interface{}

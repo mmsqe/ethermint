@@ -43,6 +43,9 @@ TEST_CONTRACTS = {
     "Calculator": "Calculator.sol",
     "Caller": "Caller.sol",
     "Random": "Random.sol",
+    "TestBlockTxProperties": "TestBlockTxProperties.sol",
+    "FeeCollector": "FeeCollector.sol",
+    "SelfDestruct": "SelfDestruct.sol",
 }
 
 
@@ -354,6 +357,21 @@ def approve_proposal(n, rsp):
     wait_for_block_time(cli, isoparse(proposal["voting_end_time"]))
     proposal = cli.query_proposal(proposal_id)
     assert proposal["status"] == "PROPOSAL_STATUS_PASSED", proposal
+
+
+def submit_gov_proposal(ethermint, tmp_path, **kwargs):
+    proposal = tmp_path / "proposal.json"
+    proposal_src = {
+        "title": "title",
+        "summary": "summary",
+        "deposit": "2aphoton",
+        **kwargs,
+    }
+    proposal.write_text(json.dumps(proposal_src))
+    rsp = ethermint.cosmos_cli().submit_gov_proposal(proposal, from_="community")
+    assert rsp["code"] == 0, rsp["raw_log"]
+    approve_proposal(ethermint, rsp)
+    print("check params have been updated now")
 
 
 class ContractAddress(rlp.Serializable):

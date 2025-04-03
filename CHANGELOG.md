@@ -69,6 +69,18 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (rpc) [#516](https://github.com/crypto-org-chain/ethermint/pull/516) Avoid method eth_chainId crashed due to nil pointer on IsEIP155 check.
 * (cli) [#524](https://github.com/crypto-org-chain/ethermint/pull/524) Allow tx evm raw run for generate only when offline with evm-denom flag.
 * (rpc) [#527](https://github.com/crypto-org-chain/ethermint/pull/527) Fix balance consistency between trace-block and state machine.
+* (rpc) [#534](https://github.com/crypto-org-chain/ethermint/pull/534), [#540](https://github.com/crypto-org-chain/ethermint/pull/540) Fix opBlockhash when no block header in abci request.
+* (rpc) [#536](https://github.com/crypto-org-chain/ethermint/pull/536) Fix validate basic after transaction conversion with raw field.
+* (cli) [#537](https://github.com/crypto-org-chain/ethermint/pull/537) Fix unsuppored sign mode SIGN_MODE_TEXTUAL for bank transfer.
+* (cli) [#543](https://github.com/crypto-org-chain/ethermint/pull/543) Fix graceful shutdown.
+* (rpc) [#545](https://github.com/crypto-org-chain/ethermint/pull/545) Fix state overwrite in debug trace APIs.
+* (rpc) [#554](https://github.com/crypto-org-chain/ethermint/pull/554) No trace detail on insufficient balance.
+* (rpc) [#558](https://github.com/crypto-org-chain/ethermint/pull/558) New tracer in predecessors to trace balance correctly when `debug_traceTransaction`.
+* (rpc) [#559](https://github.com/crypto-org-chain/ethermint/pull/559) Use basefee of transaction height instead of minus one height when `debug_traceTransaction`.
+* (ante) [#560](https://github.com/crypto-org-chain/ethermint/pull/560) Check gasWanted only in checkTx mode.
+* (rpc) [#562](https://github.com/crypto-org-chain/ethermint/pull/562) Fix nil pointer panic with legacy transaction format.
+* (evm) [#567](https://github.com/crypto-org-chain/ethermint/pull/567) Fix nonce management in batch transaction.
+* (rpc) [#574](https://github.com/crypto-org-chain/ethermint/pull/574) Fix incorrect spendable balance when debug trace tx.
 
 ### Improvements
 
@@ -90,7 +102,16 @@ Ref: https://keepachangelog.com/en/1.0.0/
 * (ante) [#504](https://github.com/crypto-org-chain/ethermint/pull/504) Optimize AnteHandle method to skip checks if disabledMsgs is empty.
 * [#517](https://github.com/crypto-org-chain/ethermint/pull/517) Add check for integer overflow to ensure safe conversion.
 * [#522](https://github.com/crypto-org-chain/ethermint/pull/522) block-stm executor support optional pre-estimations.
-* [#526](https://github.com/crypto-org-chain/ethermint/pull/526) Avoid unnecessary block result in header related api call.
+* [#526](https://github.com/crypto-org-chain/ethermint/pull/526), [#535](https://github.com/crypto-org-chain/ethermint/pull/535) Avoid unnecessary block result in header related api call.
+* [#533](https://github.com/crypto-org-chain/ethermint/pull/533) Bump cosmos-sdk to v0.50.10, cometbft to v0.38.13 and ibc-go to v8.5.1.
+* [#546](https://github.com/crypto-org-chain/ethermint/pull/546) Introduce `--async-check-tx` flag to run check-tx async with consensus.
+* [#549](https://github.com/crypto-org-chain/ethermint/pull/549) Support build without cgo.
+* [#551](https://github.com/crypto-org-chain/ethermint/pull/551) Start event stream on demand.
+* [#555](https://github.com/crypto-org-chain/ethermint/pull/555) Update cometbft to 0.38.14 and rocksdb to 9.7.4.
+* [#565](https://github.com/crypto-org-chain/ethermint/pull/565) Add back CacheWrapWithTrace api.
+* [#563](https://github.com/crypto-org-chain/ethermint/pull/563) Bump ibc-go to v9.0.2.
+* [#576](https://github.com/crypto-org-chain/ethermint/pull/576) Add config `json-rpc.restrict-user-input` to restrict
+  user input when serving json-rpc in public.
 
 ## v0.21.x-cronos
 

@@ -20,11 +20,9 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime/pprof"
-	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -70,6 +68,8 @@ import (
 	srvflags "github.com/evmos/ethermint/server/flags"
 	ethermint "github.com/evmos/ethermint/types"
 )
+
+const FlagAsyncCheckTx = "async-check-tx"
 
 // DBOpener is a function to open `application.db`, potentially with customized options.
 type DBOpener func(opts types.AppOptions, rootDir string, backend dbm.BackendType) (dbm.DB, error)
@@ -217,6 +217,7 @@ which accepts a path for the resulting pprof file.
 	cmd.Flags().Int(srvflags.JSONRPCMaxOpenConnections, config.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener") //nolint:lll
 	cmd.Flags().Bool(srvflags.JSONRPCEnableIndexer, false, "Enable the custom tx indexer for json-rpc")
 	cmd.Flags().Bool(srvflags.JSONRPCAllowIndexerGap, true, "Allow block gap for the custom tx indexer for json-rpc")
+	cmd.Flags().Bool(srvflags.JSONRPCRestrictUserInput, false, "Restrict some user input to the JSON-RPC debug apis, must be set to true if serving debug namespace to the public") //nolint:lll
 	cmd.Flags().Bool(srvflags.JSONRPCEnableMetrics, false, "Define if EVM rpc metrics server should be enabled")
 
 	cmd.Flags().String(srvflags.EVMTracer, config.DefaultEVMTracer, "the EVM tracer type to collect execution traces from the EVM transaction execution (json|struct|access_list|markdown)") //nolint:lll
@@ -228,6 +229,8 @@ which accepts a path for the resulting pprof file.
 	cmd.Flags().Uint64(server.FlagStateSyncSnapshotInterval, 0, "State sync snapshot interval")
 	cmd.Flags().Uint32(server.FlagStateSyncSnapshotKeepRecent, 2, "State sync snapshot to keep")
 	cmd.Flags().Int(server.FlagMempoolMaxTxs, config.DefaultMaxTxs, "Sets MaxTx value for the app-side mempool")
+
+	cmd.Flags().Bool(FlagAsyncCheckTx, false, "Enable async check tx [experimental]")
 
 	// add support for all CometBFT-specific command line options
 	tcmd.AddNodeFlags(cmd)
@@ -357,12 +360,21 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, opts Start
 		logger.Info("starting node with ABCI CometBFT in-process")
 
 		cmtApp := server.NewCometABCIWrapper(app)
+
+		var clientCreator proxy.ClientCreator
+		if svrCtx.Viper.GetBool(FlagAsyncCheckTx) {
+			logger.Info("enabling async check tx")
+			clientCreator = proxy.NewConsensusSyncLocalClientCreator(cmtApp)
+		} else {
+			clientCreator = proxy.NewLocalClientCreator(cmtApp)
+		}
+
 		tmNode, err = node.NewNodeWithContext(
 			ctx,
 			cfg,
 			pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
 			nodeKey,
-			proxy.NewLocalClientCreator(cmtApp),
+			clientCreator,
 			genDocProvider,
 			cmtcfg.DefaultDBProvider,
 			node.DefaultMetricsProvider(cfg.Instrumentation),
@@ -419,10 +431,11 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, opts Start
 		idxer = indexer.NewKVIndexer(idxDB, idxLogger, clientCtx)
 		indexerService := NewEVMIndexerService(idxer, clientCtx.Client.(rpcclient.Client), config.JSONRPC.AllowIndexerGap)
 		indexerService.SetLogger(servercmtlog.CometLoggerWrapper{Logger: idxLogger})
-
-		g.Go(func() error {
-			return indexerService.Start()
-		})
+		go func() {
+			if err := indexerService.Start(); err != nil {
+				logger.Error("failed to start evm indexer service", "error", err.Error())
+			}
+		}()
 	}
 
 	if config.API.Enable || config.JSONRPC.Enable {
@@ -443,30 +456,12 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, opts Start
 	if err != nil {
 		return err
 	}
-	if grpcSrv != nil {
-		defer grpcSrv.GracefulStop()
-	}
 
-	apiSrv := startAPIServer(ctx, svrCtx, clientCtx, g, config.Config, app, grpcSrv, metrics)
-	if apiSrv != nil {
-		defer apiSrv.Close()
-	}
+	startAPIServer(ctx, svrCtx, clientCtx, g, config.Config, app, grpcSrv, metrics)
 
-	clientCtx, httpSrv, httpSrvDone, err := startJSONRPCServer(svrCtx, clientCtx, g, config, genDocProvider, idxer, app)
-	if httpSrv != nil {
-		defer func() {
-			shutdownCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancelFn()
-			if err := httpSrv.Shutdown(shutdownCtx); err != nil {
-				logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
-			} else {
-				logger.Info("HTTP server shut down, waiting 5 sec")
-				select {
-				case <-time.Tick(5 * time.Second):
-				case <-httpSrvDone:
-				}
-			}
-		}()
+	clientCtx, err = startJSONRPCServer(ctx, svrCtx, clientCtx, g, config, genDocProvider, idxer, app)
+	if err != nil {
+		return err
 	}
 
 	// At this point it is safe to block the process if we're in query only mode as
@@ -580,7 +575,7 @@ func startGrpcServer(
 	}
 
 	// if gRPC is enabled, configure gRPC client for gRPC gateway and json-rpc
-	grpcClient, err := grpc.Dial(
+	grpcClient, err := grpc.NewClient(
 		config.Address,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(
@@ -619,9 +614,9 @@ func startAPIServer(
 	app types.Application,
 	grpcSrv *grpc.Server,
 	metrics *telemetry.Metrics,
-) *api.Server {
+) {
 	if !svrCfg.API.Enable {
-		return nil
+		return
 	}
 
 	apiSrv := api.New(clientCtx, svrCtx.Logger.With("server", "api"), grpcSrv)
@@ -634,10 +629,10 @@ func startAPIServer(
 	g.Go(func() error {
 		return apiSrv.Start(ctx, svrCfg)
 	})
-	return apiSrv
 }
 
 func startJSONRPCServer(
+	stdCtx context.Context,
 	svrCtx *server.Context,
 	clientCtx client.Context,
 	g *errgroup.Group,
@@ -645,7 +640,7 @@ func startJSONRPCServer(
 	genDocProvider node.GenesisDocProvider,
 	idxer ethermint.EVMTxIndexer,
 	app types.Application,
-) (ctx client.Context, httpSrv *http.Server, httpSrvDone chan struct{}, err error) {
+) (ctx client.Context, err error) {
 	ctx = clientCtx
 	if !config.JSONRPC.Enable {
 		return
@@ -653,19 +648,16 @@ func startJSONRPCServer(
 
 	txApp, ok := app.(AppWithPendingTxStream)
 	if !ok {
-		return ctx, httpSrv, httpSrvDone, fmt.Errorf("json-rpc server requires AppWithPendingTxStream")
+		return ctx, fmt.Errorf("json-rpc server requires AppWithPendingTxStream")
 	}
 
 	genDoc, err := genDocProvider()
 	if err != nil {
-		return ctx, httpSrv, httpSrvDone, err
+		return ctx, err
 	}
 
 	ctx = clientCtx.WithChainID(genDoc.ChainID)
-	g.Go(func() error {
-		httpSrv, httpSrvDone, err = StartJSONRPC(svrCtx, clientCtx, g, &config, idxer, txApp)
-		return err
-	})
+	_, err = StartJSONRPC(stdCtx, svrCtx, clientCtx, g, &config, idxer, txApp)
 	return
 }
 

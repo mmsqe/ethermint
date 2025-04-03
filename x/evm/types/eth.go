@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	errorsmod "cosmossdk.io/errors"
+	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/evmos/ethermint/types"
@@ -60,6 +61,9 @@ func (tx *EthereumTx) UnmarshalJSON(bz []byte) error {
 }
 
 func (tx EthereumTx) MarshalJSON() ([]byte, error) {
+	if tx.Transaction == nil {
+		return []byte("null"), nil
+	}
 	bz, err := tx.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -68,21 +72,32 @@ func (tx EthereumTx) MarshalJSON() ([]byte, error) {
 }
 
 func (tx EthereumTx) Validate() error {
+	if tx.Transaction == nil {
+		return errorsmod.Wrapf(errortypes.ErrInvalidRequest, "raw tx is missing")
+	}
+
 	// prevent txs with 0 gas to fill up the mempool
 	if tx.Gas() == 0 {
 		return errorsmod.Wrap(ErrInvalidGasLimit, "gas limit must not be zero")
 	}
-	if !types.IsValidInt256(tx.GasPrice()) {
+	if tx.GasPrice().BitLen() > 256 {
 		return errorsmod.Wrap(ErrInvalidGasPrice, "out of bound")
 	}
-	if !types.IsValidInt256(tx.GasFeeCap()) {
+	if tx.GasFeeCap().BitLen() > 256 {
 		return errorsmod.Wrap(ErrInvalidGasPrice, "out of bound")
 	}
-	if !types.IsValidInt256(tx.GasTipCap()) {
+	if tx.GasTipCap().BitLen() > 256 {
 		return errorsmod.Wrap(ErrInvalidGasPrice, "out of bound")
 	}
-	if !types.IsValidInt256(tx.Cost()) {
+	if tx.Cost().BitLen() > 256 {
 		return errorsmod.Wrap(ErrInvalidGasFee, "out of bound")
+	}
+	if tx.GasFeeCapIntCmp(tx.GasTipCap()) < 0 {
+		return errorsmod.Wrapf(
+			ErrInvalidGasCap,
+			"max priority fee per gas higher than max fee per gas (%s > %s)",
+			tx.GasTipCap(), tx.GasFeeCap(),
+		)
 	}
 	return nil
 }

@@ -21,8 +21,6 @@ import (
 	"math/big"
 	"sort"
 
-	cmttypes "github.com/cometbft/cometbft/types"
-
 	errorsmod "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -30,6 +28,7 @@ import (
 	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 
+	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -93,59 +92,52 @@ func (k *Keeper) NewEVM(
 	return evm
 }
 
-// GetHashFn implements vm.GetHashFunc for Ethermint. It handles 3 cases:
-//  1. The requested height matches the current height from context (and thus same epoch number)
-//  2. The requested height is from an previous height from the same chain epoch
-//  3. The requested height is from a height greater than the latest one
+// GetHashFn implements vm.GetHashFunc for Ethermint. It returns hash for 3 cases:
+//  1. The requested height matches current block height from the context.
+//  2. The requested height is within the valid range, retrieve the hash from GetHeaderHash for heights after sdk50.
+//  3. The requested height is within the valid range, retrieve the hash from GetHistoricalInfo for heights before sdk50.
 func (k Keeper) GetHashFn(ctx sdk.Context) vm.GetHashFunc {
-	return func(height uint64) common.Hash {
-		h, err := ethermint.SafeInt64(height)
+	return func(num64 uint64) common.Hash {
+		h, err := ethermint.SafeInt64(num64)
 		if err != nil {
-			k.Logger(ctx).Error("failed to cast height to int64", "error", err)
 			return common.Hash{}
 		}
-
-		switch {
-		case ctx.BlockHeight() == h:
-			// Case 1: The requested height matches the one from the context so we can retrieve the header
-			// hash directly from the context.
-			// Note: The headerHash is only set at begin block, it will be nil in case of a query context
+		upper, err := ethermint.SafeUint64(ctx.BlockHeight())
+		if err != nil {
+			return common.Hash{}
+		}
+		if upper == num64 {
 			headerHash := ctx.HeaderHash()
-			if len(headerHash) != 0 {
+			if len(headerHash) > 0 {
 				return common.BytesToHash(headerHash)
 			}
-
-			// only recompute the hash if not set (eg: checkTxState)
-			contextBlockHeader := ctx.BlockHeader()
-			header, err := cmttypes.HeaderFromProto(&contextBlockHeader)
-			if err != nil {
-				k.Logger(ctx).Error("failed to cast tendermint header from proto", "error", err)
-				return common.Hash{}
-			}
-
-			headerHash = header.Hash()
-			return common.BytesToHash(headerHash)
-
-		case ctx.BlockHeight() > h:
-			// Case 2: if the chain is not the current height we need to retrieve the hash from the store for the
-			// current chain epoch. This only applies if the current height is greater than the requested height.
-			histInfo, err := k.stakingKeeper.GetHistoricalInfo(ctx, h)
-			if err != nil {
-				k.Logger(ctx).Debug("historical info not found", "height", h, "err", err.Error())
-				return common.Hash{}
-			}
-
-			header, err := cmttypes.HeaderFromProto(&histInfo.Header)
-			if err != nil {
-				k.Logger(ctx).Error("failed to cast tendermint header from proto", "error", err)
-				return common.Hash{}
-			}
-
-			return common.BytesToHash(header.Hash())
-		default:
-			// Case 3: heights greater than the current one returns an empty hash.
+		}
+		// Align check with https://github.com/ethereum/go-ethereum/blob/release/1.11/core/vm/instructions.go#L433
+		headerNum := k.GetParams(ctx).HeaderHashNum
+		var lower uint64
+		if upper <= headerNum {
+			lower = 0
+		} else {
+			lower = upper - headerNum
+		}
+		if num64 < lower || num64 >= upper {
 			return common.Hash{}
 		}
+		hash := k.GetHeaderHash(ctx, num64)
+		if len(hash) > 0 {
+			return common.BytesToHash(hash)
+		}
+		histInfo, err := k.stakingKeeper.GetHistoricalInfo(ctx, h)
+		if err != nil {
+			k.Logger(ctx).Debug("historical info not found", "height", h, "err", err.Error())
+			return common.Hash{}
+		}
+		header, err := cmttypes.HeaderFromProto(&histInfo.Header)
+		if err != nil {
+			k.Logger(ctx).Error("failed to cast tendermint header from proto", "error", err)
+			return common.Hash{}
+		}
+		return common.BytesToHash(header.Hash())
 	}
 }
 
@@ -323,31 +315,6 @@ func (k *Keeper) ApplyMessageWithConfig(
 		return nil, errorsmod.Wrap(types.ErrCallDisabled, "failed to call contract")
 	}
 
-	// Allow the tracer captures the tx level events, mainly the gas consumption.
-	leftoverGas := msg.GasLimit
-	senderAddr := sdk.AccAddress(msg.From.Bytes())
-	tracer := cfg.GetTracer()
-	if tracer != nil {
-		if cfg.DebugTrace {
-			// msg.GasPrice should have been set to effective gas price
-			amount := new(big.Int).Mul(msg.GasPrice, new(big.Int).SetUint64(msg.GasLimit))
-			if err := k.SubBalance(ctx, senderAddr, sdk.NewCoins(sdk.NewCoin(cfg.Params.EvmDenom, sdkmath.NewIntFromBigInt(amount)))); err != nil {
-				return nil, errorsmod.Wrap(err, "failed to subtract balance")
-			}
-			if err := k.incrNonce(ctx, senderAddr); err != nil {
-				return nil, errorsmod.Wrap(err, "failed to increment nonce")
-			}
-		}
-		tracer.CaptureTxStart(leftoverGas)
-		defer func() {
-			if cfg.DebugTrace {
-				amount := new(big.Int).Mul(msg.GasPrice, new(big.Int).SetUint64(leftoverGas))
-				_ = k.AddBalance(ctx, senderAddr, sdk.NewCoins(sdk.NewCoin(cfg.Params.EvmDenom, sdkmath.NewIntFromBigInt(amount))))
-			}
-			tracer.CaptureTxEnd(leftoverGas)
-		}()
-	}
-
 	stateDB := statedb.NewWithParams(ctx, k, cfg.TxConfig, cfg.Params.EvmDenom)
 	var evm *vm.EVM
 	if cfg.Overrides != nil {
@@ -356,7 +323,31 @@ func (k *Keeper) ApplyMessageWithConfig(
 		}
 	}
 	evm = k.NewEVM(ctx, msg, cfg, stateDB)
+	// Allow the tracer captures the tx level events, mainly the gas consumption.
+	leftoverGas := msg.GasLimit
 	sender := vm.AccountRef(msg.From)
+	tracer := cfg.GetTracer()
+	debugFn := func() {
+		if tracer != nil && cfg.DebugTrace {
+			amount, _ := uint256.FromBig(new(big.Int).Mul(msg.GasPrice, new(big.Int).SetUint64(leftoverGas)))
+			stateDB.AddBalance(sender.Address(), amount)
+		}
+	}
+	if tracer != nil {
+		if cfg.DebugTrace {
+			amount, _ := uint256.FromBig(new(big.Int).Mul(msg.GasPrice, new(big.Int).SetUint64(msg.GasLimit)))
+			stateDB.SubBalance(sender.Address(), amount)
+			if err := stateDB.Error(); err != nil {
+				return nil, err
+			}
+			stateDB.SetNonce(sender.Address(), stateDB.GetNonce(sender.Address())+1)
+		}
+		tracer.CaptureTxStart(leftoverGas)
+		defer func() {
+			debugFn()
+			tracer.CaptureTxEnd(leftoverGas)
+		}()
+	}
 
 	rules := cfg.Rules
 	contractCreation := msg.To == nil
@@ -387,11 +378,12 @@ func (k *Keeper) ApplyMessageWithConfig(
 	v, _ := uint256.FromBig(msg.Value)
 	if contractCreation {
 		// take over the nonce management from evm:
-		// - reset sender's nonce to msg.Nonce() before calling evm.
-		// - increase sender's nonce by one no matter the result.
+		// - reset sender's nonce to msg.Nonce() to generate correct contract address.
+		// - set the nonce back to the original value after contract creation.
+		oldNonce := stateDB.GetNonce(sender.Address())
 		stateDB.SetNonce(sender.Address(), msg.Nonce)
 		ret, _, leftoverGas, vmErr = evm.Create(sender, msg.Data, leftoverGas, v)
-		stateDB.SetNonce(sender.Address(), msg.Nonce+1)
+		stateDB.SetNonce(sender.Address(), oldNonce)
 	} else {
 		ret, leftoverGas, vmErr = evm.Call(sender, *msg.To, msg.Data, leftoverGas, v)
 	}
@@ -415,13 +407,6 @@ func (k *Keeper) ApplyMessageWithConfig(
 	var vmError string
 	if vmErr != nil {
 		vmError = vmErr.Error()
-	}
-
-	// The dirty states in `StateDB` is either committed or discarded after return
-	if commit {
-		if err := stateDB.Commit(); err != nil {
-			return nil, errorsmod.Wrap(err, "failed to commit stateDB")
-		}
 	}
 
 	// calculate a minimum amount of gas to be charged to sender if GasLimit
@@ -450,6 +435,16 @@ func (k *Keeper) ApplyMessageWithConfig(
 	gasUsed := sdkmath.LegacyMaxDec(minimumGasUsed, sdkmath.LegacyNewDec(tempGasUsed)).TruncateInt().Uint64()
 	// reset leftoverGas, to be used by the tracer
 	leftoverGas = msg.GasLimit - gasUsed
+
+	debugFn()
+	debugFn = func() {}
+
+	// The dirty states in `StateDB` is either committed or discarded after return
+	if commit {
+		if err := stateDB.Commit(); err != nil {
+			return nil, errorsmod.Wrap(err, "failed to commit stateDB")
+		}
+	}
 
 	return &types.MsgEthereumTxResponse{
 		GasUsed:   gasUsed,

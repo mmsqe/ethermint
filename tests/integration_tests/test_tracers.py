@@ -2,6 +2,7 @@ import itertools
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import pytest
 from web3 import Web3
 
 from .expected_constants import (
@@ -19,9 +20,12 @@ from .utils import (
     deploy_contract,
     derive_new_account,
     derive_random_account,
+    send_raw_transactions,
     send_transaction,
     send_txs,
+    sign_transaction,
     w3_wait_for_new_blocks,
+    wait_for_fn,
 )
 
 
@@ -113,8 +117,7 @@ def test_trace_transactions_tracers(ethermint, geth):
         assert res[0] == res[-1] == EXPECTED_CONTRACT_CREATE_TRACER, res
 
 
-def fund_acc(w3, acc):
-    fund = 3000000000000000000
+def fund_acc(w3, acc, fund=3000000000000000000):
     addr = acc.address
     if w3.eth.get_balance(addr, "latest") == 0:
         tx = {"to": addr, "value": fund, "gasPrice": w3.eth.gas_price}
@@ -155,6 +158,89 @@ def test_trace_tx(ethermint, geth):
         res = [future.result() for future in as_completed(tasks)]
         assert len(res) == len(providers)
         assert res[0] == res[-1], res
+
+
+def test_trace_tx_reverse_transfer(ethermint):
+    print("reproduce only")
+    return
+    method = "debug_traceTransaction"
+    tracer = {"tracer": "callTracer"}
+    acc = derive_new_account(11)
+    w3 = ethermint.w3
+    fund_acc(w3, acc, fund=40000000000000000)
+    contract, _ = deploy_contract(w3, CONTRACTS["FeeCollector"])
+    amt = 18633908679862681
+    raw_transactions = []
+    nonce = w3.eth.get_transaction_count(acc.address)
+    tx = contract.functions.mint(amt).build_transaction(
+        {
+            "from": acc.address,
+            "value": hex(amt),
+            "nonce": nonce,
+        }
+    )
+    raw_transactions.append(sign_transaction(w3, tx, acc.key).rawTransaction)
+    tx = tx | {"nonce": nonce + 1}
+    raw_transactions.append(sign_transaction(w3, tx, acc.key).rawTransaction)
+    w3_wait_for_new_blocks(w3, 1)
+    sended_hash_set = send_raw_transactions(w3, raw_transactions)
+    for h in sended_hash_set:
+        tx_hash = h.hex()
+        tx_res = w3.provider.make_request(
+            method,
+            [tx_hash, tracer],
+        )
+        print(tx_res)
+
+
+@pytest.mark.flaky(max_runs=10)
+def test_destruct(ethermint):
+    method = "debug_traceTransaction"
+    tracer = {"tracer": "callTracer"}
+    receiver = "0x0F0cb39319129BA867227e5Aae1abe9e7dd5f861"
+    acc = derive_new_account(11)  # ethm13c2n7geavjfsqcan290mq74kajjlxehyzhly4p
+    w3 = ethermint.w3
+    fund_acc(w3, acc, fund=3077735635376769427)
+    sender = acc.address
+    raw_transactions = []
+    contracts = []
+    total = 3
+    for _ in range(total):
+        contract, _ = deploy_contract(w3, CONTRACTS["SelfDestruct"], key=acc.key)
+        contracts.append(contract)
+
+    nonce = w3.eth.get_transaction_count(sender)
+
+    for i in range(total):
+        tx = (
+            contracts[i]
+            .functions.execute()
+            .build_transaction(
+                {
+                    "from": sender,
+                    "nonce": nonce,
+                    "gas": 167115,
+                    "gasPrice": 5050000000000,
+                    "value": 353434350000000000,
+                }
+            )
+        )
+        raw_transactions.append(sign_transaction(w3, tx, acc.key).rawTransaction)
+        nonce += 1
+    sended_hash_set = send_raw_transactions(w3, raw_transactions)
+
+    def wait_balance():
+        return w3.eth.get_balance(receiver) > 0
+
+    wait_for_fn("wait_balance", wait_balance)
+    for h in sended_hash_set:
+        tx_hash = h.hex()
+        res = w3.provider.make_request(
+            method,
+            [tx_hash, tracer],
+        )
+        print(tx_hash, res)
+        assert "insufficient funds" not in res, res
 
 
 def test_tracecall_insufficient_funds(ethermint, geth):
@@ -457,6 +543,100 @@ def test_debug_tracecall_state_overrides(ethermint, geth):
         res = [future.result() for future in as_completed(tasks)]
         assert len(res) == len(providers)
         assert res[0] == res[-1] == balance, res
+
+
+def test_refund_unused_gas_when_contract_tx_reverted(ethermint):
+    w3 = ethermint.w3
+    test_revert, _ = deploy_contract(w3, CONTRACTS["TestRevert"])
+    gas = 1000000
+    gas_price = 6060000000000
+    acc = derive_new_account(10)
+    fund_acc(w3, acc, fund=10000000000000000000)
+    p = ethermint.cosmos_cli().get_params("feemarket")["params"]
+    min_gas_multiplier = float(p["min_gas_multiplier"])
+    sender = acc.address.lower()
+    tx_res = w3.provider.make_request(
+        "debug_traceCall",
+        [
+            {
+                "value": "0x0",
+                "to": test_revert.address,
+                "from": sender,
+                "data": "0x9ffb86a5",
+                "gas": hex(gas),
+                "gasPrice": hex(gas_price),
+            },
+            "latest",
+            {
+                "tracer": "prestateTracer",
+                "tracerConfig": {
+                    "diffMode": True,
+                },
+            },
+        ],
+    )
+    assert "result" in tx_res
+    tx_res = tx_res["result"]
+    pre = int(tx_res["pre"][sender]["balance"], 16)
+    post = int(tx_res["post"][sender]["balance"], 16)
+    diff = pre - gas * gas_price * min_gas_multiplier - post
+    assert diff == 0, diff
+
+    pre = w3.eth.get_balance(acc.address)
+    receipt = send_transaction(
+        w3,
+        test_revert.functions.revertWithMsg().build_transaction(
+            {
+                "gas": gas,
+                "gasPrice": gas_price,
+            }
+        ),
+        key=acc.key,
+    )
+    assert receipt["status"] == 0, receipt["status"]
+    post = w3.eth.get_balance(acc.address)
+    diff = pre - gas * gas_price * min_gas_multiplier - post
+    assert diff == 0, diff
+
+
+def test_refund_unused_gas_when_contract_tx_reverted_state_overrides(ethermint):
+    w3 = ethermint.w3
+    test_revert, _ = deploy_contract(w3, CONTRACTS["TestRevert"])
+    gas = 21000
+    gas_price = 6060000000000
+    acc = derive_new_account(10)
+    fund_acc(w3, acc, fund=10000000000000000000)
+    sender = acc.address.lower()
+    balance = 10000000000000000000000
+    nonce = 1000
+    tx_res = w3.provider.make_request(
+        "debug_traceCall",
+        [
+            {
+                "value": "0x1",
+                "to": test_revert.address,
+                "from": sender,
+                "gas": hex(gas),
+                "gasPrice": hex(gas_price),
+            },
+            "latest",
+            {
+                "tracer": "prestateTracer",
+                "stateOverrides": {
+                    sender: {
+                        "balance": hex(balance),
+                        "nonce": hex(nonce),
+                    }
+                },
+            },
+        ],
+    )
+    assert "result" in tx_res
+    tx_res = tx_res["result"]
+    balance_af = int(tx_res[sender]["balance"], 16)
+    nonce_af = tx_res[sender]["nonce"]
+    assert balance_af == balance, balance_af
+    assert nonce_af == nonce, nonce_af
 
 
 def test_debug_tracecall_return_revert_data_when_call_failed(ethermint, geth):
