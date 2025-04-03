@@ -459,6 +459,9 @@ func execTrace[T traceRequest](
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to load evm config: %s", err.Error())
 	}
+	if baseFee != nil {
+		cfg.BaseFee = baseFee
+	}
 	msg, err := msgCb(ctx, cfg, req.GetTraceConfig())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

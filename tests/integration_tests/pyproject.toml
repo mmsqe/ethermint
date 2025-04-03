@@ -31,7 +31,12 @@ eth-account = "^0.13.4"
 pyyaml = "^6.0.2rc1"
 
 [tool.poetry.dev-dependencies]
+attrs = "24.2.0"
+referencing = "v0.35.1"
+rpds-py = "v0.22.3"
 aiohappyeyeballs = "2.4.4"
+typing-extensions = "4.12.2"
+termcolor = "2.5.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -43,7 +43,7 @@ def test_pruned_node(pruned):
         {"from": ADDRS["validator"]}
     )
     signed = sign_transaction(w3, tx, KEYS["validator"])
-    txhash = w3.eth.send_raw_transaction(signed.rawTransaction)
+    txhash = w3.eth.send_raw_transaction(signed.raw_transaction)
     print("wait for prunning happens")
     w3_wait_for_new_blocks(w3, 15)
 

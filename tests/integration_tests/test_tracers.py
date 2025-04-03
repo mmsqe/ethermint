@@ -179,9 +179,9 @@ def test_trace_tx_reverse_transfer(ethermint):
             "nonce": nonce,
         }
     )
-    raw_transactions.append(sign_transaction(w3, tx, acc.key).rawTransaction)
+    raw_transactions.append(sign_transaction(w3, tx, acc.key).raw_transaction)
     tx = tx | {"nonce": nonce + 1}
-    raw_transactions.append(sign_transaction(w3, tx, acc.key).rawTransaction)
+    raw_transactions.append(sign_transaction(w3, tx, acc.key).raw_transaction)
     w3_wait_for_new_blocks(w3, 1)
     sended_hash_set = send_raw_transactions(w3, raw_transactions)
     for h in sended_hash_set:
@@ -225,7 +225,7 @@ def test_destruct(ethermint):
                 }
             )
         )
-        raw_transactions.append(sign_transaction(w3, tx, acc.key).rawTransaction)
+        raw_transactions.append(sign_transaction(w3, tx, acc.key).raw_transaction)
         nonce += 1
     sended_hash_set = send_raw_transactions(w3, raw_transactions)
 

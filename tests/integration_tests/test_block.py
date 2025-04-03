@@ -8,4 +8,4 @@ def test_call(ethermint):
     w3_wait_for_new_blocks(w3, 1)
     res = contract.caller.getBlockHash(height).hex()
     blk = w3.eth.get_block(height)
-    assert f"0x{res}" == blk.hash.hex(), res
+    assert res == blk.hash.hex(), res

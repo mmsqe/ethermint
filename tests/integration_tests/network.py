@@ -6,9 +6,7 @@ from pathlib import Path
 
 import web3
 from pystarport import ports
-from web3.middleware import (
-    ExtraDataToPOAMiddleware,
-)
+from web3.middleware import ExtraDataToPOAMiddleware
 
 from .cosmoscli import CosmosCLI
 from .utils import supervisorctl, w3_wait_for_block, wait_for_port

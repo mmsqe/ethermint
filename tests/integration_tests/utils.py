@@ -200,7 +200,7 @@ def send_transaction(w3, tx, key=KEYS["validator"], i=0):
     if i > 3:
         raise TimeExhausted
     signed = sign_transaction(w3, tx, key)
-    txhash = w3.eth.send_raw_transaction(signed.rawTransaction)
+    txhash = w3.eth.send_raw_transaction(signed.raw_transaction)
     try:
         return w3.eth.wait_for_transaction_receipt(txhash, timeout=20)
     except TimeExhausted:
@@ -212,7 +212,7 @@ def send_txs(w3, txs):
     raw_transactions = []
     for key in txs:
         signed = sign_transaction(w3, txs[key], key)
-        raw_transactions.append(signed.rawTransaction)
+        raw_transactions.append(signed.raw_transaction)
     # wait block update
     w3_wait_for_new_blocks(w3, 1, sleep=0.1)
     # send transactions
@@ -224,7 +224,7 @@ def send_successful_transaction(w3, i=0):
     if i > 3:
         raise TimeExhausted
     signed = sign_transaction(w3, {"to": ADDRS["community"], "value": 1000})
-    txhash = w3.eth.send_raw_transaction(signed.rawTransaction)
+    txhash = w3.eth.send_raw_transaction(signed.raw_transaction)
     try:
         receipt = w3.eth.wait_for_transaction_receipt(txhash, timeout=20)
         assert receipt.status == 1
@@ -292,7 +292,7 @@ def modify_command_in_supervisor_config(ini: Path, fn, **kwargs):
 def build_batch_tx(w3, cli, txs, key=KEYS["validator"]):
     "return cosmos batch tx and eth tx hashes"
     signed_txs = [sign_transaction(w3, tx, key) for tx in txs]
-    tmp_txs = [cli.build_evm_tx(signed.rawTransaction.hex()) for signed in signed_txs]
+    tmp_txs = [cli.build_evm_tx(signed.raw_transaction.hex()) for signed in signed_txs]
 
     msgs = [tx["body"]["messages"][0] for tx in tmp_txs]
     fee = sum(int(tx["auth_info"]["fee"]["amount"][0]["amount"]) for tx in tmp_txs)
