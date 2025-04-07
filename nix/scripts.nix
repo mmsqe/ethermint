@@ -12,8 +12,16 @@
     source ${config.dotenv}
     ${../scripts/start-geth.sh} ${config.geth-genesis} $@
   '';
+  start-beacon = pkgs.writeShellScriptBin "start-beacon" ''
+    export USE_PRYSM_VERSION=v5.0.4
+    ${../scripts/start-beacon.sh} $@
+  '';
+  start-validator = pkgs.writeShellScriptBin "start-validator" ''
+    export USE_PRYSM_VERSION=v5.0.4
+    ${../scripts/start-validator.sh} $@
+  '';
   start-scripts = pkgs.symlinkJoin {
     name = "start-scripts";
-    paths = [ start-ethermint start-geth ];
+    paths = [ start-ethermint start-geth start-beacon start-validator ];
   };
 }

@@ -89,10 +89,6 @@ def setup_geth(path, base_port):
             str(base_port),
             "--port",
             str(base_port + 1),
-            "--miner.etherbase",
-            "0x57f96e6B86CdeFdB3d412547816a82E3E0EbF9D2",
-            "--http.api",
-            "eth,net,web3,debug",
         ]
         print(*cmd)
         proc = subprocess.Popen(
@@ -109,6 +105,48 @@ def setup_geth(path, base_port):
         finally:
             os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
             # proc.terminate()
+            proc.wait()
+
+
+def setup_beacon(path, base_port):
+    with (path / "beacon.log").open("w") as logfile:
+        cmd = [
+            "start-beacon",
+            path,
+        ]
+        print(*cmd)
+        proc = subprocess.Popen(
+            cmd,
+            preexec_fn=os.setsid,
+            stdout=logfile,
+            stderr=subprocess.STDOUT,
+        )
+        try:
+            wait_for_port(base_port)
+            yield proc
+        finally:
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            proc.wait()
+
+
+def setup_validator(path, base_port):
+    with (path / "validator.log").open("w") as logfile:
+        cmd = [
+            "start-validator",
+            path,
+        ]
+        print(*cmd)
+        proc = subprocess.Popen(
+            cmd,
+            preexec_fn=os.setsid,
+            stdout=logfile,
+            stderr=subprocess.STDOUT,
+        )
+        try:
+            wait_for_port(base_port)
+            yield proc
+        finally:
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
             proc.wait()
 
 
