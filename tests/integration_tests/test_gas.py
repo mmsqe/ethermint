@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+import web3
 
 from .network import setup_custom_ethermint
 from .utils import (
@@ -117,6 +118,6 @@ def discard(request, tmp_path_factory):
 
 
 def test_discard_abci_responses(discard):
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(web3.exceptions.Web3RPCError) as exc:
         discard.w3.eth.gas_price
     assert "header result not found for height" in str(exc)

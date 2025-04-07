@@ -1,4 +1,5 @@
 import pytest
+import web3
 from web3 import Web3
 
 from .network import setup_ethermint
@@ -51,7 +52,7 @@ def test_query_future_blk(cluster):
     acc = derive_new_account(2).address
     current = w3.eth.block_number
     future = current + 1000
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(web3.exceptions.Web3RPCError) as exc:
         w3.eth.get_transaction_count(acc, hex(future))
     print(acc, str(exc))
     assert "-32000" in str(exc)

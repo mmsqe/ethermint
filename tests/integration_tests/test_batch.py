@@ -56,7 +56,7 @@ def test_batch_tx(ethermint):
 
     # check traceTransaction
     rsps = [
-        w3.provider.make_request("debug_traceTransaction", [h.hex()])["result"]
+        w3.provider.make_request("debug_traceTransaction", [f"0x{h.hex()}"])["result"]
         for h in tx_hashes
     ]
 

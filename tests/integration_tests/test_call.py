@@ -11,16 +11,16 @@ def test_temporary_contract_code(ethermint):
     state = 100
     w3: Web3 = ethermint.w3
     info = json.loads(CONTRACTS["Greeter"].read_text())
-    data = encode_transaction_data(w3, "intValue", info["abi"])
+    data = encode_transaction_data(w3, "intValue", info["abi"], args=[], kwargs={})
     # call an arbitrary address
     address = w3.to_checksum_address("0x0000000000000000000000000000ffffffffffff")
+    hex_state = HexBytes(w3.codec.encode(("uint256",), (state,))).hex()
+    hex_state = f"0x{hex_state}"
     overrides = {
         address: {
             "code": info["deployedBytecode"],
             "state": {
-                ("0x" + "0" * 64): HexBytes(
-                    w3.codec.encode(("uint256",), (state,))
-                ).hex(),
+                ("0x" + "0" * 64): hex_state,
             },
         },
     }
@@ -44,13 +44,16 @@ def test_override_state(ethermint):
 
     info = json.loads(CONTRACTS["Greeter"].read_text())
     int_value = 100
+    hex_state = HexBytes(w3.codec.encode(("uint256",), (int_value,))).hex()
+    hex_state = f"0x{hex_state}"
     state = {
-        ("0x" + "0" * 64): HexBytes(w3.codec.encode(("uint256",), (int_value,))).hex(),
+        ("0x" + "0" * 64): hex_state,
     }
+    data = encode_transaction_data(w3, "intValue", info["abi"], args=[], kwargs={})
     result = w3.eth.call(
         {
             "to": contract.address,
-            "data": encode_transaction_data(w3, "intValue", info["abi"]),
+            "data": data,
         },
         "latest",
         {
@@ -63,10 +66,11 @@ def test_override_state(ethermint):
     assert (int_value,) == w3.codec.decode(("uint256",), result)
 
     # stateDiff don't affect the other state slots
+    data = encode_transaction_data(w3, "greet", info["abi"], args=[], kwargs={})
     result = w3.eth.call(
         {
             "to": contract.address,
-            "data": encode_transaction_data(w3, "greet", info["abi"]),
+            "data": data,
         },
         "latest",
         {
@@ -79,10 +83,11 @@ def test_override_state(ethermint):
     assert ("Hello",) == w3.codec.decode(("string",), result)
 
     # state will overrides the whole state
+    data = encode_transaction_data(w3, "greet", info["abi"], args=[], kwargs={})
     result = w3.eth.call(
         {
             "to": contract.address,
-            "data": encode_transaction_data(w3, "greet", info["abi"]),
+            "data": data,
         },
         "latest",
         {

@@ -41,6 +41,7 @@ def test_out_of_gas_error(ethermint, geth):
         contract, _ = deploy_contract(w3, CONTRACTS["TestMessageCall"], key=acc.key)
         tx = contract.functions.test(iterations).build_transaction({"gas": 21204})
         tx_hash = send_transaction(w3, tx)["transactionHash"].hex()
+        tx_hash = f"0x{tx_hash}"
         res = []
         call = w3.provider.make_request
         resp = call(method, [tx_hash, tracer])
@@ -67,6 +68,7 @@ def test_storage_out_of_gas_error(ethermint, geth):
         tx = create_contract_transaction(w3, CONTRACTS["TestMessageCall"], key=acc.key)
         tx["gas"] = 210000
         tx_hash = send_transaction(w3, tx, key=acc.key)["transactionHash"].hex()
+        tx_hash = f"0x{tx_hash}"
         res = []
         call = w3.provider.make_request
         resp = call(method, [tx_hash, tracer])
@@ -94,6 +96,7 @@ def test_trace_transactions_tracers(ethermint, geth):
         call = w3.provider.make_request
         tx = {"to": ADDRS["community"], "value": 100, "gasPrice": price}
         tx_hash = send_transaction(w3, tx)["transactionHash"].hex()
+        tx_hash = f"0x{tx_hash}"
         tx_res = call(method, [tx_hash])
         assert tx_res["result"] == EXPECTED_STRUCT_TRACER, ""
         tx_res = call(method, [tx_hash, tracer])
@@ -105,6 +108,7 @@ def test_trace_transactions_tracers(ethermint, geth):
         assert tx_res["result"] == EXPECTED_CALLTRACERS, ""
         _, tx = deploy_contract(w3, CONTRACTS["TestERC20A"], key=acc.key)
         tx_hash = tx["transactionHash"].hex()
+        tx_hash = f"0x{tx_hash}"
         w3_wait_for_new_blocks(w3, 1)
         tx_res = call(method, [tx_hash, tracer])
         return json.dumps(tx_res["result"], sort_keys=True)
@@ -144,6 +148,7 @@ def test_trace_tx(ethermint, geth):
         contract, _ = deploy_contract(w3, CONTRACTS["TestMessageCall"], key=acc.key)
         tx = contract.functions.test(iterations).build_transaction()
         tx_hash = send_transaction(w3, tx)["transactionHash"].hex()
+        tx_hash = f"0x{tx_hash}"
         res = []
         call = w3.provider.make_request
         with ThreadPoolExecutor(len(tracers)) as exec:
@@ -185,7 +190,7 @@ def test_trace_tx_reverse_transfer(ethermint):
     w3_wait_for_new_blocks(w3, 1)
     sended_hash_set = send_raw_transactions(w3, raw_transactions)
     for h in sended_hash_set:
-        tx_hash = h.hex()
+        tx_hash = f"0x{h.hex()}"
         tx_res = w3.provider.make_request(
             method,
             [tx_hash, tracer],
@@ -234,7 +239,7 @@ def test_destruct(ethermint):
 
     wait_for_fn("wait_balance", wait_balance)
     for h in sended_hash_set:
-        tx_hash = h.hex()
+        tx_hash = f"0x{h.hex()}"
         res = w3.provider.make_request(
             method,
             [tx_hash, tracer],
@@ -737,7 +742,7 @@ def test_trace_staticcall(ethermint, geth):
         res = []
         call = w3.provider.make_request
         with ThreadPoolExecutor(len(sended_hash_set)) as exec:
-            params = [[tx_hash.hex(), tracer] for tx_hash in sended_hash_set]
+            params = [[f"0x{tx_hash.hex()}", tracer] for tx_hash in sended_hash_set]
             exec_map = exec.map(call, itertools.repeat(method), params)
             res = [json.dumps(resp["result"], sort_keys=True) for resp in exec_map]
         return res
