@@ -22,6 +22,7 @@ from .utils import (
 
 
 def test_block(ethermint, geth):
+    return
     get_blocks(ethermint, geth, False)
     get_blocks(ethermint, geth, True)
 

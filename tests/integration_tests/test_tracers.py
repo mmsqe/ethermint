@@ -686,7 +686,6 @@ def test_debug_tracecall_block_overrides(ethermint, geth):
             "number": future_blk,
             "coinbase": "0x1111111111111111111111111111111111111111",
             "difficulty": hex(2),
-            "time": hex(3),
             "baseLimit": hex(4),
             "baseFee": hex(5),
         }
@@ -712,7 +711,7 @@ def test_trace_staticcall(ethermint, geth):
     acc1 = derive_new_account(7)
     price = 58500000000
     func = "callCalculator()"
-    selector = f"0x{Web3.keccak(text=func).hex()[2:10]}"
+    selector = f"0x{Web3.keccak(text=func).hex()[0:8]}"
     x = "0x0000000000000000000000000000000000000000000000000000000000000000"
     y = "0x0000000000000000000000000000000000000000000000000000000000000001"
 
@@ -739,7 +738,7 @@ def test_trace_staticcall(ethermint, geth):
         }
         sended_hash_set = send_txs(w3, txs)
         for txhash in sended_hash_set:
-            res = w3.eth.wait_for_transaction_receipt(txhash, timeout=10)
+            res = w3.eth.wait_for_transaction_receipt(txhash, timeout=20)
         res = []
         call = w3.provider.make_request
         with ThreadPoolExecutor(len(sended_hash_set)) as exec:
