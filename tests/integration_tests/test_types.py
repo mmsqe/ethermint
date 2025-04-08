@@ -22,7 +22,6 @@ from .utils import (
 
 
 def test_block(ethermint, geth):
-    return
     get_blocks(ethermint, geth, False)
     get_blocks(ethermint, geth, True)
 
@@ -49,8 +48,9 @@ def get_blocks(ethermint_rpc_ws, geth, with_transactions):
 
     ethermint_blk = w3.eth.get_block(1)
     # Get existing block, no transactions
+    blk_hash = ethermint_blk["hash"].hex()
     eth_rsp = eth_rpc.make_request(
-        "eth_getBlockByHash", [ethermint_blk["hash"].hex(), with_transactions]
+        "eth_getBlockByHash", [f"0x{blk_hash}", with_transactions]
     )
     geth_rsp = geth_rpc.make_request(
         "eth_getBlockByHash",
