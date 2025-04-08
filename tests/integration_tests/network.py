@@ -41,7 +41,7 @@ class Ethermint:
         if self._w3 is None:
             if self._use_websockets:
                 self._w3 = web3.Web3(
-                    web3.providers.WebsocketProvider(self.w3_ws_endpoint)
+                    web3.providers.LegacyWebSocketProvider(self.w3_ws_endpoint)
                 )
             else:
                 self._w3 = web3.Web3(web3.providers.HTTPProvider(self.w3_http_endpoint))

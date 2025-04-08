@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+import web3
 
 from .network import setup_ethermint
 from .utils import (
@@ -221,6 +222,6 @@ def test_validate(ethermint):
         "maxFeePerGas": gas,
         "maxPriorityFeePerGas": gas + 1,
     }
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(web3.exceptions.Web3RPCError) as exc:
         send_transaction(w3, tx)
     assert "max priority fee per gas higher than max fee per gas" in str(exc)

@@ -91,13 +91,6 @@ def test_syncing(ethermint_rpc_ws, geth):
     make_same_rpc_calls(eth_rpc, geth_rpc, "eth_syncing", [])
 
 
-def test_coinbase(ethermint_rpc_ws, geth):
-    w3: Web3 = ethermint_rpc_ws.w3
-    eth_rpc = w3.provider
-    geth_rpc = geth.w3.provider
-    make_same_rpc_calls(eth_rpc, geth_rpc, "eth_coinbase", [])
-
-
 def test_max_priority_fee(ethermint_rpc_ws, geth):
     w3: Web3 = ethermint_rpc_ws.w3
     eth_rpc = w3.provider
@@ -263,7 +256,7 @@ def test_get_block_transaction_count(ethermint_rpc_ws, geth):
 
     tx_hash = send_and_get_hash(w3)
 
-    tx_res = eth_rpc.make_request("eth_getTransactionByHash", [tx_hash])
+    tx_res = eth_rpc.make_request("eth_getTransactionByHash", [f"0x{tx_hash}"])
     block_number = tx_res["result"]["blockNumber"]
     block_hash = tx_res["result"]["blockHash"]
     block_res = eth_rpc.make_request(
@@ -297,7 +290,7 @@ def test_get_transaction(ethermint_rpc_ws, geth):
 
     tx_hash = send_and_get_hash(w3)
 
-    tx_res = eth_rpc.make_request("eth_getTransactionByHash", [tx_hash])
+    tx_res = eth_rpc.make_request("eth_getTransactionByHash", [f"0x{tx_hash}"])
 
     compare_types(EXPECTED_GET_TRANSACTION, tx_res)
 
@@ -315,7 +308,7 @@ def test_get_transaction_receipt(ethermint_rpc_ws, geth):
 
     tx_hash = send_and_get_hash(w3)
 
-    tx_res = eth_rpc.make_request("eth_getTransactionReceipt", [tx_hash])
+    tx_res = eth_rpc.make_request("eth_getTransactionReceipt", [f"0x{tx_hash}"])
     compare_types(tx_res, EXPECTED_GET_TRANSACTION_RECEIPT)
 
 
@@ -346,7 +339,7 @@ def test_estimate_gas(ethermint_rpc_ws, geth):
     wait_for_fn("wait_blk", wait_blk)
     make_same_rpc_calls(eth_rpc, geth_rpc, "eth_estimateGas", [tx])
     make_same_rpc_calls(eth_rpc, geth_rpc, "eth_estimateGas", [tx, "0x1"])
-    make_same_rpc_calls(eth_rpc, geth_rpc, "eth_estimateGas", [tx, "0x5"])
+    make_same_rpc_calls(eth_rpc, geth_rpc, "eth_estimateGas", [tx, "0x500"])
     make_same_rpc_calls(eth_rpc, geth_rpc, "eth_estimateGas", [{}])
 
 

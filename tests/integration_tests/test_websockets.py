@@ -139,8 +139,8 @@ def test_subscribe_basic(ethermint: Ethermint):
                 in msg["topics"]
                 == [
                     topic,
-                    HexBytes(b"\x00" * 12 + HexBytes(sender)).hex(),
-                    HexBytes(b"\x00" * 12 + HexBytes(recipient)).hex(),
+                    "0x" + HexBytes(b"\x00" * 12 + HexBytes(sender)).hex(),
+                    "0x" + HexBytes(b"\x00" * 12 + HexBytes(recipient)).hex(),
                 ]
             )
         await assert_unsubscribe(c, sub_id)
