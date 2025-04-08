@@ -21,9 +21,6 @@ import (
 	"net/http"
 	"time"
 
-	"golang.org/x/exp/slog"
-
-	"cosmossdk.io/log"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"golang.org/x/sync/errgroup"
@@ -47,51 +44,6 @@ type AppWithPendingTxStream interface {
 	RegisterPendingTxListener(listener ante.PendingTxListener)
 }
 
-type logHandler struct {
-	log.Logger
-}
-
-func (l *logHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	keyVals := make([]any, 0, len(attrs)*2)
-	for _, attr := range attrs {
-		keyVals = append(keyVals, attr.Key, attr.Value.Any())
-	}
-	return &logHandler{
-		Logger: l.Logger.With(keyVals...),
-	}
-}
-
-func (l *logHandler) WithGroup(name string) slog.Handler {
-	return &logHandler{
-		Logger: l.Logger.With("group", name),
-	}
-}
-
-func (l *logHandler) Handle(_ context.Context, r slog.Record) error {
-	keyVals := make([]any, 0)
-	r.Attrs(func(a slog.Attr) bool {
-		keyVals = append(keyVals, a.Key, a.Value.Any())
-		return true
-	})
-
-	switch r.Level {
-	case slog.LevelDebug:
-		l.Debug(r.Message, keyVals...)
-	case slog.LevelInfo:
-		l.Info(r.Message, keyVals...)
-	case slog.LevelWarn:
-		l.Warn(r.Message, keyVals...)
-	case slog.LevelError:
-		l.Error(r.Message, keyVals...)
-	}
-	return nil
-}
-
-// Enabled reports whether l emits log records at the given context and level.
-func (l *logHandler) Enabled(_ context.Context, _ slog.Level) bool {
-	return true
-}
-
 // StartJSONRPC starts the JSON-RPC server
 func StartJSONRPC(
 	ctx context.Context,
@@ -113,8 +65,17 @@ func StartJSONRPC(
 	rpcStream := stream.NewRPCStreams(evtClient, logger, clientCtx.TxConfig.TxDecoder(), queryClient.ValidatorAccount)
 
 	app.RegisterPendingTxListener(rpcStream.ListenPendingTx)
-	ethlog.SetDefault(ethlog.NewLogger(&logHandler{
-		Logger: logger,
+
+	ethlog.Root().SetHandler(ethlog.FuncHandler(func(r *ethlog.Record) error {
+		switch r.Lvl {
+		case ethlog.LvlTrace, ethlog.LvlDebug:
+			logger.Debug(r.Msg, r.Ctx...)
+		case ethlog.LvlInfo, ethlog.LvlWarn:
+			logger.Info(r.Msg, r.Ctx...)
+		case ethlog.LvlError, ethlog.LvlCrit:
+			logger.Error(r.Msg, r.Ctx...)
+		}
+		return nil
 	}))
 
 	rpcServer := ethrpc.NewServer()

@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/evmos/ethermint/tests"
 	"github.com/evmos/ethermint/testutil"
-	"github.com/holiman/uint256"
 )
 
 type StatedbBenchmarkTestSuite struct {
@@ -52,7 +52,7 @@ func BenchmarkAddBalance(b *testing.B) {
 	suite.SetupTest(b)
 	vmdb := suite.StateDB()
 
-	amt := uint256.NewInt(10)
+	amt := big.NewInt(10)
 
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -144,7 +144,7 @@ func BenchmarkSubBalance(b *testing.B) {
 	suite.SetupTest(b)
 	vmdb := suite.StateDB()
 
-	amt := uint256.NewInt(10)
+	amt := big.NewInt(10)
 
 	b.ResetTimer()
 	b.ReportAllocs()

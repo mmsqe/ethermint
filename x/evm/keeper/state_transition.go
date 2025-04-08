@@ -35,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/holiman/uint256"
 )
 
 // NewEVM generates a go-ethereum VM from the provided Message fields and the chain parameters
@@ -329,14 +328,12 @@ func (k *Keeper) ApplyMessageWithConfig(
 	tracer := cfg.GetTracer()
 	debugFn := func() {
 		if tracer != nil && cfg.DebugTrace {
-			amount, _ := uint256.FromBig(new(big.Int).Mul(msg.GasPrice, new(big.Int).SetUint64(leftoverGas)))
-			stateDB.AddBalance(sender.Address(), amount)
+			stateDB.AddBalance(sender.Address(), new(big.Int).Mul(msg.GasPrice, new(big.Int).SetUint64(leftoverGas)))
 		}
 	}
 	if tracer != nil {
 		if cfg.DebugTrace {
-			amount, _ := uint256.FromBig(new(big.Int).Mul(msg.GasPrice, new(big.Int).SetUint64(msg.GasLimit)))
-			stateDB.SubBalance(sender.Address(), amount)
+			stateDB.SubBalance(sender.Address(), new(big.Int).Mul(msg.GasPrice, new(big.Int).SetUint64(msg.GasLimit)))
 			if err := stateDB.Error(); err != nil {
 				return nil, err
 			}
@@ -375,17 +372,17 @@ func (k *Keeper) ApplyMessageWithConfig(
 	// - prepare accessList(post-berlin)
 	// - reset transient storage(eip 1153)
 	stateDB.Prepare(rules, msg.From, cfg.CoinBase, msg.To, vm.DefaultActivePrecompiles(rules), msg.AccessList)
-	v, _ := uint256.FromBig(msg.Value)
+
 	if contractCreation {
 		// take over the nonce management from evm:
 		// - reset sender's nonce to msg.Nonce() to generate correct contract address.
 		// - set the nonce back to the original value after contract creation.
 		oldNonce := stateDB.GetNonce(sender.Address())
 		stateDB.SetNonce(sender.Address(), msg.Nonce)
-		ret, _, leftoverGas, vmErr = evm.Create(sender, msg.Data, leftoverGas, v)
+		ret, _, leftoverGas, vmErr = evm.Create(sender, msg.Data, leftoverGas, msg.Value)
 		stateDB.SetNonce(sender.Address(), oldNonce)
 	} else {
-		ret, leftoverGas, vmErr = evm.Call(sender, *msg.To, msg.Data, leftoverGas, v)
+		ret, leftoverGas, vmErr = evm.Call(sender, *msg.To, msg.Data, leftoverGas, msg.Value)
 	}
 
 	refundQuotient := params.RefundQuotient

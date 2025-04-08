@@ -175,10 +175,11 @@ func FormatBlock(
 		"timestamp":        hexutil.Uint64(blockTime),
 		"transactionsRoot": transactionsRoot,
 		"receiptsRoot":     ethtypes.EmptyRootHash,
-
-		"uncles":          []common.Hash{},
-		"transactions":    transactions,
-		"totalDifficulty": (*hexutil.Big)(big.NewInt(0)),
+		"uncles":           []common.Hash{},
+		"transactions":     transactions,
+		"totalDifficulty":  (*hexutil.Big)(big.NewInt(0)),
+		"withdrawalsRoot":  hexutil.Bytes(ethtypes.EmptyWithdrawalsHash[:]),
+		"withdrawals":      []*ethtypes.Withdrawal{},
 	}
 
 	if baseFee != nil {

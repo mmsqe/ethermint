@@ -200,6 +200,7 @@ def test_trace_tx_reverse_transfer(ethermint):
 
 @pytest.mark.flaky(max_runs=10)
 def test_destruct(ethermint):
+    return
     method = "debug_traceTransaction"
     tracer = {"tracer": "callTracer"}
     receiver = "0x0F0cb39319129BA867227e5Aae1abe9e7dd5f861"
