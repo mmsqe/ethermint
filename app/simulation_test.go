@@ -22,7 +22,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	evidencetypes "cosmossdk.io/x/evidence/types"
 	abci "github.com/cometbft/cometbft/abci/types"
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
@@ -220,8 +220,8 @@ func TestAppImportExport(t *testing.T) {
 		}
 	}()
 
-	ctxA := simApp.NewContextLegacy(true, tmproto.Header{Height: simApp.LastBlockHeight(), ChainID: SimAppChainID})
-	ctxB := newApp.NewContextLegacy(true, tmproto.Header{Height: simApp.LastBlockHeight(), ChainID: SimAppChainID})
+	ctxA := simApp.NewContextLegacy(true, cmtproto.Header{Height: simApp.LastBlockHeight(), ChainID: SimAppChainID})
+	ctxB := newApp.NewContextLegacy(true, cmtproto.Header{Height: simApp.LastBlockHeight(), ChainID: SimAppChainID})
 	newApp.ModuleManager.InitGenesis(ctxB, simApp.AppCodec(), genesisState)
 	newApp.StoreConsensusParams(ctxB, exported.ConsensusParams)
 

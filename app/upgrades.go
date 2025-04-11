@@ -17,30 +17,37 @@ package app
 
 import (
 	"context"
+	"fmt"
 
+	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	evmtypes "github.com/evmos/ethermint/x/evm/types"
+	pooltypes "github.com/cosmos/cosmos-sdk/x/protocolpool/types"
 )
 
 func (app *EthermintApp) RegisterUpgradeHandlers() {
-	planName := "sdk50"
+	planName := "sdk53"
 	app.UpgradeKeeper.SetUpgradeHandler(planName,
 		func(ctx context.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
 			m, err := app.ModuleManager.RunMigrations(ctx, app.configurator, fromVM)
 			if err != nil {
 				return m, err
 			}
-			sdkCtx := sdk.UnwrapSDKContext(ctx)
-			{
-				params := app.EvmKeeper.GetParams(sdkCtx)
-				params.HeaderHashNum = evmtypes.DefaultHeaderHashNum
-				if err := app.EvmKeeper.SetParams(sdkCtx, params); err != nil {
-					return m, err
-				}
-			}
 			return m, nil
 		},
 	)
+
+	upgradeInfo, err := app.UpgradeKeeper.ReadUpgradeInfoFromDisk()
+	if err != nil {
+		panic(fmt.Sprintf("failed to read upgrade info from disk %s", err))
+	}
+	if !app.UpgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
+		if upgradeInfo.Name == planName {
+			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storetypes.StoreUpgrades{
+				Added: []string{
+					pooltypes.ModuleName,
+				},
+			}))
+		}
+	}
 }

@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
 	storetypes "cosmossdk.io/store/types"
@@ -35,7 +35,7 @@ func (app *EthermintApp) ExportAppStateAndValidators(
 	forZeroHeight bool, jailAllowedAddrs []string, modulesToExport []string,
 ) (servertypes.ExportedApp, error) {
 	// Creates context with current height and checks txs for ctx to be usable by start of next block
-	ctx := app.NewContextLegacy(true, tmproto.Header{Height: app.LastBlockHeight()})
+	ctx := app.NewContextLegacy(true, cmtproto.Header{Height: app.LastBlockHeight()})
 
 	// We export at last height + 1, because that's the height at which
 	// Tendermint will start InitChain.

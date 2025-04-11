@@ -43,7 +43,7 @@ import (
 
 	evtypes "cosmossdk.io/x/evidence/types"
 	"cosmossdk.io/x/feegrant"
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
@@ -110,7 +110,7 @@ func (suite *AnteTestSuite) SetupTest() {
 		genesis[evmtypes.ModuleName] = app.AppCodec().MustMarshalJSON(evmGenesis)
 		return genesis
 	})
-	header := tmproto.Header{Height: 2, ChainID: testutil.TestnetChainID + "-1", Time: time.Now().UTC()}
+	header := cmtproto.Header{Height: 2, ChainID: testutil.TestnetChainID + "-1", Time: time.Now().UTC()}
 	suite.ctx = suite.app.BaseApp.NewUncachedContext(checkTx, header).
 		WithConsensusParams(*testutil.DefaultConsensusParams).
 		WithMinGasPrices(sdk.NewDecCoins(sdk.NewDecCoin(evmtypes.DefaultEVMDenom, sdkmath.OneInt()))).

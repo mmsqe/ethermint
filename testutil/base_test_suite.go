@@ -10,7 +10,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
 	abci "github.com/cometbft/cometbft/abci/types"
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -90,7 +90,7 @@ func (suite *BaseTestSuite) SetupTestWithCbAndOpts(
 ) {
 	checkTx := false
 	suite.App = SetupWithOpts(checkTx, patch, appOptions)
-	suite.Ctx = suite.App.NewUncachedContext(checkTx, tmproto.Header{
+	suite.Ctx = suite.App.NewUncachedContext(checkTx, cmtproto.Header{
 		Height:  1,
 		ChainID: ChainID,
 		Time:    time.Now().UTC(),

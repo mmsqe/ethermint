@@ -12,11 +12,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/evmos/ethermint/testutil"
+	ethermint "github.com/evmos/ethermint/types"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 
 	"github.com/evmos/ethermint/app"
 	"github.com/evmos/ethermint/encoding"
-	ethermint "github.com/evmos/ethermint/types"
 	"github.com/evmos/ethermint/x/evm/statedb"
 	"github.com/evmos/ethermint/x/evm/types"
 

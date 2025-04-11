@@ -109,6 +109,9 @@ import (
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
+	"github.com/cosmos/cosmos-sdk/x/protocolpool"
+	poolkeeper "github.com/cosmos/cosmos-sdk/x/protocolpool/keeper"
+	pooltypes "github.com/cosmos/cosmos-sdk/x/protocolpool/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
@@ -172,14 +175,17 @@ var (
 
 	// module account permissions
 	maccPerms = map[string][]string{
-		authtypes.FeeCollectorName:     nil,
-		distrtypes.ModuleName:          nil,
-		minttypes.ModuleName:           {authtypes.Minter},
-		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
-		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
-		govtypes.ModuleName:            {authtypes.Burner},
-		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
-		evmtypes.ModuleName:            {authtypes.Minter, authtypes.Burner}, // used for secure addition and subtraction of balance using module account
+		authtypes.FeeCollectorName:          nil,
+		distrtypes.ModuleName:               nil,
+		pooltypes.ModuleName:                nil,
+		pooltypes.ProtocolPoolEscrowAccount: nil,
+		minttypes.ModuleName:                {authtypes.Minter},
+		stakingtypes.BondedPoolName:         {authtypes.Burner, authtypes.Staking},
+		stakingtypes.NotBondedPoolName:      {authtypes.Burner, authtypes.Staking},
+		govtypes.ModuleName:                 {authtypes.Burner},
+		ibctransfertypes.ModuleName:         {authtypes.Minter, authtypes.Burner},
+		// used for secure addition and subtraction of balance using module account
+		evmtypes.ModuleName: {authtypes.Minter, authtypes.Burner},
 	}
 
 	// module accounts that are allowed to receive tokens
@@ -219,22 +225,23 @@ type EthermintApp struct {
 
 	// keepers
 	AccountKeeper         authkeeper.AccountKeeper
-	BankKeeper            bankkeeper.Keeper
+	BankKeeper            bankkeeper.BaseKeeper
 	CapabilityKeeper      *capabilitykeeper.Keeper
 	StakingKeeper         *stakingkeeper.Keeper
 	SlashingKeeper        slashingkeeper.Keeper
 	MintKeeper            mintkeeper.Keeper
 	DistrKeeper           distrkeeper.Keeper
 	GovKeeper             govkeeper.Keeper
-	CrisisKeeper          crisiskeeper.Keeper
-	UpgradeKeeper         upgradekeeper.Keeper
-	ParamsKeeper          paramskeeper.Keeper
+	CrisisKeeper          crisiskeeper.Keeper //nolint: staticcheck
+	UpgradeKeeper         *upgradekeeper.Keeper
+	ParamsKeeper          paramskeeper.Keeper //nolint: staticcheck
 	FeeGrantKeeper        feegrantkeeper.Keeper
 	AuthzKeeper           authzkeeper.Keeper
 	IBCKeeper             *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	EvidenceKeeper        evidencekeeper.Keeper
 	TransferKeeper        ibctransferkeeper.Keeper
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
+	PoolKeeper            poolkeeper.Keeper
 
 	// make scoped keepers public for test purposes
 	ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
@@ -308,7 +315,7 @@ func NewEthermintApp(
 		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, upgradetypes.StoreKey,
-		evidencetypes.StoreKey, capabilitytypes.StoreKey, consensusparamtypes.StoreKey,
+		evidencetypes.StoreKey, capabilitytypes.StoreKey, consensusparamtypes.StoreKey, pooltypes.StoreKey,
 		feegrant.StoreKey, authzkeeper.StoreKey, crisistypes.StoreKey,
 		// ibc keys
 		ibcexported.StoreKey, ibctransfertypes.StoreKey,
@@ -374,15 +381,17 @@ func NewEthermintApp(
 		sdk.GetConfig().GetBech32AccountAddrPrefix(),
 		authAddr,
 	)
+
 	app.BankKeeper = bankkeeper.NewBaseKeeper(
 		appCodec,
-		runtime.NewKVStoreService(keys[banktypes.StoreKey]),
 		okeys[banktypes.ObjectStoreKey],
+		runtime.NewKVStoreService(keys[banktypes.StoreKey]),
 		app.AccountKeeper,
 		app.BlockedAddrs(),
 		authAddr,
 		logger,
 	)
+
 	// optional: enable sign mode textual by overwriting the default tx config (after setting the bank keeper)
 	enabledSignModes := slices.Clone(authtx.DefaultSignModes)
 	enabledSignModes = append(enabledSignModes, sigtypes.SignMode_SIGN_MODE_TEXTUAL)
@@ -416,6 +425,13 @@ func NewEthermintApp(
 		authtypes.FeeCollectorName,
 		authAddr,
 	)
+	app.PoolKeeper = poolkeeper.NewKeeper(
+		appCodec,
+		runtime.NewKVStoreService(keys[pooltypes.StoreKey]),
+		app.AccountKeeper,
+		app.BankKeeper,
+		authAddr,
+	)
 	app.DistrKeeper = distrkeeper.NewKeeper(
 		appCodec,
 		runtime.NewKVStoreService(keys[distrtypes.StoreKey]),
@@ -432,7 +448,7 @@ func NewEthermintApp(
 		app.StakingKeeper,
 		authAddr,
 	)
-	app.CrisisKeeper = *crisiskeeper.NewKeeper(
+	app.CrisisKeeper = *crisiskeeper.NewKeeper( //nolint: staticcheck
 		appCodec,
 		runtime.NewKVStoreService(keys[crisistypes.StoreKey]),
 		invCheckPeriod,
@@ -457,7 +473,7 @@ func NewEthermintApp(
 		homePath = DefaultNodeHome
 	}
 	// set the governance module account as the authority for conducting upgrades
-	app.UpgradeKeeper = *upgradekeeper.NewKeeper(
+	app.UpgradeKeeper = upgradekeeper.NewKeeper(
 		skipUpgradeHeights,
 		runtime.NewKVStoreService(keys[upgradetypes.StoreKey]),
 		appCodec,
@@ -472,7 +488,6 @@ func NewEthermintApp(
 			app.SlashingKeeper.Hooks(),
 		),
 	)
-
 	app.AuthzKeeper = authzkeeper.NewKeeper(
 		runtime.NewKVStoreService(keys[authzkeeper.StoreKey]),
 		appCodec,
@@ -565,7 +580,7 @@ func NewEthermintApp(
 
 	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment
 	// we prefer to be more strict in what arguments the modules expect.
-	skipGenesisInvariants := cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
+	skipGenesisInvariants := cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants)) //nolint: staticcheck
 
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
@@ -578,8 +593,8 @@ func NewEthermintApp(
 		auth.NewAppModule(appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
 		vesting.NewAppModule(app.AccountKeeper, app.BankKeeper),
 		bank.NewAppModule(appCodec, app.BankKeeper, app.AccountKeeper, app.GetSubspace(banktypes.ModuleName)),
+		crisis.NewAppModule(&app.CrisisKeeper, skipGenesisInvariants, app.GetSubspace(crisistypes.ModuleName)), //nolint: staticcheck
 		capability.NewAppModule(appCodec, *app.CapabilityKeeper, false),
-		crisis.NewAppModule(&app.CrisisKeeper, skipGenesisInvariants, app.GetSubspace(crisistypes.ModuleName)),
 		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
 		gov.NewAppModule(appCodec, &app.GovKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(govtypes.ModuleName)),
 		mint.NewAppModule(appCodec, app.MintKeeper, app.AccountKeeper, nil, app.GetSubspace(minttypes.ModuleName)),
@@ -594,11 +609,12 @@ func NewEthermintApp(
 		),
 		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(distrtypes.ModuleName)),
 		staking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(stakingtypes.ModuleName)),
-		upgrade.NewAppModule(&app.UpgradeKeeper, app.AccountKeeper.AddressCodec()),
+		upgrade.NewAppModule(app.UpgradeKeeper, app.AccountKeeper.AddressCodec()),
 		evidence.NewAppModule(app.EvidenceKeeper),
-		params.NewAppModule(app.ParamsKeeper),
+		params.NewAppModule(app.ParamsKeeper), //nolint: staticcheck
 		authzmodule.NewAppModule(appCodec, app.AuthzKeeper, app.AccountKeeper, app.BankKeeper, app.interfaceRegistry),
 		consensus.NewAppModule(appCodec, app.ConsensusParamsKeeper),
+		protocolpool.NewAppModule(appCodec, app.PoolKeeper, app.AccountKeeper, app.BankKeeper),
 
 		// ibc modules
 		ibc.NewAppModule(app.IBCKeeper),
@@ -629,6 +645,7 @@ func NewEthermintApp(
 
 	app.ModuleManager.SetOrderPreBlockers(
 		upgradetypes.ModuleName,
+		authtypes.ModuleName,
 	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -650,7 +667,6 @@ func NewEthermintApp(
 		ibcexported.ModuleName,
 		// no-op modules
 		ibctransfertypes.ModuleName,
-		authtypes.ModuleName,
 		banktypes.ModuleName,
 		govtypes.ModuleName,
 		crisistypes.ModuleName,
@@ -660,6 +676,7 @@ func NewEthermintApp(
 		paramstypes.ModuleName,
 		vestingtypes.ModuleName,
 		consensusparamtypes.ModuleName,
+		pooltypes.ModuleName,
 	)
 
 	// NOTE: fee market module must go last in order to retrieve the block gas used.
@@ -686,6 +703,7 @@ func NewEthermintApp(
 		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
 		consensusparamtypes.ModuleName,
+		pooltypes.ModuleName,
 	)
 
 	// NOTE: The genutils module must occur after staking so that pools are
@@ -721,6 +739,7 @@ func NewEthermintApp(
 		consensusparamtypes.ModuleName,
 		// NOTE: crisis module must go at the end to check for invariants on each module
 		crisistypes.ModuleName,
+		pooltypes.ModuleName,
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisModuleOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisModuleOrder...)
@@ -728,7 +747,7 @@ func NewEthermintApp(
 	// Uncomment if you want to set a custom migration order here.
 	// app.ModuleManager.SetOrderMigrations(custom order)
 
-	app.ModuleManager.RegisterInvariants(&app.CrisisKeeper)
+	app.ModuleManager.RegisterInvariants(&app.CrisisKeeper) //nolint: staticcheck
 	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
 	if err := app.ModuleManager.RegisterServices(app.configurator); err != nil {
 		panic(err)
@@ -840,9 +859,9 @@ func (app *EthermintApp) setAnteHandler(txConfig client.TxConfig, maxGasWanted u
 		DynamicFeeChecker:      true,
 		DisabledAuthzMsgs: []string{
 			sdk.MsgTypeURL(&evmtypes.MsgEthereumTx{}),
-			sdk.MsgTypeURL(&vestingtypes.MsgCreateVestingAccount{}),
-			sdk.MsgTypeURL(&vestingtypes.MsgCreatePermanentLockedAccount{}),
-			sdk.MsgTypeURL(&vestingtypes.MsgCreatePeriodicVestingAccount{}),
+			sdk.MsgTypeURL(&vestingtypes.BaseVestingAccount{}),
+			sdk.MsgTypeURL(&vestingtypes.PermanentLockedAccount{}),
+			sdk.MsgTypeURL(&vestingtypes.PeriodicVestingAccount{}),
 		},
 		PendingTxListener: app.onPendingTx,
 	})
@@ -1125,8 +1144,12 @@ func GetMaccPerms() map[string][]string {
 }
 
 // initParamsKeeper init params keeper and its subspaces
-func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
-	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
+func initParamsKeeper(
+	appCodec codec.BinaryCodec,
+	legacyAmino *codec.LegacyAmino,
+	key, tkey storetypes.StoreKey,
+) paramskeeper.Keeper { //nolint: staticcheck
+	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey) //nolint: staticcheck
 	// register the key tables for legacy param subspaces
 	keyTable := ibcclienttypes.ParamKeyTable()
 	keyTable.RegisterParamSet(&ibcconnectiontypes.Params{})
