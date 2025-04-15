@@ -4,7 +4,7 @@ go 1.23.3
 
 require (
 	cosmossdk.io/api v0.9.0
-	cosmossdk.io/client/v2 v2.10.0-beta.1
+	cosmossdk.io/client/v2 v2.0.0-beta.5.0.20241121152743-3dad36d9a29e
 	cosmossdk.io/collections v1.2.0
 	cosmossdk.io/core v1.0.0
 	cosmossdk.io/errors v1.0.2
@@ -12,10 +12,10 @@ require (
 	cosmossdk.io/math v1.5.3
 	cosmossdk.io/store v1.10.0-rc.1.0.20241218084712-ca559989da43
 	cosmossdk.io/tools/confix v0.2.0-rc.1
-	cosmossdk.io/x/evidence v0.0.0-00010101000000-000000000000
-	cosmossdk.io/x/feegrant v0.0.0-00010101000000-000000000000
+	cosmossdk.io/x/evidence v0.2.0-rc.2
+	cosmossdk.io/x/feegrant v0.2.0-rc.2
 	cosmossdk.io/x/tx v1.0.0-alpha.3
-	cosmossdk.io/x/upgrade v0.1.4
+	cosmossdk.io/x/upgrade v0.2.0-rc.2
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/cometbft/cometbft v1.0.0-alpha.2.0.20240429102542-490e9bc3de65
@@ -48,7 +48,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/tyler-smith/go-bip39 v1.1.0
-	golang.org/x/net v0.38.0
+	golang.org/x/net v0.39.0
 	golang.org/x/sync v0.13.0
 	golang.org/x/text v0.24.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250324211829-b45e905df463
@@ -258,14 +258,10 @@ require (
 
 replace (
 	// release/v0.53.x
-	cosmossdk.io/client/v2 => github.com/mmsqe/cosmos-sdk/client/v2 v2.0.0-20250411150506-df7ea7b64a60
-	cosmossdk.io/core => github.com/mmsqe/cosmos-sdk/core v0.0.0-20250411150506-df7ea7b64a60
-	cosmossdk.io/store => github.com/mmsqe/cosmos-sdk/store v0.0.0-20250411150506-df7ea7b64a60
-	cosmossdk.io/x/evidence => github.com/mmsqe/cosmos-sdk/x/evidence v0.0.0-20250411150506-df7ea7b64a60
-	cosmossdk.io/x/feegrant => github.com/mmsqe/cosmos-sdk/x/feegrant v0.0.0-20250411150506-df7ea7b64a60
-	cosmossdk.io/x/tx => github.com/mmsqe/cosmos-sdk/x/tx v0.0.0-20250411150506-df7ea7b64a60
-	cosmossdk.io/x/upgrade => github.com/mmsqe/cosmos-sdk/x/upgrade v0.0.0-20250411150506-df7ea7b64a60
-	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.0-beta2.0.20250411150506-df7ea7b64a60
+	cosmossdk.io/core => github.com/mmsqe/cosmos-sdk/core v0.0.0-20250415020506-4187a9df5d15
+	cosmossdk.io/store => github.com/mmsqe/cosmos-sdk/store v0.0.0-20250415020506-4187a9df5d15
+	cosmossdk.io/x/tx => github.com/mmsqe/cosmos-sdk/x/tx v0.0.0-20250415020506-4187a9df5d15
+	github.com/cosmos/cosmos-sdk => github.com/mmsqe/cosmos-sdk v0.46.0-beta2.0.20250415020506-4187a9df5d15
 )
 
 replace (
