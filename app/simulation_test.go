@@ -354,7 +354,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		config,
 		app.AppCodec(),
 		func(ctx context.Context) error {
-			return app.BankKeeper.CreditVirtualAccounts(ctx)
+			return newApp.BankKeeper.CreditVirtualAccounts(ctx)
 		},
 	)
 	require.NoError(t, err)
