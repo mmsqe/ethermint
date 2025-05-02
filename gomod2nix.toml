@@ -211,9 +211,9 @@ schema = 3
   [mod."github.com/cosmos/ibc-go/modules/capability"]
     version = "v1.0.1"
     hash = "sha256-iRhj2WTr99DgAl80h25pxtkO6iHYjyHflwpxKKG5b6E="
-  [mod."github.com/cosmos/ibc-go/v9"]
-    version = "v9.0.2"
-    hash = "sha256-1CJgR4aOrl2E9hCU3j5ReqPnRKKR56OPJ/bILmY/jTM="
+  [mod."github.com/cosmos/ibc-go/v8"]
+    version = "v8.5.1"
+    hash = "sha256-F4VZbKo1n9fLSxLSR+/ZaisbJ2v+EHjpXVpCovGTiyQ="
   [mod."github.com/cosmos/ics23/go"]
     version = "v0.11.0"
     hash = "sha256-mgU/pqp4kASmW/bP0z6PzssfjRp7GU9ioyvNlDdGC+E="
@@ -260,8 +260,8 @@ schema = 3
     version = "v1.0.1"
     hash = "sha256-yuvxYYngpfVkUg9yAmG99IUVmADTQA0tMbBXe0Fq0Mc="
   [mod."github.com/dvsekhvalnov/jose2go"]
-    version = "v1.7.0"
-    hash = "sha256-kBuUrroBiwDTaO7JGo5bh6nEMNkICSjg2dFZQMGM7Q0="
+    version = "v1.6.0"
+    hash = "sha256-IXn2BuUp4fi/i2zf1tGGW1m9xoYh3VCksB6GJ5Sf06g="
   [mod."github.com/edsrzf/mmap-go"]
     version = "v1.0.0"
     hash = "sha256-k1DYvCqO3BKNcGEve/nMW0RxzMkK2tGfXbUbycqcVSo="
@@ -276,7 +276,7 @@ schema = 3
     hash = "sha256-1ARLFfk23TFvOUxXhlMJ757SgClmNtWaqj/T7g/2Z70="
   [mod."github.com/ethereum/go-ethereum"]
     version = "v1.10.20-0.20241030073450-b9cc632bc183"
-    hash = "sha256-5nh0HZOZwlZBMmHv08BELlNfDZyq5zwq65ByyMzOetA="
+    hash = "sha256-VV7pJcUZDPOQWWCvWLieuL3O1JPyMgDLAIah1ivjglI="
     replaced = "github.com/crypto-org-chain/go-ethereum"
   [mod."github.com/fatih/color"]
     version = "v1.18.0"
@@ -644,8 +644,8 @@ schema = 3
     version = "v0.14.3"
     hash = "sha256-tldEok5ebZ4R4B7H8dSlYS5oVuLvh89n9wUaVlDjYwg="
   [mod."go.etcd.io/bbolt"]
-    version = "v1.4.0-alpha.1"
-    hash = "sha256-CHCzkBBaVVcfjB2sKmvDFMGgx2YF3/aDpPFuqvbKIk0="
+    version = "v1.4.0-alpha.0.0.20240404170359-43604f3112c5"
+    hash = "sha256-U/PkBhk4m6iKFDuR0ULO4EFXb8gFnKNGgNnwMU0OGoM="
   [mod."go.opencensus.io"]
     version = "v0.24.0"
     hash = "sha256-4H+mGZgG2c9I1y0m8avF4qmt8LUKxxVsTqR8mKgP4yo="
