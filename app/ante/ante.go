@@ -59,9 +59,9 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 		// disable vesting message types
 		for _, msg := range tx.GetMsgs() {
 			switch msg.(type) {
-			case *vestingtypes.BaseVestingAccount,
-				*vestingtypes.PermanentLockedAccount,
-				*vestingtypes.PeriodicVestingAccount:
+			case *vestingtypes.MsgCreateVestingAccount,
+				*vestingtypes.MsgCreatePeriodicVestingAccount,
+				*vestingtypes.MsgCreatePermanentLockedAccount:
 				return ctx, errorsmod.Wrapf(
 					errortypes.ErrInvalidRequest,
 					"vesting messages are not supported",

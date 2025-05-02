@@ -860,9 +860,9 @@ func (app *EthermintApp) setAnteHandler(txConfig client.TxConfig, maxGasWanted u
 		DynamicFeeChecker:      true,
 		DisabledAuthzMsgs: []string{
 			sdk.MsgTypeURL(&evmtypes.MsgEthereumTx{}),
-			sdk.MsgTypeURL(&vestingtypes.BaseVestingAccount{}),
-			sdk.MsgTypeURL(&vestingtypes.PermanentLockedAccount{}),
-			sdk.MsgTypeURL(&vestingtypes.PeriodicVestingAccount{}),
+			sdk.MsgTypeURL(&vestingtypes.MsgCreateVestingAccount{}),
+			sdk.MsgTypeURL(&vestingtypes.MsgCreatePermanentLockedAccount{}),
+			sdk.MsgTypeURL(&vestingtypes.MsgCreatePeriodicVestingAccount{}),
 		},
 		PendingTxListener: app.onPendingTx,
 	})
