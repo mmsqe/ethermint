@@ -616,7 +616,7 @@ func NewEthermintApp(
 		params.NewAppModule(app.ParamsKeeper), //nolint: staticcheck
 		authzmodule.NewAppModule(appCodec, app.AuthzKeeper, app.AccountKeeper, app.BankKeeper, app.interfaceRegistry),
 		consensus.NewAppModule(appCodec, app.ConsensusParamsKeeper),
-		protocolpool.NewAppModule(appCodec, app.PoolKeeper, app.AccountKeeper, app.BankKeeper),
+		protocolpool.NewAppModule(app.PoolKeeper, app.AccountKeeper, app.BankKeeper),
 
 		// ibc modules
 		ibc.NewAppModule(app.IBCKeeper),
